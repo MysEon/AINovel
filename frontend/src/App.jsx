@@ -114,8 +114,12 @@ function AppContent() {
   // 删除项目
   const handleDeleteProject = (projectId) => {
     showConfirmDialog({
+      title: '删除项目',
       message: '确定要删除这个项目吗？此操作不可撤销。',
       type: 'warning',
+      showResultNotification: true,
+      successMessage: '项目删除成功',
+      errorMessage: '删除项目失败',
       onConfirm: () => {
         setProjects(projects.filter(p => p.id !== projectId));
         if (currentProject && currentProject.id === projectId) {

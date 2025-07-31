@@ -40,6 +40,19 @@
   background-color: rgba(0, 0, 0, 0.03);
 }
 
+.confirm-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.confirm-dialog-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color, #333333);
+}
+
 .confirm-dialog-icon {
   font-size: 1.5rem;
   color: #ffc107;
@@ -131,6 +144,10 @@
 }
 
 .dark-theme .confirm-dialog-message {
+  color: #ffffff;
+}
+
+.dark-theme .confirm-dialog-title h3 {
   color: #ffffff;
 }
 

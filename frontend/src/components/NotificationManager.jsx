@@ -37,20 +37,28 @@ export const NotificationProvider = ({ children }) => {
   };
 
   const showConfirmDialog = ({
+    title,
     message,
     onConfirm,
     onCancel,
     confirmText,
     cancelText,
-    type
+    type,
+    showResultNotification = false,
+    successMessage = '操作成功',
+    errorMessage = '操作失败'
   }) => {
     setConfirmDialog({
+      title,
       message,
       onConfirm,
       onCancel,
       confirmText,
       cancelText,
-      type
+      type,
+      showResultNotification,
+      successMessage,
+      errorMessage
     });
   };
 
@@ -81,10 +89,33 @@ export const NotificationProvider = ({ children }) => {
       </div>
       {confirmDialog && (
         <ConfirmDialog
+          title={confirmDialog.title}
           message={confirmDialog.message}
-          onConfirm={() => {
-            if (confirmDialog.onConfirm) confirmDialog.onConfirm();
-            hideConfirmDialog();
+          onConfirm={async () => {
+            try {
+              if (confirmDialog.onConfirm) await confirmDialog.onConfirm();
+              hideConfirmDialog();
+              
+              // 显示操作成功通知
+              if (confirmDialog.showResultNotification) {
+                addNotification({
+                  message: confirmDialog.successMessage,
+                  type: 'success',
+                  duration: 3000
+                });
+              }
+            } catch (error) {
+              hideConfirmDialog();
+              
+              // 显示操作失败通知
+              if (confirmDialog.showResultNotification) {
+                addNotification({
+                  message: confirmDialog.errorMessage,
+                  type: 'error',
+                  duration: 3000
+                });
+              }
+            }
           }}
           onCancel={() => {
             if (confirmDialog.onCancel) confirmDialog.onCancel();

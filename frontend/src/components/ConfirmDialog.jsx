@@ -3,6 +3,7 @@ import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import './ConfirmDialog.css';
 
 const ConfirmDialog = ({ 
+  title = '确认操作',
   message, 
   onConfirm, 
   onCancel, 
@@ -57,7 +58,10 @@ const ConfirmDialog = ({
     <div className="confirm-dialog-overlay">
       <div className={`confirm-dialog ${getTypeClass()}`}>
         <div className="confirm-dialog-header">
-          <FaExclamationTriangle className="confirm-dialog-icon" />
+          <div className="confirm-dialog-title">
+            <FaExclamationTriangle className="confirm-dialog-icon" />
+            <h3>{title}</h3>
+          </div>
           <button className="confirm-dialog-close" onClick={handleClose}>
             <FaTimes />
           </button>
