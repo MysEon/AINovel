@@ -115,6 +115,7 @@ npm run build
 - Use descriptive commit messages that explain the "why" rather than just the "what"
 - Use Chinese in commit message
 - You can only do git when the user says the problem is solved or the function is okay.
+- Strictly prohibited: Do not mention "🤖 Generated with Claude Code" or "Co-Authored-By: Claude <noreply@anthropic.com>" in git commit messages
 
 ### Task Management
 
