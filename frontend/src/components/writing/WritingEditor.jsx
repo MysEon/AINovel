@@ -4,7 +4,7 @@ import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
-const WritingEditor = ({ projectId, initialChapterId, onChapterChange }) => {
+const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
   const [aiAssisted, setAiAssisted] = useState(false);
   const [aiMode, setAiMode] = useState('optimize'); // 'optimize' or 'takeover'
   const [content, setContent] = useState('');
@@ -143,6 +143,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange }) => {
       
       // 刷新章节列表
       await fetchChapters();
+      if (onProjectsChange) {
+        onProjectsChange();
+      }
     } catch (error) {
       addNotification({
         message: '发布失败: ' + error.message,
@@ -233,6 +236,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange }) => {
         type: 'success',
         duration: 3000
       });
+
+      if (onProjectsChange) {
+        onProjectsChange();
+      }
     } catch (error) {
       addNotification({
         message: '创建章节失败: ' + error.message,

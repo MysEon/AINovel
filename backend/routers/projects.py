@@ -9,7 +9,8 @@ from sqlalchemy.future import select
 from typing import List
 
 from database import get_db
-from models import User, Project
+from models import User, Project, Chapter
+from sqlalchemy import func, case
 from schemas import ProjectCreate, ProjectUpdate, ProjectResponse, MessageResponse
 from .auth import get_current_user_dependency
 
@@ -44,13 +45,55 @@ async def get_user_projects(
     current_user: User = Depends(get_current_user_dependency)
 ):
     """
-    获取当前用户的所有项目列表
+    获取当前用户的所有项目列表,并计算统计信息
     """
-    result = await db.execute(
-        select(Project).where(Project.user_id == current_user.id).order_by(Project.created_at.desc())
+    # 子查询计算每个项目的统计信息
+    stats_sq = (
+        select(
+            Chapter.project_id,
+            func.sum(Chapter.word_count).label("total_word_count"),
+            func.count(Chapter.id).label("total_chapter_count"),
+            func.max(Chapter.updated_at).label("last_updated_at")
+        )
+        .group_by(Chapter.project_id)
+        .subquery()
     )
-    projects = result.scalars().all()
-    return projects
+
+    # 主查询连接项目表和统计信息
+    result = await db.execute(
+        select(
+            Project,
+            stats_sq.c.total_word_count,
+            stats_sq.c.total_chapter_count,
+            stats_sq.c.last_updated_at
+        )
+        .outerjoin(stats_sq, Project.id == stats_sq.c.project_id)
+        .where(Project.user_id == current_user.id)
+        .order_by(Project.created_at.desc())
+    )
+
+    projects_with_stats = result.all()
+
+    # 构建响应数据
+    response_data = []
+    for project, word_count, chapter_count, last_updated in projects_with_stats:
+        updated_at = project.updated_at
+        if last_updated and last_updated > updated_at:
+            updated_at = last_updated
+            
+        project_response = ProjectResponse(
+            id=project.id,
+            name=project.name,
+            description=project.description,
+            user_id=project.user_id,
+            created_at=project.created_at,
+            updated_at=updated_at,
+            word_count=word_count or 0,
+            chapter_count=chapter_count or 0
+        )
+        response_data.append(project_response)
+
+    return response_data
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(

@@ -7,7 +7,7 @@ import KanbanBoard from './KanbanBoard';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import './ProjectEditor.css';
 
-const ProjectEditor = ({ user, project, onBackToDashboard }) => {
+const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) => {
   const [theme, setTheme] = useState('system');
   const [actualTheme, setActualTheme] = useState('dark');
   const [activeItem, setActiveItem] = useState('项目总览');
@@ -115,13 +115,14 @@ const ProjectEditor = ({ user, project, onBackToDashboard }) => {
       case '看板页':
         return <KanbanBoard />;
       case '已发布':
-        return <PublishedChapters projectId={project.id} />;
+        return <PublishedChapters projectId={project.id} onProjectsChange={onProjectsChange} />;
       case '开始写作':
       case '章节管理':
         return <WritingEditor 
           projectId={project.id} 
           initialChapterId={currentChapterId}
           onChapterChange={setCurrentChapterId}
+          onProjectsChange={onProjectsChange}
         />;
       default:
         return <textarea placeholder="在这里开始你的创作..."></textarea>;

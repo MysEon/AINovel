@@ -168,6 +168,7 @@ function AppContent() {
             user={user}
             project={currentProject}
             onBackToDashboard={handleBackToDashboard}
+            onProjectsChange={fetchUserProjects}
           />
         );
       

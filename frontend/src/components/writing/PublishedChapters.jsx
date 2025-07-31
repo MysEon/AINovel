@@ -4,7 +4,7 @@ import { getChapters, deleteChapter } from '../../services/chapterService';
 import { useNotification } from '../NotificationManager';
 import './PublishedChapters.css';
 
-const PublishedChapters = ({ projectId }) => {
+const PublishedChapters = ({ projectId, onProjectsChange }) => {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState(null);
@@ -68,6 +68,9 @@ const PublishedChapters = ({ projectId }) => {
           await deleteChapter(chapterId);
           // 从状态中移除已删除的章节
           setChapters(prevChapters => prevChapters.filter(chapter => chapter.id !== chapterId));
+          if (onProjectsChange) {
+            onProjectsChange();
+          }
         } catch (error) {
           throw new Error('删除章节失败: ' + error.message);
         }

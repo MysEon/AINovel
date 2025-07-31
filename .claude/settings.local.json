@@ -20,7 +20,10 @@
       "Bash(git commit:*)",
       "Bash(cat:*)",
       "Bash(git add .)",
-      "Bash(git commit -m \"修复保存功能失效的问题\")"
+      "Bash(git commit -m \"修复保存功能失效的问题\")",
+      "Bash(cd backend)",
+      "Bash(alembic revision --autogenerate -m \"Add word_count and chapter_count to projects table\")",
+      "Bash(python -m alembic revision --autogenerate -m \"Add word_count and chapter_count to projects table\")"
     ],
     "deny": []
   }

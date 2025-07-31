@@ -58,22 +58,11 @@ class ProjectResponse(ProjectBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
+    word_count: int = 0
+    chapter_count: int = 0
     
     class Config:
         from_attributes = True
-    
-    # 计算字段
-    @computed_field
-    @property
-    def word_count(self) -> int:
-        # 这里应该计算项目总字数，简化处理返回0
-        return 0
-    
-    @computed_field
-    @property
-    def chapter_count(self) -> int:
-        # 这里应该计算章节数量，简化处理返回0
-        return 0
 
 # 角色相关模型
 class CharacterBase(BaseModel):
