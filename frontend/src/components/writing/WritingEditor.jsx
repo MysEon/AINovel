@@ -39,7 +39,13 @@ const WritingEditor = ({ projectId }) => {
         setCurrentChapter(nextChapter);
       } else {
         // 如果没有已发布章节，默认为第一章
-        setCurrentChapter({ id: null, title: '第一章', order_index: 1, status: 'draft' });
+        // 如果也没有草稿章节，则创建一个默认的第一章
+        if (chaptersData.length === 0) {
+          setCurrentChapter({ id: null, title: '第一章', order_index: 1, status: 'draft' });
+        } else {
+          // 选择第一个章节
+          setCurrentChapter(chaptersData[0]);
+        }
       }
     } catch (error) {
       addNotification({
@@ -222,7 +228,16 @@ const WritingEditor = ({ projectId }) => {
   return (
     <div className="writing-editor">
       <div className="editor-content">
-        {aiAssisted ? (
+        {chapters.length === 0 && !manualChapter ? (
+          <div className="empty-chapters-notice">
+            <h3>欢迎开始创作！</h3>
+            <p>您的项目目前还没有章节。</p>
+            <button className="create-chapter-button" onClick={() => setManualChapter('第一章')}>
+              <FaBook /> 创建第一个章节
+            </button>
+            <p>点击上方按钮创建您的第一个章节，开始您的创作之旅。</p>
+          </div>
+        ) : aiAssisted ? (
           <AiWritingInterface content={content} onContentChange={handleContentChange} />
         ) : (
           <RichTextEditor content={content} onContentChange={handleContentChange} />

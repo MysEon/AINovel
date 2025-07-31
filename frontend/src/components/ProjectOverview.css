@@ -273,6 +273,34 @@
   text-indent: 2rem;
 }
 
+/* 空项目提示 */
+.empty-project-notice {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--content-bg);
+  border-radius: 12px;
+  margin: 2rem 0;
+  border: 2px dashed var(--border-color);
+}
+
+.empty-project-notice h3 {
+  color: var(--text-color);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.empty-project-notice p {
+  color: var(--secondary-text-color);
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.empty-project-notice .btn-primary {
+  margin: 1.5rem auto;
+  font-size: 1.1rem;
+  padding: 1rem 2rem;
+}
+
 @media (max-width: 768px) {
   .project-overview {
     padding: 1rem;
@@ -311,5 +339,17 @@
   
   .chapter-section h2 {
     font-size: 1.5rem;
+  }
+  
+  .empty-project-notice {
+    padding: 2rem 1rem;
+  }
+  
+  .empty-project-notice h3 {
+    font-size: 1.3rem;
+  }
+  
+  .empty-project-notice p {
+    font-size: 1rem;
   }
 }

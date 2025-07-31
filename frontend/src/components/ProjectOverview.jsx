@@ -69,17 +69,28 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
           <button className="btn-primary" onClick={onNavigateToDrafts}>
             <FaBook /> 开始编写
           </button>
-          <button className="btn-secondary" onClick={() => setReadingMode(true)}>
+          <button className="btn-secondary" onClick={() => setReadingMode(true)} disabled={publishedChapters.length === 0}>
             <FaEye /> 阅读模式
           </button>
-          <button className="btn-secondary" onClick={() => handleExport('PDF')}>
+          <button className="btn-secondary" onClick={() => handleExport('PDF')} disabled={publishedChapters.length === 0}>
             <FaDownload /> 导出PDF
           </button>
-          <button className="btn-secondary" onClick={handlePrint}>
+          <button className="btn-secondary" onClick={handlePrint} disabled={publishedChapters.length === 0}>
             <FaPrint /> 打印
           </button>
         </div>
       </div>
+      
+      {publishedChapters.length === 0 && !loading && (
+        <div className="empty-project-notice">
+          <h3>欢迎使用AINovel创作平台！</h3>
+          <p>您的项目目前还没有已发布的章节。</p>
+          <button className="btn-primary" onClick={onNavigateToDrafts}>
+            <FaBook /> 立即开始创作
+          </button>
+          <p>点击"开始编写"按钮创建您的第一个章节。</p>
+        </div>
+      )}
 
       <div className="overview-stats">
         <div className="stat-card">
