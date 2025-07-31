@@ -21,12 +21,16 @@ export const createChapter = async (projectId, chapterData) => {
   if (!response.ok) {
     // 尝试解析错误响应，如果失败则使用默认错误消息
     try {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || '创建章节失败');
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '创建章节失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '创建章节失败: 服务器返回错误');
+      }
     } catch (e) {
-      // 如果无法解析JSON，使用响应文本或默认错误消息
-      const errorText = await response.text();
-      throw new Error(errorText || '创建章节失败: 服务器返回错误');
+      throw new Error('创建章节失败: 服务器返回错误');
     }
   }
 
@@ -42,12 +46,16 @@ export const getChapters = async (projectId) => {
   if (!response.ok) {
     // 尝试解析错误响应，如果失败则使用默认错误消息
     try {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || '获取章节列表失败');
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '获取章节列表失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '获取章节列表失败: 服务器返回错误');
+      }
     } catch (e) {
-      // 如果无法解析JSON，使用响应文本或默认错误消息
-      const errorText = await response.text();
-      throw new Error(errorText || '获取章节列表失败: 服务器返回错误');
+      throw new Error('获取章节列表失败: 服务器返回错误');
     }
   }
 
@@ -79,12 +87,16 @@ export const updateChapter = async (chapterId, chapterData) => {
   if (!response.ok) {
     // 尝试解析错误响应，如果失败则使用默认错误消息
     try {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || '更新章节失败');
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '更新章节失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '更新章节失败: 服务器返回错误');
+      }
     } catch (e) {
-      // 如果无法解析JSON，使用响应文本或默认错误消息
-      const errorText = await response.text();
-      throw new Error(errorText || '更新章节失败: 服务器返回错误');
+      throw new Error('更新章节失败: 服务器返回错误');
     }
   }
 
@@ -99,8 +111,19 @@ export const deleteChapter = async (chapterId) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '删除章节失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '删除章节失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '删除章节失败: 服务器返回错误');
+      }
+    } catch (e) {
+      throw new Error('删除章节失败: 服务器返回错误');
+    }
   }
 
   return await response.json();
@@ -115,8 +138,19 @@ export const publishChapter = async (chapterId) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '发布章节失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '发布章节失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '发布章节失败: 服务器返回错误');
+      }
+    } catch (e) {
+      throw new Error('发布章节失败: 服务器返回错误');
+    }
   }
 
   return await response.json();
@@ -131,8 +165,19 @@ export const unpublishChapter = async (chapterId) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '取消发布章节失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '取消发布章节失败');
+      } catch (jsonError) {
+        // 如果无法解析JSON，使用响应文本或默认错误消息
+        throw new Error(errorText || '取消发布章节失败: 服务器返回错误');
+      }
+    } catch (e) {
+      throw new Error('取消发布章节失败: 服务器返回错误');
+    }
   }
 
   return await response.json();
