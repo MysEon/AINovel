@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
-import ConfirmationDialog from '../ConfirmationDialog';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
@@ -15,10 +14,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isEditorLocked, setIsEditorLocked] = useState(false);
-  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
   const [showNewChapterDialog, setShowNewChapterDialog] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
-  const { addNotification } = useNotification();
+  const { addNotification, showConfirmDialog } = useNotification();
 
   // 当 currentChapter 改变时，也更新 content 和锁定状态
   useEffect(() => {
@@ -215,35 +213,40 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     }
   };
 
-  const handleUnlockConfirm = async () => {
+  const handleUnlockClick = () => {
     if (!currentChapter || !projectId) return;
 
-    try {
-      await batchUpdateChapterStatus({
-        project_id: projectId,
-        from_order_index: currentChapter.order_index,
-        new_status: 'draft'
-      });
-      
-      addNotification({
-        message: '章节已解锁，您可以开始编辑了',
-        type: 'success',
-        duration: 3000
-      });
+    showConfirmDialog({
+      title: '确认解锁章节',
+      message: `您确定要解锁章节 "${currentChapter.title}" 吗？这将导致该章节及其之后的所有已发布章节状态变更为“草稿”，以便您可以重新编辑。`,
+      type: 'warning',
+      showResultNotification: true,
+      successMessage: '章节已成功解锁，您可以开始编辑了',
+      errorMessage: '解锁失败',
+      onConfirm: async () => {
+        try {
+            await batchUpdateChapterStatus({
+              project_id: projectId,
+              from_order_index: currentChapter.order_index,
+              new_status: 'draft'
+            });
+            
+            await fetchChapters(); // Re-fetch all chapters to update list statuses
+            
+            // Re-fetch current chapter to get its updated status and unlock the editor
+            const reloadedChapter = await getChapter(currentChapter.id);
+            setCurrentChapter(reloadedChapter);
 
-      setShowUnlockConfirm(false);
-      await fetchChapters(); // 重新获取章节以更新状态
-      // 找到并设置当前章节
-      const reloadedChapter = await getChapter(currentChapter.id);
-      setCurrentChapter(reloadedChapter);
-
-    } catch (error) {
-      addNotification({
-        message: '解锁失败: ' + error.message,
-        type: 'error',
-        duration: 3000
-      });
-    }
+            if (onProjectsChange) {
+              onProjectsChange();
+            }
+        } catch (error) {
+          // The component will show the generic errorMessage.
+          // Throwing the original error is good for debugging in the console.
+          throw new Error(`解锁失败: ${error.message}`);
+        }
+      }
+    });
   };
 
   // 开启新章
@@ -395,7 +398,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               </span>
             )}
             {isEditorLocked && (
-              <button className="action-btn unlock-btn" onClick={() => setShowUnlockConfirm(true)} title="解锁">
+              <button className="action-btn unlock-btn" onClick={handleUnlockClick} title="解锁">
                 <FaLockOpen />
               </button>
             )}
@@ -476,15 +479,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         </div>
       </div>
 
-      {showUnlockConfirm && (
-        <ConfirmationDialog
-          title="确认解锁章节"
-          message={`您确定要解锁章节 "${currentChapter?.title}" 吗？这将导致该章节及其之后的所有已发布章节状态变更为“草稿”，以便您可以重新编辑。`}
-          onConfirm={handleUnlockConfirm}
-          onCancel={() => setShowUnlockConfirm(false)}
-          confirmText="确认解锁"
-        />
-      )}
+      {/* Unlock confirmation dialog is now handled globally by NotificationManager */}
 
       {showNewChapterDialog && (
         <NewChapterDialog

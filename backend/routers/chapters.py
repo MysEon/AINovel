@@ -5,7 +5,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func as sql_func
+from sqlalchemy import func as sql_func, update
 from typing import List
 
 from database import get_db

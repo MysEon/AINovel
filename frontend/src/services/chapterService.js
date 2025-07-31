@@ -191,7 +191,7 @@ export const unpublishChapter = async (chapterId) => {
 
 // 批量更新章节状态
 export const batchUpdateChapterStatus = async (updateData) => {
-  const response = await fetch(`${API_BASE_URL}/api/chapters/batch_update_status`, {
+  const response = await fetch(`${API_BASE_URL}/chapters/batch_update_status`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(updateData)
