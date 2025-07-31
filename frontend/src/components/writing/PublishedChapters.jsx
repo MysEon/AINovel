@@ -55,6 +55,11 @@ const PublishedChapters = ({ projectId }) => {
 
   // 删除章节
   const handleDeleteChapter = async (chapterId) => {
+    // 添加确认对话框
+    if (!window.confirm('确定要删除这个章节吗？此操作不可撤销。')) {
+      return;
+    }
+    
     try {
       await deleteChapter(chapterId);
       // 从状态中移除已删除的章节
