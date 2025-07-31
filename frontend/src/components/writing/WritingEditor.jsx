@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaRobot, FaFont, FaSave, FaUpload, FaBook } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
-import { getChapters, updateChapter, publishChapter } from '../../services/chapterService';
+import { getChapters, updateChapter, publishChapter, createChapter } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
 const WritingEditor = ({ projectId }) => {
