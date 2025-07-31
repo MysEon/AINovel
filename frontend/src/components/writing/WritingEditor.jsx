@@ -371,7 +371,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             <p>点击上方按钮创建您的第一个章节，开始您的创作之旅。</p>
           </div>
         ) : aiAssisted ? (
-          <AiWritingInterface content={content} onContentChange={handleContentChange} />
+          <AiWritingInterface 
+            content={content} 
+            onContentChange={handleContentChange} 
+            readOnly={isEditorLocked} 
+          />
         ) : (
           <RichTextEditor 
             content={content} 
@@ -541,7 +545,7 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly }) => {
   const [messages, setMessages] = useState([
     { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你 brainstorm ideas, improve your writing, or answer questions about your story. What would you like to work on today?' }
   ]);
@@ -605,11 +609,13 @@ const AiWritingInterface = ({ content, onContentChange }) => {
         </div>
       </div>
       <div className="content-editor">
+        {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
         <textarea
-          className="content-textarea"
+          className={`content-textarea ${readOnly ? 'locked' : ''}`}
           value={content}
           onChange={handleContentChange}
           placeholder="在这里创作你的小说内容..."
+          readOnly={readOnly}
         />
       </div>
     </div>

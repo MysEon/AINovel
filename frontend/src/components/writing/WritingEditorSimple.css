@@ -376,6 +376,7 @@
   flex-direction: column;
   background-color: #ffffff;
   overflow: hidden;
+  position: relative;
 }
 
 .content-editor .content-textarea {
@@ -706,6 +707,7 @@
 .dark-theme .content-editor {
   background-color: #2d2d2d;
   overflow: hidden;
+  position: relative;
 }
 
 .dark-theme .content-editor .content-textarea {
