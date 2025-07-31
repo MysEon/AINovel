@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
-import ConfirmationDialog from './ConfirmationDialog';
+import ConfirmationDialog from '../ConfirmationDialog';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
