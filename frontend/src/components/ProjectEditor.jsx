@@ -12,6 +12,7 @@ const ProjectEditor = ({ user, project, onBackToDashboard }) => {
   const [actualTheme, setActualTheme] = useState('dark');
   const [activeItem, setActiveItem] = useState('项目总览');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [currentChapterId, setCurrentChapterId] = useState(null);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -75,6 +76,23 @@ const ProjectEditor = ({ user, project, onBackToDashboard }) => {
     document.body.className = actualTheme + '-theme';
   }, [actualTheme]);
 
+  // 从localStorage加载上次打开的章节
+  useEffect(() => {
+    const lastChapterId = localStorage.getItem(`lastChapter_${project.id}`);
+    if (lastChapterId) {
+      setCurrentChapterId(parseInt(lastChapterId, 10));
+    }
+  }, [project.id]);
+
+  // 将当前打开的章节ID保存到localStorage
+  useEffect(() => {
+    if (currentChapterId) {
+      localStorage.setItem(`lastChapter_${project.id}`, currentChapterId);
+    } else {
+      localStorage.removeItem(`lastChapter_${project.id}`);
+    }
+  }, [currentChapterId, project.id]);
+
   const menuItems = {
     '开始写作': ['开始写作'],
     '项目管理': ['模型参数选择', '提示词管理'],
@@ -100,7 +118,11 @@ const ProjectEditor = ({ user, project, onBackToDashboard }) => {
         return <PublishedChapters projectId={project.id} />;
       case '开始写作':
       case '章节管理':
-        return <WritingEditor projectId={project.id} />;
+        return <WritingEditor 
+          projectId={project.id} 
+          initialChapterId={currentChapterId}
+          onChapterChange={setCurrentChapterId}
+        />;
       default:
         return <textarea placeholder="在这里开始你的创作..."></textarea>;
     }
