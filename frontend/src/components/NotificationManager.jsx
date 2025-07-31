@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useState } from 'react';
 import Notification from './Notification';
+import ConfirmDialog from './ConfirmDialog';
 
 const NotificationContext = createContext();
 
@@ -16,6 +17,7 @@ const notificationReducer = (state, action) => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, dispatch] = useReducer(notificationReducer, []);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const addNotification = (notification) => {
     dispatch({
@@ -34,6 +36,28 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  const showConfirmDialog = ({
+    message,
+    onConfirm,
+    onCancel,
+    confirmText,
+    cancelText,
+    type
+  }) => {
+    setConfirmDialog({
+      message,
+      onConfirm,
+      onCancel,
+      confirmText,
+      cancelText,
+      type
+    });
+  };
+
+  const hideConfirmDialog = () => {
+    setConfirmDialog(null);
+  };
+
   const removeNotification = (id) => {
     dispatch({
       type: 'REMOVE_NOTIFICATION',
@@ -42,7 +66,7 @@ export const NotificationProvider = ({ children }) => {
   };
 
   return (
-    <NotificationContext.Provider value={{ addNotification, removeNotification }}>
+    <NotificationContext.Provider value={{ addNotification, removeNotification, showConfirmDialog, hideConfirmDialog }}>
       {children}
       <div className="notifications-container">
         {notifications.map((notification) => (
@@ -55,6 +79,22 @@ export const NotificationProvider = ({ children }) => {
           />
         ))}
       </div>
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={() => {
+            if (confirmDialog.onConfirm) confirmDialog.onConfirm();
+            hideConfirmDialog();
+          }}
+          onCancel={() => {
+            if (confirmDialog.onCancel) confirmDialog.onCancel();
+            hideConfirmDialog();
+          }}
+          confirmText={confirmDialog.confirmText}
+          cancelText={confirmDialog.cancelText}
+          type={confirmDialog.type}
+        />
+      )}
     </NotificationContext.Provider>
   );
 };

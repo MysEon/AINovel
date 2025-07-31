@@ -14,7 +14,7 @@ function AppContent() {
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
   
-  const { addNotification } = useNotification();
+  const { addNotification, showConfirmDialog } = useNotification();
 
   const fetchCurrentUser = async (token) => {
     try {
@@ -113,13 +113,17 @@ function AppContent() {
 
   // 删除项目
   const handleDeleteProject = (projectId) => {
-    if (window.confirm('确定要删除这个项目吗？此操作不可撤销。')) {
-      setProjects(projects.filter(p => p.id !== projectId));
-      if (currentProject && currentProject.id === projectId) {
-        setCurrentProject(null);
-        setCurrentView('dashboard');
+    showConfirmDialog({
+      message: '确定要删除这个项目吗？此操作不可撤销。',
+      type: 'warning',
+      onConfirm: () => {
+        setProjects(projects.filter(p => p.id !== projectId));
+        if (currentProject && currentProject.id === projectId) {
+          setCurrentProject(null);
+          setCurrentView('dashboard');
+        }
       }
-    }
+    });
   };
 
   // 返回项目仪表板

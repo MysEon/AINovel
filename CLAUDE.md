@@ -106,6 +106,7 @@ npm run build
 - Get user verification after each feature implementation
 - Do not implement many features at once before verification
 - Code writing must follow design patterns, such as the Adapter pattern, to ensure code is easy to read and modify.
+- Do not automatically start projects such as API services and frontends; please let users verify manually.
 
 ### Git Commit Practices
 

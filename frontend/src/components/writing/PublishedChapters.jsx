@@ -8,7 +8,7 @@ const PublishedChapters = ({ projectId }) => {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState(null);
-  const { addNotification } = useNotification();
+  const { addNotification, showConfirmDialog } = useNotification();
 
   // 获取已发布的章节
   useEffect(() => {
@@ -55,27 +55,29 @@ const PublishedChapters = ({ projectId }) => {
 
   // 删除章节
   const handleDeleteChapter = async (chapterId) => {
-    // 添加确认对话框
-    if (!window.confirm('确定要删除这个章节吗？此操作不可撤销。')) {
-      return;
-    }
-    
-    try {
-      await deleteChapter(chapterId);
-      // 从状态中移除已删除的章节
-      setChapters(prevChapters => prevChapters.filter(chapter => chapter.id !== chapterId));
-      addNotification({
-        message: '章节删除成功',
-        type: 'success',
-        duration: 3000
-      });
-    } catch (error) {
-      addNotification({
-        message: '删除章节失败: ' + error.message,
-        type: 'error',
-        duration: 3000
-      });
-    }
+    // 使用全局确认对话框
+    showConfirmDialog({
+      message: '确定要删除这个章节吗？此操作不可撤销。',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteChapter(chapterId);
+          // 从状态中移除已删除的章节
+          setChapters(prevChapters => prevChapters.filter(chapter => chapter.id !== chapterId));
+          addNotification({
+            message: '章节删除成功',
+            type: 'success',
+            duration: 3000
+          });
+        } catch (error) {
+          addNotification({
+            message: '删除章节失败: ' + error.message,
+            type: 'error',
+            duration: 3000
+          });
+        }
+      }
+    });
   };
 
   // 导出章节
