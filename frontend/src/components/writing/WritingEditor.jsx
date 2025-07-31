@@ -4,7 +4,7 @@ import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
-const WritingEditor = ({ projectId }) => {
+const WritingEditor = ({ projectId, initialChapterId, onChapterChange }) => {
   const [aiAssisted, setAiAssisted] = useState(false);
   const [aiMode, setAiMode] = useState('optimize'); // 'optimize' or 'takeover'
   const [content, setContent] = useState('');
@@ -15,10 +15,14 @@ const WritingEditor = ({ projectId }) => {
   const [isPublishing, setIsPublishing] = useState(false);
   const { addNotification } = useNotification();
 
-  // 调试信息
+  // 当 currentChapter 改变时，也更新 content
   useEffect(() => {
-    console.log('WritingEditor mounted with projectId:', projectId);
-  }, [projectId]);
+    if (currentChapter) {
+      setContent(currentChapter.content || '');
+    } else {
+      setContent('');
+    }
+  }, [currentChapter]);
 
   // 获取项目章节数据
   useEffect(() => {
@@ -33,34 +37,36 @@ const WritingEditor = ({ projectId }) => {
       const chaptersData = await getChapters(projectId);
       console.log('Received chapters data:', chaptersData);
       setChapters(chaptersData);
-      
-      // 默认选择最后一个已发布章节的下一章
-      const lastPublished = chaptersData
-        .filter(chapter => chapter.status === 'published')
-        .sort((a, b) => b.order_index - a.order_index)[0];
-      
-      console.log('Last published chapter:', lastPublished);
-      
-      if (lastPublished) {
-        const nextChapterIndex = lastPublished.order_index + 1;
-        const nextChapter = chaptersData.find(ch => ch.order_index === nextChapterIndex) || 
-          { id: null, title: `第${nextChapterIndex}章`, order_index: nextChapterIndex, status: 'draft' };
-        console.log('Setting next chapter:', nextChapter);
-        setCurrentChapter(nextChapter);
-      } else {
-        // 如果没有已发布章节，默认为第一章
-        // 如果也没有草稿章节，则创建一个默认的第一章
-        if (chaptersData.length === 0) {
-          const defaultChapter = { id: null, title: '第一章', order_index: 1, status: 'draft' };
-          console.log('Setting default chapter (no chapters):', defaultChapter);
-          setCurrentChapter(defaultChapter);
+
+      let chapterToSet = null;
+
+      // 1. 优先从 initialChapterId 加载
+      if (initialChapterId) {
+        chapterToSet = chaptersData.find(ch => ch.id === initialChapterId);
+      }
+
+      // 2. 如果没有，则使用默认逻辑
+      if (!chapterToSet) {
+        const lastPublished = chaptersData
+          .filter(chapter => chapter.status === 'published')
+          .sort((a, b) => b.order_index - a.order_index)[0];
+        
+        if (lastPublished) {
+          const nextChapterIndex = lastPublished.order_index + 1;
+          chapterToSet = chaptersData.find(ch => ch.order_index === nextChapterIndex) || 
+            { id: null, title: `第${nextChapterIndex}章`, order_index: nextChapterIndex, status: 'draft' };
+        } else if (chaptersData.length > 0) {
+          // 如果没有已发布章节，选择第一个
+          chapterToSet = chaptersData[0];
         } else {
-          // 选择第一个章节，确保不为空
-          const firstChapter = chaptersData[0] || { id: null, title: '第一章', order_index: 1, status: 'draft' };
-          console.log('Setting first chapter:', firstChapter);
-          setCurrentChapter(firstChapter);
+          // 如果没有任何章节，创建一个默认的
+          chapterToSet = { id: null, title: '第一章', order_index: 1, status: 'draft' };
         }
       }
+      
+      console.log('Setting current chapter:', chapterToSet);
+      setCurrentChapter(chapterToSet);
+
     } catch (error) {
       console.error('Error fetching chapters:', error);
       addNotification({
@@ -182,6 +188,9 @@ const WritingEditor = ({ projectId }) => {
     } else {
       const chapter = chapters.find(ch => ch.id === parseInt(selectedId));
       setCurrentChapter(chapter);
+      if (onChapterChange) {
+        onChapterChange(chapter.id);
+      }
       // 加载章节内容
       if (chapter && chapter.content) {
         setContent(chapter.content);

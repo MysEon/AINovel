@@ -18,7 +18,9 @@
       "Bash(node:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git add .)",
+      "Bash(git commit -m \"修复保存功能失效的问题\")"
     ],
     "deny": []
   }
