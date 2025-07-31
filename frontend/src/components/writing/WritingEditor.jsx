@@ -15,6 +15,11 @@ const WritingEditor = ({ projectId }) => {
   const [isPublishing, setIsPublishing] = useState(false);
   const { addNotification } = useNotification();
 
+  // 调试信息
+  useEffect(() => {
+    console.log('WritingEditor mounted with projectId:', projectId);
+  }, [projectId]);
+
   // 获取项目章节数据
   useEffect(() => {
     if (projectId) {
@@ -24,7 +29,9 @@ const WritingEditor = ({ projectId }) => {
 
   const fetchChapters = async () => {
     try {
+      console.log('Fetching chapters for projectId:', projectId);
       const chaptersData = await getChapters(projectId);
+      console.log('Received chapters data:', chaptersData);
       setChapters(chaptersData);
       
       // 默认选择最后一个已发布章节的下一章
@@ -32,22 +39,30 @@ const WritingEditor = ({ projectId }) => {
         .filter(chapter => chapter.status === 'published')
         .sort((a, b) => b.order_index - a.order_index)[0];
       
+      console.log('Last published chapter:', lastPublished);
+      
       if (lastPublished) {
         const nextChapterIndex = lastPublished.order_index + 1;
         const nextChapter = chaptersData.find(ch => ch.order_index === nextChapterIndex) || 
           { id: null, title: `第${nextChapterIndex}章`, order_index: nextChapterIndex, status: 'draft' };
+        console.log('Setting next chapter:', nextChapter);
         setCurrentChapter(nextChapter);
       } else {
         // 如果没有已发布章节，默认为第一章
         // 如果也没有草稿章节，则创建一个默认的第一章
         if (chaptersData.length === 0) {
-          setCurrentChapter({ id: null, title: '第一章', order_index: 1, status: 'draft' });
+          const defaultChapter = { id: null, title: '第一章', order_index: 1, status: 'draft' };
+          console.log('Setting default chapter (no chapters):', defaultChapter);
+          setCurrentChapter(defaultChapter);
         } else {
-          // 选择第一个章节
-          setCurrentChapter(chaptersData[0]);
+          // 选择第一个章节，确保不为空
+          const firstChapter = chaptersData[0] || { id: null, title: '第一章', order_index: 1, status: 'draft' };
+          console.log('Setting first chapter:', firstChapter);
+          setCurrentChapter(firstChapter);
         }
       }
     } catch (error) {
+      console.error('Error fetching chapters:', error);
       addNotification({
         message: '获取章节列表失败: ' + error.message,
         type: 'error',
@@ -224,6 +239,20 @@ const WritingEditor = ({ projectId }) => {
     }
     return currentChapter ? currentChapter.title : '未选择章节';
   };
+
+  // 错误边界检查
+  if (!projectId) {
+    return (
+      <div className="writing-editor">
+        <div className="editor-content">
+          <div className="error-notice">
+            <h3>错误</h3>
+            <p>项目ID未提供，请返回项目选择页面。</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="writing-editor">
