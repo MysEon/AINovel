@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(grep:*)",
+      "Bash(findstr:*)",
+      "Bash(npm start:*)",
+      "Bash(npm run dev:*)",
+      "Bash(uvicorn:*)",
+      "Bash(powershell:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

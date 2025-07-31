@@ -1,0 +1,52 @@
+.kanban-container {
+  padding: 2rem;
+  background-color: var(--content-bg, #fff);
+  color: var(--text-color, #333);
+  height: 100%;
+}
+
+.kanban-container h1 {
+  margin-top: 0;
+  color: var(--header-text, #333);
+}
+
+.kanban-placeholder {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.kanban-column {
+  flex: 1;
+  background-color: var(--kanban-column-bg, #f5f5f5);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.kanban-column h3 {
+  margin-top: 0;
+  color: var(--header-text, #333);
+}
+
+.kanban-card {
+  background-color: var(--kanban-card-bg, #fff);
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* 暗色主题适配 */
+.dark-theme .kanban-container {
+  background-color: var(--dark-content-bg, #2d2d2d);
+  color: var(--dark-text-color, #fff);
+}
+
+.dark-theme .kanban-column {
+  background-color: var(--dark-kanban-column-bg, #3d3d3d);
+}
+
+.dark-theme .kanban-card {
+  background-color: var(--dark-kanban-card-bg, #4d4d4d);
+  color: var(--dark-text-color, #fff);
+}
