@@ -176,7 +176,7 @@ class ChapterBase(BaseModel):
     order_index: Optional[int] = 0
 
 class ChapterCreate(ChapterBase):
-    project_id: int
+    project_id: Optional[int] = None
 
 class ChapterUpdate(ChapterBase):
     title: Optional[str] = Field(None, min_length=1, max_length=200)

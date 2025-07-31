@@ -113,6 +113,7 @@ npm run build
 - Commit messages should contain only project details that AI can reference as project context
 - Use descriptive commit messages that explain the "why" rather than just the "what"
 - Use Chinese in commit message
+- You can only do git when the user says the problem is solved or the function is okay.
 
 ### Task Management
 
