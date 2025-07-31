@@ -36,6 +36,8 @@ class Project(Base):
     name = Column(String(100), nullable=False)
     description = Column(Text)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    word_count = Column(Integer, default=0)
+    chapter_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
