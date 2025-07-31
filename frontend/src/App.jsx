@@ -4,7 +4,7 @@ import LoginPage from './components/LoginPage';
 import ProjectDashboard from './components/ProjectDashboard';
 import ProjectEditor from './components/ProjectEditor';
 import { NotificationProvider, useNotification } from './components/NotificationManager';
-import { createProject as createProjectAPI, getUserProjects } from './services/projectService';
+import { createProject as createProjectAPI, getUserProjects, deleteProject } from './services/projectService';
 import './App.css';
 
 function AppContent() {
@@ -120,7 +120,8 @@ function AppContent() {
       showResultNotification: true,
       successMessage: '项目删除成功',
       errorMessage: '删除项目失败',
-      onConfirm: () => {
+      onConfirm: async () => {
+        await deleteProject(projectId);
         setProjects(projects.filter(p => p.id !== projectId));
         if (currentProject && currentProject.id === projectId) {
           setCurrentProject(null);
