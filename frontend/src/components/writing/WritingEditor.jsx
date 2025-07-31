@@ -205,8 +205,8 @@ const WritingEditor = ({ projectId }) => {
         content: '',
         outline: '',
         order_index: chapters.length + 1,
-        status: 'draft',
-        project_id: projectId
+        status: 'draft'
+        // project_id由后端从URL参数中获取，不需要在请求体中发送
       };
       
       const newChapter = await createChapter(projectId, newChapterData);

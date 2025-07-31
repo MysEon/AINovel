@@ -19,8 +19,15 @@ export const createChapter = async (projectId, chapterData) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '创建章节失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || '创建章节失败');
+    } catch (e) {
+      // 如果无法解析JSON，使用响应文本或默认错误消息
+      const errorText = await response.text();
+      throw new Error(errorText || '创建章节失败: 服务器返回错误');
+    }
   }
 
   return await response.json();
@@ -33,8 +40,15 @@ export const getChapters = async (projectId) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '获取章节列表失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || '获取章节列表失败');
+    } catch (e) {
+      // 如果无法解析JSON，使用响应文本或默认错误消息
+      const errorText = await response.text();
+      throw new Error(errorText || '获取章节列表失败: 服务器返回错误');
+    }
   }
 
   return await response.json();
@@ -63,8 +77,15 @@ export const updateChapter = async (chapterId, chapterData) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '更新章节失败');
+    // 尝试解析错误响应，如果失败则使用默认错误消息
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || '更新章节失败');
+    } catch (e) {
+      // 如果无法解析JSON，使用响应文本或默认错误消息
+      const errorText = await response.text();
+      throw new Error(errorText || '更新章节失败: 服务器返回错误');
+    }
   }
 
   return await response.json();

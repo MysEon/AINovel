@@ -42,11 +42,12 @@ async def create_chapter(
     # 自动计算字数
     word_count = len(chapter_data.content) if chapter_data.content else 0
     
-    new_chapter = Chapter(
-        **chapter_data.model_dump(),
-        project_id=project_id,
-        word_count=word_count
-    )
+    chapter_dict = chapter_data.model_dump()
+    # 确保使用URL中的project_id，而不是请求体中的
+    chapter_dict['project_id'] = project_id
+    chapter_dict['word_count'] = word_count
+    
+    new_chapter = Chapter(**chapter_dict)
     db.add(new_chapter)
     await db.commit()
     await db.refresh(new_chapter)
