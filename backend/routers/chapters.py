@@ -10,7 +10,7 @@ from typing import List
 
 from database import get_db
 from models import User, Project, Chapter
-from schemas import ChapterCreate, ChapterUpdate, ChapterResponse, MessageResponse
+from schemas import ChapterCreate, ChapterUpdate, ChapterResponse, MessageResponse, ChapterBatchUpdate
 from .auth import get_current_user_dependency
 
 async def update_project_stats(project_id: int, db: AsyncSession):
@@ -155,3 +155,32 @@ async def delete_chapter(
     await update_project_stats(project_id, db)
     
     return {"message": f"章节 '{chapter.title}' 已成功删除"}
+
+@router.post("/api/chapters/batch_update_status", response_model=MessageResponse)
+async def batch_update_chapter_status(
+    update_data: ChapterBatchUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """
+    批量更新章节的状态
+    """
+    # 验证项目所有权
+    project_result = await db.execute(
+        select(Project).where(Project.id == update_data.project_id, Project.user_id == current_user.id)
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=403, detail="无权操作该项目")
+
+    # 更新指定章节及之后所有章节的状态
+    await db.execute(
+        update(Chapter)
+        .where(Chapter.project_id == update_data.project_id)
+        .where(Chapter.order_index >= update_data.from_order_index)
+        .values(status=update_data.new_status)
+    )
+    await db.commit()
+    await update_project_stats(update_data.project_id, db)
+    
+    return {"message": "章节状态已批量更新"}

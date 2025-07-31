@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
-import { getChapters, updateChapter, publishChapter, createChapter } from '../../services/chapterService';
+import ConfirmationDialog from './ConfirmationDialog';
+import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus } from '../../services/chapterService';
 import './WritingEditorSimple.css';
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
@@ -13,14 +14,20 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [manualChapter, setManualChapter] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isEditorLocked, setIsEditorLocked] = useState(false);
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
+  const [showNewChapterDialog, setShowNewChapterDialog] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState('');
   const { addNotification } = useNotification();
 
-  // 当 currentChapter 改变时，也更新 content
+  // 当 currentChapter 改变时，也更新 content 和锁定状态
   useEffect(() => {
     if (currentChapter) {
       setContent(currentChapter.content || '');
+      setIsEditorLocked(currentChapter.status === 'published');
     } else {
       setContent('');
+      setIsEditorLocked(false);
     }
   }, [currentChapter]);
 
@@ -184,22 +191,100 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     setAiMode(mode);
   };
 
-  const handleChapterChange = (e) => {
+  const handleChapterChange = async (e) => {
     const selectedId = e.target.value;
     if (selectedId === 'manual') {
+      setCurrentChapter(null);
+      setContent('');
       setManualChapter('');
     } else {
-      const chapter = chapters.find(ch => ch.id === parseInt(selectedId));
-      setCurrentChapter(chapter);
-      if (onChapterChange) {
-        onChapterChange(chapter.id);
+      try {
+        const chapterId = parseInt(selectedId);
+        const chapterDetails = await getChapter(chapterId);
+        setCurrentChapter(chapterDetails);
+        if (onChapterChange) {
+          onChapterChange(chapterDetails.id);
+        }
+      } catch (error) {
+        addNotification({
+          message: '获取章节详情失败: ' + error.message,
+          type: 'error',
+          duration: 3000
+        });
       }
-      // 加载章节内容
-      if (chapter && chapter.content) {
-        setContent(chapter.content);
-      } else {
-        setContent('');
+    }
+  };
+
+  const handleUnlockConfirm = async () => {
+    if (!currentChapter || !projectId) return;
+
+    try {
+      await batchUpdateChapterStatus({
+        project_id: projectId,
+        from_order_index: currentChapter.order_index,
+        new_status: 'draft'
+      });
+      
+      addNotification({
+        message: '章节已解锁，您可以开始编辑了',
+        type: 'success',
+        duration: 3000
+      });
+
+      setShowUnlockConfirm(false);
+      await fetchChapters(); // 重新获取章节以更新状态
+      // 找到并设置当前章节
+      const reloadedChapter = await getChapter(currentChapter.id);
+      setCurrentChapter(reloadedChapter);
+
+    } catch (error) {
+      addNotification({
+        message: '解锁失败: ' + error.message,
+        type: 'error',
+        duration: 3000
+      });
+    }
+  };
+
+  // 开启新章
+  const handleStartNewChapter = async () => {
+    if (!newChapterTitle.trim() || !projectId) return;
+    
+    try {
+      const nextOrderIndex = chapters.length > 0
+        ? Math.max(...chapters.map(ch => ch.order_index)) + 1
+        : 1;
+
+      const newChapterData = {
+        title: newChapterTitle,
+        content: '',
+        outline: '',
+        order_index: nextOrderIndex,
+        status: 'draft'
+      };
+      
+      const newChapter = await createChapter(projectId, newChapterData);
+      
+      setChapters(prev => [...prev, newChapter].sort((a, b) => a.order_index - b.order_index));
+      setCurrentChapter(newChapter);
+      setShowNewChapterDialog(false);
+      setNewChapterTitle('');
+      
+      addNotification({
+        message: '新章节已开启',
+        type: 'success',
+        duration: 3000
+      });
+
+      if (onProjectsChange) {
+        onProjectsChange();
       }
+    } catch (error) {
+      addNotification({
+        message: '开启新章失败: ' + error.message,
+        type: 'error',
+        duration: 3000
+      });
     }
   };
 
@@ -285,7 +370,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         ) : aiAssisted ? (
           <AiWritingInterface content={content} onContentChange={handleContentChange} />
         ) : (
-          <RichTextEditor content={content} onContentChange={handleContentChange} />
+          <RichTextEditor 
+            content={content} 
+            onContentChange={handleContentChange} 
+            readOnly={isEditorLocked}
+          />
         )}
       </div>
       <div className="editor-footer">
@@ -301,19 +390,33 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               <option value="manual">手动输入</option>
             </select>
             {currentChapter && (
-              <span className="chapter-status">
+              <span className={`chapter-status ${currentChapter.status}`}>
                 {currentChapter.status === 'published' ? '已发布' : '草稿'}
               </span>
+            )}
+            {isEditorLocked && (
+              <button className="publish-button unlock" onClick={() => setShowUnlockConfirm(true)}>
+                <FaLockOpen />
+                解锁
+              </button>
             )}
           </div>
           <button 
             className={`publish-button ${currentChapter?.status === 'published' ? 'published' : ''}`}
             onClick={publishChapterContent}
-            disabled={isPublishing || !currentChapter}
+            disabled={isPublishing || !currentChapter || currentChapter.status === 'published'}
             title={currentChapter?.status === 'published' ? "章节已发布" : "发布章节"}
           >
             <FaUpload />
             <span>{currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布')}</span>
+          </button>
+          <button 
+            className="publish-button"
+            onClick={() => setShowNewChapterDialog(true)}
+            title="开启一个全新的章节"
+          >
+            <FaPlus />
+            <span>开启新章</span>
           </button>
           {manualChapter !== '' && (
             <div className="manual-chapter-input-group">
@@ -373,22 +476,72 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           </button>
         </div>
       </div>
+
+      {showUnlockConfirm && (
+        <ConfirmationDialog
+          title="确认解锁章节"
+          message={`您确定要解锁章节 "${currentChapter?.title}" 吗？这将导致该章节及其之后的所有已发布章节状态变更为“草稿”，以便您可以重新编辑。`}
+          onConfirm={handleUnlockConfirm}
+          onCancel={() => setShowUnlockConfirm(false)}
+          confirmText="确认解锁"
+        />
+      )}
+
+      {showNewChapterDialog && (
+        <NewChapterDialog
+          value={newChapterTitle}
+          onChange={(e) => setNewChapterTitle(e.target.value)}
+          onConfirm={handleStartNewChapter}
+          onCancel={() => setShowNewChapterDialog(false)}
+        />
+      )}
     </div>
   );
 };
 
-const RichTextEditor = ({ content, onContentChange }) => {
+const NewChapterDialog = ({ value, onChange, onConfirm, onCancel }) => {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>开启新章节</h2>
+        <p>请输入新章节的标题：</p>
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          placeholder="例如：第三章：新的征程"
+          autoFocus
+        />
+        <div className="form-actions">
+          <button type="button" className="cancel-btn" onClick={onCancel}>
+            取消
+          </button>
+          <button type="button" className="confirm-btn" onClick={onConfirm} disabled={!value.trim()}>
+            确认
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   const handleChange = (e) => {
-    onContentChange(e.target.value);
+    if (!readOnly) {
+      onContentChange(e.target.value);
+    }
   };
 
   return (
     <div className="rich-text-editor">
+      {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
       <textarea
-        className="content-textarea"
+        className={`content-textarea ${readOnly ? 'locked' : ''}`}
         value={content}
         onChange={handleChange}
         placeholder="在这里开始你的创作..."
+        readOnly={readOnly}
       />
     </div>
   );

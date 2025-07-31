@@ -182,6 +182,11 @@ class ChapterResponse(ChapterBase):
     class Config:
         from_attributes = True
 
+class ChapterBatchUpdate(BaseModel):
+    project_id: int
+    from_order_index: int
+    new_status: str
+
 # 草稿相关模型
 class DraftBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)

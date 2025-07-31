@@ -37,6 +37,7 @@ export const createChapter = async (projectId, chapterData) => {
   return await response.json();
 };
 
+
 // 获取项目的所有章节
 export const getChapters = async (projectId) => {
   const response = await fetch(`${API_BASE_URL}/projects/${projectId}/chapters`, {
@@ -62,6 +63,7 @@ export const getChapters = async (projectId) => {
   return await response.json();
 };
 
+
 // 获取单个章节
 export const getChapter = async (chapterId) => {
   const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
@@ -75,6 +77,7 @@ export const getChapter = async (chapterId) => {
 
   return await response.json();
 };
+
 
 // 更新章节
 export const updateChapter = async (chapterId, chapterData) => {
@@ -103,6 +106,7 @@ export const updateChapter = async (chapterId, chapterData) => {
   return await response.json();
 };
 
+
 // 删除章节
 export const deleteChapter = async (chapterId) => {
   const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
@@ -128,6 +132,7 @@ export const deleteChapter = async (chapterId) => {
 
   return await response.json();
 };
+
 
 // 发布章节
 export const publishChapter = async (chapterId) => {
@@ -156,6 +161,7 @@ export const publishChapter = async (chapterId) => {
   return await response.json();
 };
 
+
 // 取消发布章节
 export const unpublishChapter = async (chapterId) => {
   const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
@@ -178,6 +184,22 @@ export const unpublishChapter = async (chapterId) => {
     } catch (e) {
       throw new Error('取消发布章节失败: 服务器返回错误');
     }
+  }
+
+  return await response.json();
+};
+
+// 批量更新章节状态
+export const batchUpdateChapterStatus = async (updateData) => {
+  const response = await fetch(`${API_BASE_URL}/api/chapters/batch_update_status`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updateData)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || '批量更新章节状态失败');
   }
 
   return await response.json();

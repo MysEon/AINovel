@@ -236,10 +236,27 @@
 }
 
 .rich-text-editor {
+  position: relative;
   height: 100%;
   padding: 0;
   overflow: hidden;
 }
+
+.editor-lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 10;
+}
+
 
 .content-textarea {
   width: 100%;
@@ -559,6 +576,16 @@
 .dark-theme .publish-button.published:hover:not(:disabled) {
   background-color: #218838;
   border-color: #1e7e34;
+}
+
+.publish-button.unlock {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.publish-button.unlock:hover:not(:disabled) {
+  background-color: #c82333;
+  border-color: #bd2130;
 }
 
 .dark-theme .ai-mode-selector {
