@@ -112,7 +112,7 @@ npm run build
 - Commit frequently with detailed commit messages without any ads about yourself
 - Commit messages should contain only project details that AI can reference as project context
 - Use descriptive commit messages that explain the "why" rather than just the "what"
-- 
+- Use Chinese in commit message
 
 ### Task Management
 
