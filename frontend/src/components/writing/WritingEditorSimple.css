@@ -578,14 +578,17 @@
   border-color: #1e7e34;
 }
 
-.publish-button.unlock {
-  background-color: #dc3545;
-  border-color: #dc3545;
+/* 新增解锁按钮样式 */
+.unlock-btn {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: white !important;
 }
 
-.publish-button.unlock:hover:not(:disabled) {
-  background-color: #c82333;
-  border-color: #bd2130;
+.unlock-btn:hover {
+  background-color: #c82333 !important;
+  border-color: #bd2130 !important;
+  transform: scale(1.05);
 }
 
 .dark-theme .ai-mode-selector {

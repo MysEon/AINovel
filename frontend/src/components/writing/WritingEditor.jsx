@@ -395,9 +395,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               </span>
             )}
             {isEditorLocked && (
-              <button className="publish-button unlock" onClick={() => setShowUnlockConfirm(true)}>
+              <button className="action-btn unlock-btn" onClick={() => setShowUnlockConfirm(true)} title="解锁">
                 <FaLockOpen />
-                解锁
               </button>
             )}
           </div>

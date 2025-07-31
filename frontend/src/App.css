@@ -985,7 +985,7 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
   transform: scale(1.05);
 }
 
-.delete-btn:hover {
+.delete-btn:hover, .unlock-btn:hover {
   background: #e74c3c;
   color: #ffffff;
   border-color: #e74c3c;
