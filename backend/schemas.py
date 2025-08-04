@@ -189,6 +189,17 @@ class ChapterBatchUpdate(BaseModel):
     from_order_index: int
     new_status: str
 
+class BatchPublishRequest(BaseModel):
+    chapter_ids: List[int]
+    project_id: int
+
+class BatchPublishResponse(BaseModel):
+    success: bool
+    published_chapters: List[dict]
+    failed_chapters: List[dict]
+    total_count: int
+    success_count: int
+
 # 草稿相关模型
 class DraftBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)

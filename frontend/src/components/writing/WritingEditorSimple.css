@@ -89,6 +89,30 @@
   border-color: #1e7e34;
 }
 
+.batch-publish-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background-color: #6f42c1;
+  color: white;
+  border: 1px solid #6f42c1;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.batch-publish-button:hover:not(:disabled) {
+  background-color: #5a359a;
+  border-color: #4d2c87;
+}
+
+.batch-publish-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .chapter-status {
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
@@ -577,6 +601,17 @@
 .dark-theme .publish-button.published:hover:not(:disabled) {
   background-color: #218838;
   border-color: #1e7e34;
+}
+
+.dark-theme .batch-publish-button {
+  background-color: #6f42c1;
+  color: white;
+  border: 1px solid #6f42c1;
+}
+
+.dark-theme .batch-publish-button:hover:not(:disabled) {
+  background-color: #5a359a;
+  border-color: #4d2c87;
 }
 
 /* 新增解锁按钮样式 */

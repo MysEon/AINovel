@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
-import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus } from '../../services/chapterService';
+import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
+import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import './WritingEditorSimple.css';
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
@@ -14,6 +15,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [isPublishing, setIsPublishing] = useState(false);
   const [isEditorLocked, setIsEditorLocked] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [showBatchPublish, setShowBatchPublish] = useState(false);
+  const [publishButtonPosition, setPublishButtonPosition] = useState(null);
   const { addNotification, showConfirmDialog } = useNotification();
 
   // 当 currentChapter 改变时，也更新 content 和锁定状态
@@ -266,6 +269,67 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     }
   };
 
+  // 处理批量发布
+  const handleBatchPublish = async (chaptersToPublish, onProgress) => {
+    try {
+      const chapterIds = chaptersToPublish.map(ch => ch.id);
+      const results = await batchPublishChapters(projectId, chapterIds, onProgress);
+      
+      // 刷新章节列表
+      await fetchChapters();
+      
+      // 如果当前章节在发布的章节中，更新其状态
+      const publishedChapterIds = results.results
+        .filter(r => r.success)
+        .map(r => r.chapterId);
+      
+      if (currentChapter && publishedChapterIds.includes(currentChapter.id)) {
+        const updatedChapter = await getChapter(currentChapter.id);
+        setCurrentChapter(updatedChapter);
+      }
+      
+      // 通知父组件更新项目状态
+      if (onProjectsChange) {
+        onProjectsChange();
+      }
+      
+      // 显示结果通知
+      if (results.errorCount === 0) {
+        addNotification({
+          message: `成功发布 ${results.successCount} 个章节`,
+          type: 'success',
+          duration: 3000
+        });
+      } else {
+        addNotification({
+          message: `发布完成：成功 ${results.successCount} 个，失败 ${results.errorCount} 个`,
+          type: 'warning',
+          duration: 5000
+        });
+      }
+      
+    } catch (error) {
+      addNotification({
+        message: '批量发布失败: ' + error.message,
+        type: 'error',
+        duration: 3000
+      });
+      throw error;
+    }
+  };
+
+  // 打开批量发布对话框
+  const handleBatchPublishClick = (event) => {
+    const rect = event.target.getBoundingClientRect();
+    setPublishButtonPosition({
+      top: rect.top,
+      left: rect.left,
+      bottom: rect.bottom,
+      right: rect.right
+    });
+    setShowBatchPublish(true);
+  };
+
   const getChapterDisplay = () => {
     return currentChapter ? currentChapter.title : '未选择章节';
   };
@@ -357,6 +421,15 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             <span>{currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布')}</span>
           </button>
           <button 
+            className="batch-publish-button"
+            onClick={handleBatchPublishClick}
+            disabled={!currentChapter}
+            title="批量发布多个章节"
+          >
+            <FaLayerGroup />
+            <span>批量发布</span>
+          </button>
+          <button 
             className="publish-button"
             onClick={() => {
               showConfirmDialog({
@@ -419,6 +492,18 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           </button>
         </div>
       </div>
+
+      {/* 批量发布对话框 */}
+      {showBatchPublish && (
+        <BatchChapterPublishDialog
+          projectId={projectId}
+          currentChapter={currentChapter}
+          chapters={chapters}
+          onClose={() => setShowBatchPublish(false)}
+          onPublish={handleBatchPublish}
+          triggerPosition={publishButtonPosition}
+        />
+      )}
 
       {/* Unlock confirmation dialog is now handled globally by NotificationManager */}
     </div>

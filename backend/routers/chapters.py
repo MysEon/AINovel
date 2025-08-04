@@ -2,15 +2,15 @@
 小说章节相关的API路由
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func as sql_func, update
-from typing import List
+from typing import List, Optional
 
 from database import get_db
 from models import User, Project, Chapter
-from schemas import ChapterCreate, ChapterUpdate, ChapterResponse, MessageResponse, ChapterBatchUpdate
+from schemas import ChapterCreate, ChapterUpdate, ChapterResponse, MessageResponse, ChapterBatchUpdate, BatchPublishRequest, BatchPublishResponse
 from .auth import get_current_user_dependency
 
 async def update_project_stats(project_id: int, db: AsyncSession):
@@ -170,6 +170,40 @@ async def delete_chapter(
     
     return {"message": f"章节 '{chapter.title}' 已成功删除"}
 
+@router.get("/api/projects/{project_id}/chapters/unpublished")
+async def get_unpublished_chapters(
+    project_id: int,
+    current_chapter_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """获取项目中所有未发布的章节列表"""
+    # 验证项目权限
+    project = await get_project_for_user(project_id, db, current_user)
+    
+    # 获取未发布章节
+    query = select(Chapter).where(
+        Chapter.project_id == project_id,
+        Chapter.status == 'draft'
+    ).order_by(Chapter.order_index)
+    
+    result = await db.execute(query)
+    chapters = result.scalars().all()
+    
+    return {
+        "chapters": [
+            {
+                "id": chapter.id,
+                "title": chapter.title,
+                "chapter_number": chapter.chapter_number,
+                "content": chapter.content[:200] + "..." if len(chapter.content) > 200 else chapter.content,
+                "updated_at": chapter.updated_at,
+                "is_current": chapter.id == current_chapter_id
+            }
+            for chapter in chapters
+        ]
+    }
+
 @router.post("/api/chapters/batch_update_status", response_model=MessageResponse)
 async def batch_update_chapter_status(
     update_data: ChapterBatchUpdate,
@@ -198,3 +232,61 @@ async def batch_update_chapter_status(
     await update_project_stats(update_data.project_id, db)
     
     return {"message": "章节状态已批量更新"}
+
+@router.post("/api/chapters/batch-publish", response_model=BatchPublishResponse)
+async def batch_publish_chapters(
+    request: BatchPublishRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """批量发布章节"""
+    # 验证项目权限
+    project = await get_project_for_user(request.project_id, db, current_user)
+    
+    published_chapters = []
+    failed_chapters = []
+    
+    # 批量处理章节发布
+    for chapter_id in request.chapter_ids:
+        try:
+            chapter_result = await db.execute(
+                select(Chapter).where(
+                    Chapter.id == chapter_id,
+                    Chapter.project_id == request.project_id,
+                    Chapter.status == 'draft'
+                )
+            )
+            chapter = chapter_result.scalar_one_or_none()
+            
+            if chapter:
+                chapter.status = 'published'
+                await db.commit()
+                await db.refresh(chapter)
+                
+                published_chapters.append({
+                    "id": chapter.id,
+                    "title": chapter.title,
+                    "published_at": chapter.updated_at
+                })
+            else:
+                failed_chapters.append({
+                    "id": chapter_id,
+                    "reason": "章节不存在或已发布"
+                })
+        except Exception as e:
+            await db.rollback()
+            failed_chapters.append({
+                "id": chapter_id,
+                "reason": str(e)
+            })
+    
+    # 更新项目统计信息
+    await update_project_stats(request.project_id, db)
+    
+    return {
+        "success": len(failed_chapters) == 0,
+        "published_chapters": published_chapters,
+        "failed_chapters": failed_chapters,
+        "total_count": len(request.chapter_ids),
+        "success_count": len(published_chapters)
+    }

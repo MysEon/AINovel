@@ -26,7 +26,9 @@
       "Bash(python -m alembic revision --autogenerate -m \"Add word_count and chapter_count to projects table\")",
       "Bash(sqlite3:*)",
       "Bash(alembic revision:*)",
-      "Bash(alembic upgrade:*)"
+      "Bash(alembic upgrade:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

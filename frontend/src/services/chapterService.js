@@ -204,3 +204,84 @@ export const batchUpdateChapterStatus = async (updateData) => {
 
   return await response.json();
 };
+
+// 批量发布章节
+export const batchPublishChapters = async (projectId, chapterIds, onProgress) => {
+  const totalChapters = chapterIds.length;
+  let successCount = 0;
+  let errorCount = 0;
+  const results = [];
+
+  for (let i = 0; i < chapterIds.length; i++) {
+    const chapterId = chapterIds[i];
+    try {
+      const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: 'published' })
+      });
+
+      if (response.ok) {
+        const updatedChapter = await response.json();
+        results.push({ chapterId, success: true, chapter: updatedChapter });
+        successCount++;
+      } else {
+        const errorData = await response.json();
+        results.push({ 
+          chapterId, 
+          success: false, 
+          error: errorData.detail || '发布失败' 
+        });
+        errorCount++;
+      }
+    } catch (error) {
+      results.push({ 
+        chapterId, 
+        success: false, 
+        error: error.message || '网络错误' 
+      });
+      errorCount++;
+    }
+
+    // 更新进度
+    if (onProgress) {
+      onProgress({ current: i + 1, total: totalChapters });
+    }
+  }
+
+  return {
+    successCount,
+    errorCount,
+    totalChapters,
+    results
+  };
+};
+
+// 获取未发布章节列表
+export const getUnpublishedChapters = async (projectId, currentChapterId) => {
+  const params = new URLSearchParams();
+  if (currentChapterId) {
+    params.append('current_chapter_id', currentChapterId);
+  }
+  
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/chapters/unpublished?${params}`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    try {
+      const errorText = await response.clone().text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.detail || '获取未发布章节列表失败');
+      } catch (jsonError) {
+        throw new Error(errorText || '获取未发布章节列表失败: 服务器返回错误');
+      }
+    } catch (e) {
+      throw new Error('获取未发布章节列表失败: 服务器返回错误');
+    }
+  }
+
+  return await response.json();
+};
+
