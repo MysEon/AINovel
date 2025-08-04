@@ -125,8 +125,8 @@ class Chapter(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    content = Column(Text)
-    outline = Column(Text)      # 章节大纲
+    content = Column(Text(1000000))  # 限制为1MB
+    outline = Column(Text(50000))    # 限制为50KB
     chapter_number = Column(Integer, default=0)  # 章节编号（第几章）
     order_index = Column(Integer, default=0)  # 章节顺序
     word_count = Column(Integer, default=0)   # 字数统计

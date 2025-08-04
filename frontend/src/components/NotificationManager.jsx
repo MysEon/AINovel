@@ -53,7 +53,8 @@ export const NotificationProvider = ({ children }) => {
     required = false,
     showResultNotification = false,
     successMessage = '操作成功',
-    errorMessage = '操作失败'
+    errorMessage = '操作失败',
+    className = ''
   }) => {
     setConfirmDialog({
       title,
@@ -72,7 +73,8 @@ export const NotificationProvider = ({ children }) => {
       required,
       showResultNotification,
       successMessage,
-      errorMessage
+      errorMessage,
+      className
     });
   };
 
@@ -145,6 +147,7 @@ export const NotificationProvider = ({ children }) => {
           inputPlaceholder={confirmDialog.inputPlaceholder}
           inputType={confirmDialog.inputType}
           required={confirmDialog.required}
+          className={confirmDialog.className}
         />
       )}
     </NotificationContext.Provider>

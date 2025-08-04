@@ -7,11 +7,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func as sql_func, update
 from typing import List, Optional
+import re
 
 from database import get_db
 from models import User, Project, Chapter
 from schemas import ChapterCreate, ChapterUpdate, ChapterResponse, MessageResponse, ChapterBatchUpdate, BatchPublishRequest, BatchPublishResponse
 from .auth import get_current_user_dependency
+
+def calculate_word_count(content: str) -> int:
+    """
+    计算内容的字数（支持中英文混合）
+    - 中文：按字符计算
+    - 英文：按单词计算
+    """
+    if not content:
+        return 0
+    
+    # 移除多余的空白字符
+    content = re.sub(r'\s+', ' ', content.strip())
+    
+    # 计算中文字符数（包括中文标点）
+    chinese_chars = len(re.findall(r'[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]', content))
+    
+    # 计算英文单词数
+    english_words = len(re.findall(r'\b[a-zA-Z]+\b', content))
+    
+    return chinese_chars + english_words
 
 async def update_project_stats(project_id: int, db: AsyncSession):
     """更新项目的统计数据：总字数和总章节数"""
@@ -82,7 +103,14 @@ async def create_chapter(
     )
     max_order_index = max_order_result.scalar_one_or_none() or 0
     
-    word_count = len(chapter_data.content) if chapter_data.content else 0
+    # 验证内容大小
+    if chapter_data.content and len(chapter_data.content) > 1000000:  # 1MB限制
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="章节内容不能超过1MB"
+        )
+    
+    word_count = calculate_word_count(chapter_data.content) if chapter_data.content else 0
     
     chapter_dict = chapter_data.model_dump()
     chapter_dict['project_id'] = project_id
@@ -144,7 +172,13 @@ async def update_chapter(
     update_data = chapter_data.model_dump(exclude_unset=True)
     
     if 'content' in update_data and update_data['content'] is not None:
-        update_data['word_count'] = len(update_data['content'])
+        # 验证内容大小
+        if len(update_data['content']) > 1000000:  # 1MB限制
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="章节内容不能超过1MB"
+            )
+        update_data['word_count'] = calculate_word_count(update_data['content'])
 
     for key, value in update_data.items():
         setattr(chapter, key, value)

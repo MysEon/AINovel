@@ -59,8 +59,13 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         
         if (lastPublished) {
           const nextChapterNumber = lastPublished.chapter_number + 1;
-          chapterToSet = chaptersData.find(ch => ch.chapter_number === nextChapterNumber) || 
-            { id: null, title: `第${nextChapterNumber}章`, chapter_number: nextChapterNumber, status: 'draft' };
+          const nextChapter = chaptersData.find(ch => ch.chapter_number === nextChapterNumber);
+          if (nextChapter) {
+            chapterToSet = nextChapter;
+          } else {
+            // 如果没有下一章，就显示最后一章（已发布的章节）
+            chapterToSet = lastPublished;
+          }
         } else if (chaptersData.length > 0) {
           // 如果没有已发布章节，选择第一个草稿章节
           const draftChapters = chaptersData.filter(ch => ch.status === 'draft');
@@ -110,6 +115,13 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       
       // 更新当前章节数据
       setCurrentChapter(updatedChapter);
+      
+      // 更新章节列表中的对应章节
+      setChapters(prevChapters => 
+        prevChapters.map(chapter => 
+          chapter.id === updatedChapter.id ? updatedChapter : chapter
+        )
+      );
     } catch (error) {
       addNotification({
         message: '保存失败: ' + error.message,
@@ -145,11 +157,15 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         duration: 3000
       });
       
-      // 更新当前章节状态
-      setCurrentChapter(updatedChapter);
+      // 重新获取最新的章节数据以确保状态同步
+      const latestChapters = await getChapters(projectId);
+      setChapters(latestChapters);
       
-      // 刷新章节列表
-      await fetchChapters();
+      // 重新获取当前章节的最新状态
+      const latestChapter = await getChapter(currentChapter.id);
+      setCurrentChapter(latestChapter);
+      
+      // 通知父组件更新项目状态
       if (onProjectsChange) {
         onProjectsChange();
       }
@@ -162,7 +178,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     } finally {
       setIsPublishing(false);
     }
-  }, [isPublishing, content, currentChapter, addNotification, fetchChapters]);
+  }, [isPublishing, content, currentChapter, addNotification, projectId, onProjectsChange]);
 
   // Ctrl+S 快捷键支持
   useEffect(() => {

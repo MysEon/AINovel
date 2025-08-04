@@ -160,8 +160,8 @@ class WorldviewResponse(WorldviewBase):
 # 章节相关模型
 class ChapterBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    content: Optional[str] = None
-    outline: Optional[str] = None
+    content: Optional[str] = Field(None, max_length=1000000)  # 限制为1MB
+    outline: Optional[str] = Field(None, max_length=50000)    # 限制为50KB
     order_index: Optional[int] = 0
     status: str = Field("draft", pattern="^(draft|published)$")
 

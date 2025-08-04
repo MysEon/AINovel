@@ -48,6 +48,30 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
     window.print();
   };
 
+  const handlePreviewChapter = (chapter) => {
+    showConfirmDialog({
+      title: `第${chapter.chapter_number}章 ${chapter.title}`,
+      message: chapter.content,
+      type: 'info',
+      showCancel: false,
+      confirmText: '关闭',
+      className: 'chapter-preview',
+      customContent: (
+        <div className="chapter-detail-content">
+          <div className="chapter-meta-info">
+            <span className="word-count">{chapter.word_count || 0} 字</span>
+            <span className="publish-date">
+              发布于 {new Date(chapter.updated_at).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="chapter-text-content">
+            {chapter.content}
+          </div>
+        </div>
+      )
+    });
+  };
+
   if (readingMode) {
     return (
       <div className="reading-mode">
@@ -180,7 +204,12 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
                       <td>{chapter.title}</td>
                       <td>{chapter.word_count || 0}</td>
                       <td>
-                        <button className="btn-small">预览</button>
+                        <button 
+                          className="btn-small" 
+                          onClick={() => handlePreviewChapter(chapter)}
+                        >
+                          预览
+                        </button>
                       </td>
                     </tr>
                   ))}

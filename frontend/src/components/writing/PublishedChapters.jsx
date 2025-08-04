@@ -105,6 +105,7 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
       type: 'info',
       showCancel: false,
       confirmText: '关闭',
+      className: 'chapter-preview',
       customContent: (
         <div className="chapter-detail-content">
           <div className="chapter-meta-info">
