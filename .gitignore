@@ -157,5 +157,9 @@ fix_*.py
 migrate_*.py
 
 # Claude specific
+.claude/
 .claude/specs/
-*.md
+CLAUDE.md
+TODO.md
+check_db.py
+test_db_insert.py

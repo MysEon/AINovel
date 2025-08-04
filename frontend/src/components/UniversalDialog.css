@@ -17,11 +17,14 @@
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   min-width: 300px;
-  max-width: 500px;
-  width: 90%;
+  max-width: 90vw;
+  max-height: 85vh;
+  width: fit-content;
   overflow: hidden;
   transform: scale(1);
   transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .universal-dialog-error {
@@ -106,6 +109,8 @@
 
 .universal-dialog-content {
   padding: 1.5rem;
+  overflow-y: auto;
+  max-height: 60vh;
 }
 
 .universal-dialog-message {
@@ -252,11 +257,22 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+/* Chapter preview dialog - adaptive height */
+.universal-dialog.chapter-preview {
+  max-height: 85vh;
+}
+
+.universal-dialog.chapter-preview .universal-dialog-content {
+  max-height: 70vh;
+  min-height: 200px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .universal-dialog {
     width: 95%;
     min-width: 280px;
+    max-width: 95vw;
   }
   
   .universal-dialog-content {
