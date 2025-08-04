@@ -140,23 +140,23 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
           {activeTab === 'content' && (
             <div className="content-structure">
               <h3>项目结构</h3>
-              <div className="structure-tree">
-                <div className="tree-item">
+              <div className="structure-list">
+                <div className="project-header">
                   <FaBook /> {project.name}
-                  <div className="tree-children">
-                    {publishedChapters.length > 0 ? (
-                      publishedChapters.map((chapter) => (
-                        <div key={chapter.id} className="tree-item">
-                          <FaList /> 第{chapter.chapter_number}章 {chapter.title} ({chapter.word_count || 0}字)
-                        </div>
-                      ))
-                    ) : (
-                      <div className="tree-item empty-structure">
-                        <FaList /> 暂无已发布章节
-                      </div>
-                    )}
-                  </div>
                 </div>
+                {publishedChapters.length > 0 ? (
+                  <div className="chapters-list">
+                    {publishedChapters.map((chapter) => (
+                      <div key={chapter.id} className="chapter-item">
+                        <FaList /> 第{chapter.chapter_number}章 {chapter.title} ({chapter.word_count || 0}字)
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-structure">
+                    <FaList /> 暂无已发布章节
+                  </div>
+                )}
               </div>
             </div>
           )}

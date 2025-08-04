@@ -169,37 +169,57 @@
   font-weight: 600;
 }
 
-.structure-tree {
+.structure-list {
   font-size: 1rem;
 }
 
-.tree-item {
+.project-header {
   padding: 0.75rem 1rem;
-  border-left: 2px solid var(--border-color);
-  margin-left: 1rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
 }
 
-.tree-item:first-child {
-  border-left: none;
-  margin-left: 0;
-}
-
-.tree-item > .tree-children {
-  margin-top: 0.5rem;
-  margin-left: 1.5rem;
-}
-
-.tree-item svg {
+.project-header svg {
   margin-right: 0.5rem;
   color: var(--primary-color);
 }
 
-.tree-item.empty-structure {
-  color: var(--secondary-text-color);
-  font-style: italic;
+.chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.tree-item.empty-structure svg {
+.chapter-item {
+  padding: 0.75rem 1rem;
+  background: var(--content-bg);
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.chapter-item:hover {
+  background: var(--hover-bg);
+}
+
+.chapter-item svg {
+  margin-right: 0.5rem;
+  color: var(--primary-color);
+}
+
+.empty-structure {
+  padding: 1rem;
+  color: var(--secondary-text-color);
+  font-style: italic;
+  text-align: center;
+  background: var(--content-bg);
+  border-radius: 6px;
+}
+
+.empty-structure svg {
+  margin-right: 0.5rem;
   color: var(--secondary-text-color);
   opacity: 0.6;
 }
