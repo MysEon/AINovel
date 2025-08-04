@@ -23,11 +23,43 @@ const BatchChapterPublishDialog = ({
   // 计算对话框位置
   const getDialogStyle = () => {
     if (!triggerPosition) return {};
+    
+    const dialogWidth = 450; // 预估对话框宽度
+    const dialogHeight = 500; // 预估对话框高度
+    const margin = 20; // 边距
+    
+    let left = triggerPosition.left;
+    let top = triggerPosition.bottom + 10;
+    let arrowPosition = 'top'; // 箭头位置：top 或 bottom
+    
+    // 确保不超出右边界
+    if (left + dialogWidth > window.innerWidth - margin) {
+      left = window.innerWidth - dialogWidth - margin;
+    }
+    
+    // 确保不超出左边界
+    if (left < margin) {
+      left = margin;
+    }
+    
+    // 如果下方空间不够，显示在按钮上方
+    if (top + dialogHeight > window.innerHeight - margin) {
+      top = triggerPosition.top - dialogHeight - 10;
+      arrowPosition = 'bottom';
+    }
+    
+    // 确保不超出顶部
+    if (top < margin) {
+      top = margin;
+    }
+    
     return {
       position: 'fixed',
-      top: triggerPosition.bottom + 10,
-      left: triggerPosition.left,
-      zIndex: 1000
+      top: top,
+      left: left,
+      zIndex: 1000,
+      '--arrow-position': arrowPosition,
+      '--arrow-left': `${triggerPosition.left + triggerPosition.width / 2 - left}px`
     };
   };
 
@@ -122,8 +154,14 @@ const BatchChapterPublishDialog = ({
   };
 
   if (publishing) {
+    const dialogStyle = getDialogStyle();
+    const arrowPosition = dialogStyle['--arrow-position'] || 'top';
+    
     return (
-      <div className="batch-publish-dialog publishing" style={getDialogStyle()}>
+      <div className="batch-publish-dialog publishing" style={dialogStyle}>
+        {/* 箭头指向触发按钮 */}
+        <div className={`dialog-arrow arrow-${arrowPosition}`} />
+        
         <div className="publishing-content">
           <div className="publishing-icon">
             <FaUpload />
@@ -144,10 +182,13 @@ const BatchChapterPublishDialog = ({
     );
   }
 
+  const dialogStyle = getDialogStyle();
+  const arrowPosition = dialogStyle['--arrow-position'] || 'top';
+  
   return (
-    <div className="batch-publish-dialog" style={getDialogStyle()}>
+    <div className="batch-publish-dialog" style={dialogStyle}>
       {/* 箭头指向触发按钮 */}
-      <div className="dialog-arrow" />
+      <div className={`dialog-arrow arrow-${arrowPosition}`} />
       
       <div className="dialog-header">
         <h3><FaUpload /> 批量发布章节</h3>

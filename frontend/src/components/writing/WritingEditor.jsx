@@ -325,7 +325,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       top: rect.top,
       left: rect.left,
       bottom: rect.bottom,
-      right: rect.right
+      right: rect.right,
+      width: rect.width,
+      height: rect.height
     });
     setShowBatchPublish(true);
   };

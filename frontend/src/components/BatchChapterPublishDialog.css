@@ -14,17 +14,21 @@
 /* 对话框箭头 */
 .dialog-arrow {
   position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
+}
+
+/* 箭头在顶部 */
+.dialog-arrow.arrow-top {
+  top: -8px;
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
   border-bottom: 8px solid white;
 }
 
-.dialog-arrow::before {
+.dialog-arrow.arrow-top::before {
   content: '';
   position: absolute;
   top: -9px;
@@ -34,6 +38,26 @@
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
   border-bottom: 9px solid #e1e5e9;
+}
+
+/* 箭头在底部 */
+.dialog-arrow.arrow-bottom {
+  bottom: -8px;
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
+  border-top: 8px solid white;
+}
+
+.dialog-arrow.arrow-bottom::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: -9px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 9px solid #e1e5e9;
 }
 
 /* 对话框头部 */
