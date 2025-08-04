@@ -194,6 +194,16 @@
   color: var(--primary-color);
 }
 
+.tree-item.empty-structure {
+  color: var(--secondary-text-color);
+  font-style: italic;
+}
+
+.tree-item.empty-structure svg {
+  color: var(--secondary-text-color);
+  opacity: 0.6;
+}
+
 .chapters-table {
   width: 100%;
   border-collapse: collapse;

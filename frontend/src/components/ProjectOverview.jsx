@@ -144,16 +144,17 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
                 <div className="tree-item">
                   <FaBook /> {project.name}
                   <div className="tree-children">
-                    <div className="tree-item">
-                      <FaList /> 已发布章节
-                      <div className="tree-children">
-                        {publishedChapters.map((chapter) => (
-                          <div key={chapter.id} className="tree-item">
-                            第{chapter.chapter_number}章 {chapter.title} ({chapter.word_count || 0}字)
-                          </div>
-                        ))}
+                    {publishedChapters.length > 0 ? (
+                      publishedChapters.map((chapter) => (
+                        <div key={chapter.id} className="tree-item">
+                          <FaList /> 第{chapter.chapter_number}章 {chapter.title} ({chapter.word_count || 0}字)
+                        </div>
+                      ))
+                    ) : (
+                      <div className="tree-item empty-structure">
+                        <FaList /> 暂无已发布章节
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
