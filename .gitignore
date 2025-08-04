@@ -148,3 +148,14 @@ Thumbs.db
 # AI Novel specific
 ainovel.db
 *.log
+
+# Test files
+test_*.py
+*_test.py
+check_*.py
+fix_*.py
+migrate_*.py
+
+# Claude specific
+.claude/specs/
+*.md

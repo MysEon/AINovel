@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaBook, FaClock, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa';
-
-import ConfirmationDialog from './ConfirmationDialog';
+import { useNotification } from './NotificationManager';
 const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, onDeleteProject, onLogout }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
+  const { showConfirmDialog } = useNotification();
 
   // 确保主题在仪表板页面正确应用
   useEffect(() => {
@@ -98,7 +97,15 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                     </button>
                     <button 
                       className="action-btn delete-btn"
-                      onClick={() => setShowDeleteConfirm(project)}
+                      onClick={() => {
+                    showConfirmDialog({
+                      title: '确认删除项目',
+                      message: `您确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
+                      type: 'error',
+                      confirmText: '确认删除',
+                      onConfirm: () => onDeleteProject(project.id)
+                    });
+                  }}
                       title="删除项目"
                     >
                       <FaTrash />
@@ -190,19 +197,6 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
             </form>
           </div>
         </div>
-      )}
-
-      {showDeleteConfirm && (
-        <ConfirmationDialog
-          title="确认删除项目"
-          message={`您确定要删除项目 "${showDeleteConfirm.name}" 吗？此操作无法撤销。`}
-          onConfirm={() => {
-            onDeleteProject(showDeleteConfirm.id);
-            setShowDeleteConfirm(null);
-          }}
-          onCancel={() => setShowDeleteConfirm(null)}
-          confirmText="确认删除"
-        />
       )}
     </div>
   );

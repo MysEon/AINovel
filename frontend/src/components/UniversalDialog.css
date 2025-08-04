@@ -1,0 +1,273 @@
+.universal-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.universal-dialog {
+  background: var(--background-color, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  max-width: 500px;
+  width: 90%;
+  overflow: hidden;
+  transform: scale(1);
+  transition: transform 0.3s ease;
+}
+
+.universal-dialog-error {
+  border-top: 4px solid #dc3545;
+}
+
+.universal-dialog-warning {
+  border-top: 4px solid #ffc107;
+}
+
+.universal-dialog-success {
+  border-top: 4px solid #28a745;
+}
+
+.universal-dialog-info {
+  border-top: 4px solid #17a2b8;
+}
+
+.universal-dialog-question {
+  border-top: 4px solid #007bff;
+}
+
+.universal-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.universal-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.universal-dialog-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color, #333333);
+}
+
+.universal-dialog-icon {
+  font-size: 1.5rem;
+}
+
+.universal-dialog-error .universal-dialog-icon {
+  color: #dc3545;
+}
+
+.universal-dialog-warning .universal-dialog-icon {
+  color: #ffc107;
+}
+
+.universal-dialog-success .universal-dialog-icon {
+  color: #28a745;
+}
+
+.universal-dialog-info .universal-dialog-icon {
+  color: #17a2b8;
+}
+
+.universal-dialog-question .universal-dialog-icon {
+  color: #007bff;
+}
+
+.universal-dialog-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.universal-dialog-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.universal-dialog-content {
+  padding: 1.5rem;
+}
+
+.universal-dialog-message {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-color, #333333);
+}
+
+.universal-dialog-custom-content {
+  margin-bottom: 1rem;
+}
+
+.universal-dialog-input-container {
+  margin-top: 1rem;
+}
+
+.universal-dialog-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: var(--input-background, #ffffff);
+  color: var(--text-color, #333333);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.universal-dialog-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.universal-dialog-input::placeholder {
+  color: #999;
+}
+
+.universal-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.universal-dialog-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.universal-dialog-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.universal-dialog-button.cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.universal-dialog-button.cancel:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.universal-dialog-button.confirm {
+  background-color: #007bff;
+  color: white;
+}
+
+.universal-dialog-button.confirm:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.universal-dialog-error .universal-dialog-button.confirm {
+  background-color: #dc3545;
+}
+
+.universal-dialog-error .universal-dialog-button.confirm:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.universal-dialog-warning .universal-dialog-button.confirm {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.universal-dialog-warning .universal-dialog-button.confirm:hover:not(:disabled) {
+  background-color: #e0a800;
+}
+
+.universal-dialog-success .universal-dialog-button.confirm {
+  background-color: #28a745;
+}
+
+.universal-dialog-success .universal-dialog-button.confirm:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+/* Dark theme support */
+.dark-theme .universal-dialog {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
+.dark-theme .universal-dialog-header,
+.dark-theme .universal-dialog-actions {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-theme .universal-dialog-close {
+  color: #ccc;
+}
+
+.dark-theme .universal-dialog-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .universal-dialog-message {
+  color: #ffffff;
+}
+
+.dark-theme .universal-dialog-title h3 {
+  color: #ffffff;
+}
+
+.dark-theme .universal-dialog-input {
+  background-color: #3d3d3d;
+  color: #ffffff;
+  border-color: #555;
+}
+
+.dark-theme .universal-dialog-input::placeholder {
+  color: #aaa;
+}
+
+.dark-theme .universal-dialog-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .universal-dialog {
+    width: 95%;
+    min-width: 280px;
+  }
+  
+  .universal-dialog-content {
+    padding: 1rem;
+  }
+  
+  .universal-dialog-actions {
+    flex-direction: column;
+  }
+  
+  .universal-dialog-button {
+    width: 100%;
+  }
+}

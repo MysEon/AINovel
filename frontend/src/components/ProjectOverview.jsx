@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBook, FaList, FaEye, FaDownload, FaPrint } from 'react-icons/fa';
 import { getChapters } from '../services/chapterService';
+import { useNotification } from './NotificationManager';
 import './ProjectOverview.css';
 
 const ProjectOverview = ({ project, onNavigateToDrafts }) => {
@@ -8,6 +9,7 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
   const [readingMode, setReadingMode] = useState(false);
   const [publishedChapters, setPublishedChapters] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { addNotification } = useNotification();
 
   // 获取已发布的章节数据
   useEffect(() => {
@@ -35,7 +37,11 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
 
   const handleExport = (format) => {
     // 导出功能实现
-    alert(`导出为${format}格式功能待实现`);
+    addNotification({
+      message: `导出为${format}格式功能待实现`,
+      type: 'info',
+      duration: 3000
+    });
   };
 
   const handlePrint = () => {
@@ -50,9 +56,9 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
           <button onClick={() => setReadingMode(false)}>退出阅读模式</button>
         </div>
         <div className="reading-content">
-          {publishedChapters.map((chapter, index) => (
+          {publishedChapters.map((chapter) => (
             <div key={chapter.id} className="chapter-section">
-              <h2>第{index + 1}章 {chapter.title}</h2>
+              <h2>第{chapter.chapter_number}章 {chapter.title}</h2>
               <p>{chapter.content}</p>
             </div>
           ))}
@@ -141,9 +147,9 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
                     <div className="tree-item">
                       <FaList /> 已发布章节
                       <div className="tree-children">
-                        {publishedChapters.map((chapter, index) => (
+                        {publishedChapters.map((chapter) => (
                           <div key={chapter.id} className="tree-item">
-                            第{index + 1}章 {chapter.title} ({chapter.word_count || 0}字)
+                            第{chapter.chapter_number}章 {chapter.title} ({chapter.word_count || 0}字)
                           </div>
                         ))}
                       </div>
@@ -167,9 +173,9 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {publishedChapters.map((chapter, index) => (
+                  {publishedChapters.map((chapter) => (
                     <tr key={chapter.id}>
-                      <td>第{index + 1}章</td>
+                      <td>第{chapter.chapter_number}章</td>
                       <td>{chapter.title}</td>
                       <td>{chapter.word_count || 0}</td>
                       <td>

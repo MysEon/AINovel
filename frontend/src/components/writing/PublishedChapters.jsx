@@ -7,7 +7,6 @@ import './PublishedChapters.css';
 const PublishedChapters = ({ projectId, onProjectsChange }) => {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedChapter, setSelectedChapter] = useState(null);
   const { addNotification, showConfirmDialog } = useNotification();
 
   // 获取已发布的章节
@@ -36,10 +35,7 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
     }
   }, [projectId, addNotification]);
 
-  // 查看章节内容
-  const viewChapter = (chapter) => {
-    setSelectedChapter(chapter);
-  };
+  // 查看章节内容 - 已被新的 UniversalDialog 实现替换
 
   // 编辑章节
   const editChapter = (chapter) => {
@@ -100,9 +96,29 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
     });
   };
 
-  // 关闭章节详情
-  const closeChapterDetail = () => {
-    setSelectedChapter(null);
+  
+  // 使用 UniversalDialog 显示章节详情
+  const viewChapter = (chapter) => {
+    showConfirmDialog({
+      title: `第${chapter.chapter_number}章 ${chapter.title}`,
+      message: chapter.content,
+      type: 'info',
+      showCancel: false,
+      confirmText: '关闭',
+      customContent: (
+        <div className="chapter-detail-content">
+          <div className="chapter-meta-info">
+            <span className="word-count">{chapter.word_count || 0} 字</span>
+            <span className="publish-date">
+              发布于 {new Date(chapter.updated_at).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="chapter-text-content">
+            {chapter.content}
+          </div>
+        </div>
+      )
+    });
   };
 
   if (loading) {
@@ -134,7 +150,7 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
             {chapters.map((chapter) => (
               <div key={chapter.id} className="chapter-card">
                 <div className="chapter-header">
-                  <h3>{chapter.title}</h3>
+                  <h3>第{chapter.chapter_number}章 {chapter.title}</h3>
                   <div className="chapter-meta">
                     <span className="word-count">{chapter.word_count || 0} 字</span>
                     <span className="publish-date">
@@ -188,29 +204,7 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
         </div>
       )}
 
-      {selectedChapter && (
-        <div className="chapter-modal">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{selectedChapter.title}</h2>
-              <button className="close-button" onClick={closeChapterDetail}>
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="chapter-content">
-                {selectedChapter.content}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="close-modal-button" onClick={closeChapterDetail}>
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 };
 

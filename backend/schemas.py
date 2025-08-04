@@ -163,6 +163,7 @@ class ChapterBase(BaseModel):
     content: Optional[str] = None
     outline: Optional[str] = None
     order_index: Optional[int] = 0
+    status: str = Field("draft", pattern="^(draft|published)$")
 
 class ChapterCreate(ChapterBase):
     project_id: Optional[int] = None
@@ -174,6 +175,7 @@ class ChapterUpdate(ChapterBase):
 class ChapterResponse(ChapterBase):
     id: int
     project_id: int
+    chapter_number: int
     word_count: int
     status: str
     created_at: datetime

@@ -10,11 +10,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [content, setContent] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
-  const [manualChapter, setManualChapter] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isEditorLocked, setIsEditorLocked] = useState(false);
-  const [showNewChapterDialog, setShowNewChapterDialog] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const { addNotification, showConfirmDialog } = useNotification();
 
@@ -54,18 +52,19 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       if (!chapterToSet) {
         const lastPublished = chaptersData
           .filter(chapter => chapter.status === 'published')
-          .sort((a, b) => b.order_index - a.order_index)[0];
+          .sort((a, b) => b.chapter_number - a.chapter_number)[0];
         
         if (lastPublished) {
-          const nextChapterIndex = lastPublished.order_index + 1;
-          chapterToSet = chaptersData.find(ch => ch.order_index === nextChapterIndex) || 
-            { id: null, title: `第${nextChapterIndex}章`, order_index: nextChapterIndex, status: 'draft' };
+          const nextChapterNumber = lastPublished.chapter_number + 1;
+          chapterToSet = chaptersData.find(ch => ch.chapter_number === nextChapterNumber) || 
+            { id: null, title: `第${nextChapterNumber}章`, chapter_number: nextChapterNumber, status: 'draft' };
         } else if (chaptersData.length > 0) {
-          // 如果没有已发布章节，选择第一个
-          chapterToSet = chaptersData[0];
+          // 如果没有已发布章节，选择第一个草稿章节
+          const draftChapters = chaptersData.filter(ch => ch.status === 'draft');
+          chapterToSet = draftChapters.length > 0 ? draftChapters[0] : chaptersData[0];
         } else {
           // 如果没有任何章节，创建一个默认的
-          chapterToSet = { id: null, title: '第一章', order_index: 1, status: 'draft' };
+          chapterToSet = { id: null, title: '第一章', chapter_number: 1, status: 'draft' };
         }
       }
       
@@ -191,11 +190,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
   const handleChapterChange = async (e) => {
     const selectedId = e.target.value;
-    if (selectedId === 'manual') {
-      setCurrentChapter(null);
-      setContent('');
-      setManualChapter('');
-    } else {
+    if (selectedId) {
       try {
         const chapterId = parseInt(selectedId);
         const chapterDetails = await getChapter(chapterId);
@@ -218,7 +213,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
     showConfirmDialog({
       title: '确认解锁章节',
-      message: `您确定要解锁章节 "${currentChapter.title}" 吗？这将导致该章节及其之后的所有已发布章节状态变更为“草稿”，以便您可以重新编辑。`,
+      message: `您确定要解锁章节 "${currentChapter.title}" 吗？这将导致该章节及其之后的所有已发布章节状态变更为"草稿"，以便您可以重新编辑。`,
       type: 'warning',
       showResultNotification: true,
       successMessage: '章节已成功解锁，您可以开始编辑了',
@@ -227,7 +222,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         try {
             await batchUpdateChapterStatus({
               project_id: projectId,
-              from_order_index: currentChapter.order_index,
+              from_order_index: currentChapter.chapter_number,
               new_status: 'draft'
             });
             
@@ -250,97 +245,28 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   };
 
   // 开启新章
-  const handleStartNewChapter = async () => {
-    if (!newChapterTitle.trim() || !projectId) return;
+  const handleStartNewChapter = async (title) => {
+    if (!title.trim() || !projectId) return;
     
-    try {
-      const nextOrderIndex = chapters.length > 0
-        ? Math.max(...chapters.map(ch => ch.order_index)) + 1
-        : 1;
-
-      const newChapterData = {
-        title: newChapterTitle,
-        content: '',
-        outline: '',
-        order_index: nextOrderIndex,
-        status: 'draft'
-      };
-      
-      const newChapter = await createChapter(projectId, newChapterData);
-      
-      setChapters(prev => [...prev, newChapter].sort((a, b) => a.order_index - b.order_index));
-      setCurrentChapter(newChapter);
-      setShowNewChapterDialog(false);
-      setNewChapterTitle('');
-      
-      addNotification({
-        message: '新章节已开启',
-        type: 'success',
-        duration: 3000
-      });
-
-      if (onProjectsChange) {
-        onProjectsChange();
-      }
-    } catch (error) {
-      addNotification({
-        message: '开启新章失败: ' + error.message,
-        type: 'error',
-        duration: 3000
-      });
-    }
-  };
-
-  const handleManualChapterChange = (e) => {
-    setManualChapter(e.target.value);
-  };
-
-  // 创建新章节
-  const createNewChapter = async () => {
-    if (!manualChapter.trim() || !projectId) return;
+    const newChapterData = {
+      title: title,
+      content: '',
+      outline: '',
+      status: 'draft'
+    };
     
-    try {
-      const newChapterData = {
-        title: manualChapter.trim(),
-        content: '',
-        outline: '',
-        order_index: chapters.length + 1,
-        status: 'draft'
-        // project_id由后端从URL参数中获取，不需要在请求体中发送
-      };
-      
-      const newChapter = await createChapter(projectId, newChapterData);
-      
-      // 添加到章节列表
-      setChapters(prev => [...prev, newChapter]);
-      
-      // 设置为当前章节
-      setCurrentChapter(newChapter);
-      setContent('');
-      setManualChapter('');
-      
-      addNotification({
-        message: '新章节已创建',
-        type: 'success',
-        duration: 3000
-      });
+    const newChapter = await createChapter(projectId, newChapterData);
+    
+    setChapters(prev => [...prev, newChapter].sort((a, b) => a.chapter_number - b.chapter_number));
+    setCurrentChapter(newChapter);
+    setNewChapterTitle('');
 
-      if (onProjectsChange) {
-        onProjectsChange();
-      }
-    } catch (error) {
-      addNotification({
-        message: '创建章节失败: ' + error.message,
-        type: 'error',
-        duration: 3000
-      });
+    if (onProjectsChange) {
+      onProjectsChange();
     }
   };
 
   const getChapterDisplay = () => {
-    if (manualChapter) {
-      return manualChapter;
-    }
     return currentChapter ? currentChapter.title : '未选择章节';
   };
 
@@ -361,11 +287,26 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   return (
     <div className="writing-editor">
       <div className="editor-content">
-        {chapters.length === 0 && !manualChapter ? (
+        {chapters.length === 0 ? (
           <div className="empty-chapters-notice">
             <h3>欢迎开始创作！</h3>
             <p>您的项目目前还没有章节。</p>
-            <button className="create-chapter-button" onClick={() => setManualChapter('第一章')}>
+            <button className="create-chapter-button" onClick={() => {
+              showConfirmDialog({
+                title: '创建第一个章节',
+                message: '请输入章节标题：',
+                showInput: true,
+                inputValue: '',
+                onInputChange: (value) => {},
+                inputPlaceholder: '例如：第一章：开始',
+                required: true,
+                type: 'info',
+                showResultNotification: true,
+                successMessage: '第一个章节已创建',
+                errorMessage: '创建第一个章节失败',
+                onConfirm: handleStartNewChapter
+              });
+            }}>
               <FaBook /> 创建第一个章节
             </button>
             <p>点击上方按钮创建您的第一个章节，开始您的创作之旅。</p>
@@ -391,10 +332,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             <select value={currentChapter?.id || ''} onChange={handleChapterChange}>
               {chapters.map(chapter => (
                 <option key={chapter.id} value={chapter.id}>
-                  {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
+                  第{chapter.chapter_number}章 {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
                 </option>
               ))}
-              <option value="manual">手动输入</option>
             </select>
             {currentChapter && (
               <span className={`chapter-status ${currentChapter.status}`}>
@@ -418,30 +358,27 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           </button>
           <button 
             className="publish-button"
-            onClick={() => setShowNewChapterDialog(true)}
+            onClick={() => {
+              showConfirmDialog({
+                title: '开启新章节',
+                message: '请输入新章节的标题：',
+                showInput: true,
+                inputValue: newChapterTitle,
+                onInputChange: (value) => setNewChapterTitle(value),
+                inputPlaceholder: '例如：新的征程',
+                required: true,
+                type: 'info',
+                showResultNotification: true,
+                successMessage: '新章节已开启',
+                errorMessage: '开启新章失败',
+                onConfirm: handleStartNewChapter
+              });
+            }}
             title="开启一个全新的章节"
           >
             <FaPlus />
             <span>开启新章</span>
           </button>
-          {manualChapter !== '' && (
-            <div className="manual-chapter-input-group">
-              <input
-                type="text"
-                value={manualChapter}
-                onChange={handleManualChapterChange}
-                placeholder="输入章节名称"
-                className="manual-chapter-input"
-              />
-              <button 
-                className="create-chapter-button"
-                onClick={createNewChapter}
-                disabled={!manualChapter.trim()}
-              >
-                创建章节
-              </button>
-            </div>
-          )}
         </div>
         <div className="footer-right">
           {aiAssisted && (
@@ -484,41 +421,6 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       </div>
 
       {/* Unlock confirmation dialog is now handled globally by NotificationManager */}
-
-      {showNewChapterDialog && (
-        <NewChapterDialog
-          value={newChapterTitle}
-          onChange={(e) => setNewChapterTitle(e.target.value)}
-          onConfirm={handleStartNewChapter}
-          onCancel={() => setShowNewChapterDialog(false)}
-        />
-      )}
-    </div>
-  );
-};
-
-const NewChapterDialog = ({ value, onChange, onConfirm, onCancel }) => {
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>开启新章节</h2>
-        <p>请输入新章节的标题：</p>
-        <input
-          type="text"
-          value={value}
-          onChange={onChange}
-          placeholder="例如：第三章：新的征程"
-          autoFocus
-        />
-        <div className="form-actions">
-          <button type="button" className="cancel-btn" onClick={onCancel}>
-            取消
-          </button>
-          <button type="button" className="confirm-btn" onClick={onConfirm} disabled={!value.trim()}>
-            确认
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

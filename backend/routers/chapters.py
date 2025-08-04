@@ -70,11 +70,25 @@ async def create_chapter(
     """在指定项目中创建一个新章节"""
     await get_project_for_user(project_id, db, current_user)
     
+    # 获取项目中最大的章节编号
+    max_chapter_result = await db.execute(
+        select(sql_func.max(Chapter.chapter_number)).where(Chapter.project_id == project_id)
+    )
+    max_chapter_number = max_chapter_result.scalar_one_or_none() or 0
+    
+    # 获取项目中最大的order_index
+    max_order_result = await db.execute(
+        select(sql_func.max(Chapter.order_index)).where(Chapter.project_id == project_id)
+    )
+    max_order_index = max_order_result.scalar_one_or_none() or 0
+    
     word_count = len(chapter_data.content) if chapter_data.content else 0
     
     chapter_dict = chapter_data.model_dump()
     chapter_dict['project_id'] = project_id
     chapter_dict['word_count'] = word_count
+    chapter_dict['chapter_number'] = max_chapter_number + 1
+    chapter_dict['order_index'] = max_order_index + 1
     
     new_chapter = Chapter(**chapter_dict)
     db.add(new_chapter)

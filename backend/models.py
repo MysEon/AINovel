@@ -127,6 +127,7 @@ class Chapter(Base):
     title = Column(String(200), nullable=False)
     content = Column(Text)
     outline = Column(Text)      # 章节大纲
+    chapter_number = Column(Integer, default=0)  # 章节编号（第几章）
     order_index = Column(Integer, default=0)  # 章节顺序
     word_count = Column(Integer, default=0)   # 字数统计
     status = Column(String(20), default="draft")  # draft, published
