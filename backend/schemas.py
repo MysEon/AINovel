@@ -3,7 +3,7 @@ Pydantic模型定义
 用于API请求和响应的数据验证
 """
 
-from pydantic import BaseModel, EmailStr, Field, computed_field
+from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -237,6 +237,17 @@ class ModelConfigBase(BaseModel):
     model_name: Optional[str] = Field(None, max_length=100, description="例如: gpt-4, claude-3-opus")
     temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(2000, gt=0)
+    
+    # 新增LLM参数
+    api_url: Optional[str] = Field(None, max_length=500, description="自定义API URL")
+    top_p: Optional[float] = Field(1.0, ge=0.0, le=1.0, description="核采样参数")
+    top_k: Optional[int] = Field(40, ge=0, le=100, description="顶部K采样")
+    frequency_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="频率惩罚")
+    presence_penalty: Optional[float] = Field(0.0, ge=-2.0, le=2.0, description="存在惩罚")
+    stop_sequences: Optional[List[str]] = Field([], description="停止序列列表")
+    stream: Optional[bool] = Field(False, description="流式输出")
+    logprobs: Optional[bool] = Field(False, description="对数概率")
+    top_logprobs: Optional[int] = Field(0, ge=0, le=20, description="顶部对数概率数量")
 
 class ModelConfigCreate(ModelConfigBase):
     api_key: Optional[str] = Field(None, min_length=1, max_length=500, description="API密钥将加密存储")
@@ -248,6 +259,17 @@ class ModelConfigUpdate(BaseModel):
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(None, gt=0)
     api_key: Optional[str] = Field(None, min_length=1, max_length=500)
+    
+    # 新增LLM参数
+    api_url: Optional[str] = Field(None, max_length=500)
+    top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
+    top_k: Optional[int] = Field(None, ge=0, le=100)
+    frequency_penalty: Optional[float] = Field(None, ge=-2.0, le=2.0)
+    presence_penalty: Optional[float] = Field(None, ge=-2.0, le=2.0)
+    stop_sequences: Optional[List[str]] = Field(None)
+    stream: Optional[bool] = Field(None)
+    logprobs: Optional[bool] = Field(None)
+    top_logprobs: Optional[int] = Field(None, ge=0, le=20)
 
 class ModelConfigResponse(ModelConfigBase):
     id: int
@@ -255,8 +277,31 @@ class ModelConfigResponse(ModelConfigBase):
     created_at: datetime
     updated_at: datetime
     
+    @field_validator('stop_sequences', mode='before')
+    @classmethod
+    def parse_stop_sequences(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except:
+                return []
+        return v or []
+    
     class Config:
         from_attributes = True
+
+# 测试连接请求模型
+class TestConnectionRequest(BaseModel):
+    api_key: str = Field(..., min_length=1, max_length=500, description="API密钥")
+    api_url: Optional[str] = Field(None, max_length=500, description="自定义API URL")
+    model_type: str = Field(..., min_length=1, max_length=50, description="模型类型")
+    model_name: Optional[str] = Field(None, max_length=100, description="模型名称")
+
+# 测试连接响应模型
+class TestConnectionResponse(BaseModel):
+    success: bool
+    message: str
+    details: Optional[dict] = None
 
 # 提示词模板相关模型
 class PromptTemplateBase(BaseModel):

@@ -165,6 +165,18 @@ class ModelConfig(Base):
     model_name = Column(String(100))  # gpt-4, claude-3, etc
     temperature = Column(String(10), default="0.7")
     max_tokens = Column(Integer, default=2000)
+    
+    # 新增LLM参数
+    api_url = Column(String(500))  # 自定义API URL
+    top_p = Column(String(10), default="1.0")  # 核采样参数
+    top_k = Column(Integer, default=40)  # 顶部K采样
+    frequency_penalty = Column(String(10), default="0.0")  # 频率惩罚
+    presence_penalty = Column(String(10), default="0.0")  # 存在惩罚
+    stop_sequences = Column(Text)  # 停止序列，JSON数组格式
+    stream = Column(Boolean, default=False)  # 流式输出
+    logprobs = Column(Boolean, default=False)  # 对数概率
+    top_logprobs = Column(Integer, default=0)  # 顶部对数概率数量
+    
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
