@@ -5,6 +5,7 @@ import WritingEditor from './writing/WritingEditor';
 import PublishedChapters from './writing/PublishedChapters';
 import KanbanBoard from './KanbanBoard';
 import ModelConfigManager from './ModelConfigManager';
+import KnowledgeBase from './KnowledgeBase';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import './ProjectEditor.css';
 
@@ -97,7 +98,7 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
   const menuItems = {
     '开始写作': ['开始写作'],
     '项目管理': ['模型参数选择', '提示词管理'],
-    '知识库': ['角色管理', '地点管理', '组织管理', '世界观管理'],
+    '知识库': ['知识库总览', '角色管理', '地点管理', '组织管理', '世界观管理'],
     '剧情结构': ['主线大纲', '章节管理', '时间线'],
     '写作辅助': ['对话生成', '语言润色', '情感分析'],
     '创作库': ['已发布', '历史版本'],
@@ -127,6 +128,8 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         />;
       case '模型参数选择':
         return <ModelConfigManager />;
+      case '知识库总览':
+        return <KnowledgeBase projectId={project.id} />;
       default:
         return <textarea placeholder="在这里开始你的创作..."></textarea>;
     }

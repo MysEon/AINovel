@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from database import create_tables
-from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates
+from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
 
 # 应用启动时创建数据库表
 create_tables()
@@ -46,6 +46,8 @@ app.include_router(drafts.router)
 app.include_router(model_configs.router)
 # 挂载提示词模板路由
 app.include_router(prompt_templates.router)
+# 挂载知识库路由
+app.include_router(knowledge.router)
 
 @app.get("/", tags=["Root"])
 def read_root():
