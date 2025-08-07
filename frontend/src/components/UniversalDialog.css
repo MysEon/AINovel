@@ -215,7 +215,7 @@
   background-color: #218838;
 }
 
-/* Dark theme support */
+/* 暗色主题支持 */
 .dark-theme .universal-dialog {
   background: #2d2d2d;
   color: #ffffff;
@@ -257,7 +257,7 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Chapter preview dialog - adaptive height */
+/* 章节预览弹窗 - 自适应高度 */
 .universal-dialog.chapter-preview {
   max-height: 85vh;
 }
@@ -267,7 +267,7 @@
   min-height: 200px;
 }
 
-/* Responsive design */
+/* 响应式设计 */
 @media (max-width: 768px) {
   .universal-dialog {
     width: 95%;

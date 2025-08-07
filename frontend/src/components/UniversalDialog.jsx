@@ -47,7 +47,7 @@ const UniversalDialog = ({
       try {
         await onConfirm(currentInputValue);
       } catch (error) {
-        console.error('Dialog confirm error:', error);
+        console.error('弹窗确认错误:', error);
         throw error;
       }
     }

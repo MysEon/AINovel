@@ -150,12 +150,6 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         hideBackButton={true} // 隐藏Sidebar中的返回按钮
       />
       <main className="content">
-        <header>
-          <div className="content-title">
-            <h3>{activeItem}</h3>
-            <p className="project-name">项目：{project.name}</p>
-          </div>
-        </header>
         <div className="content-actions">
           <button onClick={onBackToDashboard} className="back-to-dashboard" title="返回项目列表">
             <FaArrowLeft />
