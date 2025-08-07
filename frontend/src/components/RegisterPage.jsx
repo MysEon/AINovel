@@ -110,7 +110,6 @@ const RegisterPage = ({ onNavigate }) => {
       <div className="login-container">
         <div className="login-header">
           <h1>创建账户</h1>
-          <p>加入AINovel，开始您的创作之旅</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

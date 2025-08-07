@@ -103,11 +103,26 @@ const Sidebar = ({
   onCreateProject,
   hideProjectSelector = false,
   projectName,
-  onBackToDashboard
+  onBackToDashboard,
+  hideBackButton = false
 }) => {
   return (
     <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <div dangerouslySetInnerHTML={{ __html: startWritingStyles }} />
+      {!isCollapsed && hideProjectSelector && onBackToDashboard && !hideBackButton && (
+        <>
+          <div className="project-header-with-back">
+            <button className="compact-back-btn" onClick={onBackToDashboard} title="返回项目列表">
+              <FaArrowLeft />
+            </button>
+          </div>
+          <div className="project-info-separate">
+            <span className="project-label">当前项目</span>
+            <span className="project-name-compact">{projectName}</span>
+          </div>
+        </>
+      )}
+      
       <div className="sidebar-header">
         <div className="project-section">
           {!isCollapsed && !hideProjectSelector && (
@@ -134,19 +149,12 @@ const Sidebar = ({
             </div>
           )}
           
-          {!isCollapsed && hideProjectSelector && onBackToDashboard && (
-            <div className="project-header-with-back">
-              <button className="compact-back-btn" onClick={onBackToDashboard} title="返回项目列表">
-                <FaArrowLeft />
-              </button>
-              <div className="project-info">
-                <span className="project-label">项目</span>
-                <span className="project-name-compact">{projectName}</span>
-              </div>
+          {!isCollapsed && (
+            <div className="app-title-section">
+              <h1>AINovel</h1>
+              <span className="app-subtitle">智能小说创作平台</span>
             </div>
           )}
-          
-          <h1>AINovel</h1>
         </div>
         <button className="collapse-btn" onClick={toggleSidebar}>
           {isCollapsed ? <FaBars /> : <FaTimes />}
@@ -157,7 +165,7 @@ const Sidebar = ({
         <div className="sidebar-menu">
           {Object.entries(menuItems).map(([section, items]) => (
             <div key={section} className="menu-section">
-              {section !== '开始写作' && <h2>{section}</h2>}
+              {section !== '开始写作' && <h3>{section}</h3>}
               <ul>
                 {items.map((item) => (
                   <li 
@@ -178,7 +186,6 @@ const Sidebar = ({
       
       {!currentProject && !hideProjectSelector && !isCollapsed && (
         <div className="no-project-message">
-          <p>请选择或创建一个项目开始创作</p>
         </div>
       )}
     </nav>

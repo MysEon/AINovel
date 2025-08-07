@@ -75,39 +75,43 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
   width: 64px;
 }
 
-/* 侧边栏项目头部布局 */
+/* 侧边栏项目头部布局 - 放在蓝色区域外面 */
 .project-header-with-back {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0;
+  background: transparent;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.project-header-with-back:hover {
+  transform: translateY(-1px);
 }
 
 .compact-back-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  padding: 0.5rem;
-  border-radius: 6px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 0.6rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(8px);
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .compact-back-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: var(--hover-bg);
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .compact-back-btn svg {
@@ -117,34 +121,62 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
 .project-info {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.25rem;
   min-width: 0;
   flex-grow: 1;
 }
 
 .project-label {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  color: var(--secondary-text-color);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-weight: 500;
 }
 
 .project-name-compact {
-  font-size: 0.9rem;
-  color: #ffffff;
+  font-size: 0.95rem;
+  color: var(--text-color);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.app-title-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.app-title-section h1 {
+  font-size: 1.6rem;
+  margin: 0;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  line-height: 1.2;
+}
+
+.app-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  margin-top: 0.25rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 .sidebar-header {
   padding: 1.5rem 1.5rem 1rem;
   flex-shrink: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  justify-content: center;
+  align-items: center;
   position: relative;
   background: var(--gradient-primary);
   margin-bottom: 1rem;
@@ -247,9 +279,9 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
 }
 
 .collapse-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.75rem;
@@ -258,14 +290,13 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--hover-bg);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .sidebar.collapsed .collapse-btn {
@@ -1207,7 +1238,8 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
 }
 
 /* Additional styles for project editor */
-.theme-toggle {
+.theme-toggle,
+.back-to-dashboard {
   background-color: var(--hover-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
@@ -1221,15 +1253,28 @@ body, #root { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidd
   font-size: 0.9rem;
   font-weight: 500;
 }
-.theme-toggle:hover {
+.theme-toggle:hover,
+.back-to-dashboard:hover {
   background-color: var(--border-color);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.theme-toggle svg {
+.theme-toggle svg,
+.back-to-dashboard svg {
   font-size: 1rem;
   opacity: 0.8;
+}
+
+.project-info-separate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: var(--menu-item-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 /* 全局通知容器 */

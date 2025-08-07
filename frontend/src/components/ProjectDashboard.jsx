@@ -50,7 +50,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
     <div className="project-dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <h1>我的项目</h1>
+          <h3>我的项目</h3>
           <p>欢迎回来，{user?.name || '用户'}</p>
         </div>
         <div className="header-right">
@@ -74,7 +74,6 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
               <FaBook />
             </div>
             <h3>还没有项目</h3>
-            <p>创建您的第一个小说项目开始创作之旅</p>
             <button className="create-first-project-btn" onClick={() => setShowCreateDialog(true)}>
               <FaPlus />
               创建项目

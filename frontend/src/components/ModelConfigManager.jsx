@@ -224,7 +224,7 @@ const ModelConfigManager = () => {
       )}
 
       <div className="manager-header">
-        <h2>模型配置管理</h2>
+        <h3>模型配置管理</h3>
         {!isCreating && !editingConfig && (
           <button 
             className="btn btn-primary"

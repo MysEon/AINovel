@@ -133,7 +133,7 @@ const PublishedChapters = ({ projectId, onProjectsChange }) => {
   return (
     <div className="published-chapters">
       <div className="chapters-header">
-        <h2>已发布章节</h2>
+        <h3>已发布章节</h3>
         <div className="chapters-stats">
           <span>共 {chapters.length} 章节</span>
         </div>

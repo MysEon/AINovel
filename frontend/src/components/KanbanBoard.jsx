@@ -4,7 +4,7 @@ import './KanbanBoard.css';
 const KanbanBoard = () => {
   return (
     <div className="kanban-container">
-      <h1>项目看板</h1>
+      <h3>项目看板</h3>
       <p>看板功能正在开发中...</p>
       <div className="kanban-placeholder">
         <div className="kanban-column">

@@ -391,8 +391,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             }}>
               <FaBook /> 创建第一个章节
             </button>
-            <p>点击上方按钮创建您的第一个章节，开始您的创作之旅。</p>
-          </div>
+            </div>
         ) : aiAssisted ? (
           <AiWritingInterface 
             content={content} 

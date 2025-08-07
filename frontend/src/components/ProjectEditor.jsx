@@ -147,18 +147,25 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         hideProjectSelector={true} // 隐藏项目选择器
         projectName={project.name} // 显示项目名称
         onBackToDashboard={onBackToDashboard}
+        hideBackButton={true} // 隐藏Sidebar中的返回按钮
       />
       <main className="content">
         <header>
           <div className="content-title">
-            <h1>{activeItem}</h1>
+            <h3>{activeItem}</h3>
             <p className="project-name">项目：{project.name}</p>
           </div>
+        </header>
+        <div className="content-actions">
+          <button onClick={onBackToDashboard} className="back-to-dashboard" title="返回项目列表">
+            <FaArrowLeft />
+            <span>返回项目列表</span>
+          </button>
           <button onClick={toggleTheme} className="theme-toggle">
             {getThemeInfo().icon}
             <span>{getThemeInfo().text}</span>
           </button>
-        </header>
+        </div>
         {renderContent()}
       </main>
     </div>

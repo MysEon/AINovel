@@ -76,7 +76,7 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
     return (
       <div className="reading-mode">
         <div className="reading-header">
-          <h1>{project.name}</h1>
+          <h3>{project.name}</h3>
           <button onClick={() => setReadingMode(false)}>退出阅读模式</button>
         </div>
         <div className="reading-content">
@@ -94,7 +94,7 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
   return (
     <div className="project-overview">
       <div className="overview-header">
-        <h1>{project.name} - 项目总览</h1>
+        <h3>{project.name} - 项目总览</h3>
         <div className="overview-actions">
           <button className="btn-primary" onClick={onNavigateToDrafts}>
             <FaBook /> 开始编写
@@ -118,7 +118,6 @@ const ProjectOverview = ({ project, onNavigateToDrafts }) => {
           <button className="btn-primary" onClick={onNavigateToDrafts}>
             <FaBook /> 立即开始创作
           </button>
-          <p>点击"开始编写"按钮创建您的第一个章节。</p>
         </div>
       )}
 

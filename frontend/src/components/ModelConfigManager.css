@@ -34,9 +34,11 @@
   margin-bottom: 30px;
 }
 
-.manager-header h2 {
+.manager-header h3 {
   margin: 0;
   color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .btn {
