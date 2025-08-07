@@ -9,7 +9,7 @@ AINovel 是一个基于 Web 的智能小说创作平台，旨在帮助作者更�
 
 ## ✨ 特性
 
-- 📚 **项目管理** - 创建和管理多个小说项目，跟踪字数和章节统计
+- 📚 **项目管理** - 创建和管理多个小说项目，跟踪字数和章节统计；
 - 👥 **角色管理** - 详细记录角色信息，包括性格、背景、外貌等
 - 🌍 **世界观构建** - 定义世界规则、魔法体系、科技水平和时间线
 - 🏛️ **地点与组织** - 构建小说世界的地理环境、文化特色和组织结构
@@ -29,19 +29,20 @@ AINovel 是一个基于 Web 的智能小说创作平台，旨在帮助作者更�
 ### 本地开发
 
 1. **克隆仓库**
+
    ```bash
    git clone https://github.com/yourusername/AINovel.git
    cd AINovel
    ```
-
 2. **启动后端**
+
    ```bash
    cd backend
    pip install -r requirements.txt
    python main.py
    ```
-
 3. **启动前端**
+
    ```bash
    cd frontend
    npm install
@@ -65,6 +66,7 @@ docker-compose up --build
 ## 🛠️ 技术栈
 
 ### 后端
+
 - **框架**: FastAPI
 - **数据库**: SQLite (SQLAlchemy ORM)
 - **认证**: JWT (Python-JOSE)
@@ -72,6 +74,7 @@ docker-compose up --build
 - **ASGI 服务器**: Uvicorn
 
 ### 前端
+
 - **框架**: React 19
 - **构建工具**: Vite
 - **语言**: JavaScript
