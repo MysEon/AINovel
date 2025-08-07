@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaFlask, FaCheck, FaSpinner } from 'react-icons/fa';
 import modelConfigService from '../services/modelConfigService';
 import Notification from './Notification';
+import UniversalDialog from './UniversalDialog';
 import './ModelConfigManager.css';
 
 const ModelConfigManager = () => {
@@ -11,6 +12,7 @@ const ModelConfigManager = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [notification, setNotification] = useState(null);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null);
 
   // 表单状态
   const [formData, setFormData] = useState(modelConfigService.getDefaultConfig());
@@ -117,17 +119,30 @@ const ModelConfigManager = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('确定要删除这个配置吗？')) {
-      return;
+    const config = configs.find(c => c.id === id);
+    if (config) {
+      setDeleteConfirmDialog({
+        id: id,
+        name: config.name
+      });
     }
+  };
 
+  const confirmDelete = async (id) => {
     try {
       await modelConfigService.deleteModelConfig(id);
       showNotification('配置删除成功', 'success');
       loadConfigs();
     } catch (error) {
       showNotification('删除失败: ' + error.message, 'error');
+    } finally {
+      // 确保在删除操作完成后关闭确认对话框
+      setDeleteConfirmDialog(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmDialog(null);
   };
 
   const handleTestConnection = async () => {
@@ -502,6 +517,18 @@ const ModelConfigManager = () => {
           </div>
         )}
       </div>
+
+      {deleteConfirmDialog && (
+        <UniversalDialog
+          title="删除配置"
+          message={`确定要删除配置 "${deleteConfirmDialog.name}" 吗？此操作无法撤销。`}
+          type="warning"
+          confirmText="删除"
+          cancelText="取消"
+          onConfirm={() => confirmDelete(deleteConfirmDialog.id)}
+          onCancel={cancelDelete}
+        />
+      )}
     </div>
   );
 };
