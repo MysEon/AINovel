@@ -276,6 +276,7 @@ class ModelConfigResponse(ModelConfigBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
+    api_key_masked: Optional[str] = Field(None, description="遮蔽的API密钥，用于显示")
     
     @field_validator('stop_sequences', mode='before')
     @classmethod

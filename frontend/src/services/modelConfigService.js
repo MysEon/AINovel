@@ -112,16 +112,20 @@ class ModelConfigService {
       errors.push('模型类型不能为空');
     }
 
+    // 检查API密钥 - 如果是编辑模式且有遮蔽的密钥，则不要求重新输入
     if (!config.api_key || config.api_key.trim() === '') {
-      errors.push('API密钥不能为空');
+      // 如果没有遮蔽的密钥标识，则要求提供API密钥
+      if (!config.api_key_masked) {
+        errors.push('API密钥不能为空');
+      }
     }
 
     if (config.temperature && (config.temperature < 0 || config.temperature > 2)) {
       errors.push('温度值必须在0-2之间');
     }
 
-    if (config.max_tokens && (config.max_tokens < 1 || config.max_tokens > 32000)) {
-      errors.push('最大令牌数必须在1-32000之间');
+    if (config.max_tokens && config.max_tokens < 1) {
+      errors.push('最大令牌数必须大于0');
     }
 
     if (config.top_p && (config.top_p < 0 || config.top_p > 1)) {

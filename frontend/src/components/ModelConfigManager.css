@@ -1,8 +1,30 @@
 /* ModelConfigManager.css */
 .model-config-manager {
-  padding: 20px;
-  max-width: 1200px;
+  padding: 30px;
+  max-width: 1600px;
   margin: 0 auto;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* 滚动条样式 */
+.model-config-manager::-webkit-scrollbar {
+  width: 8px;
+}
+
+.model-config-manager::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.model-config-manager::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.model-config-manager::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .manager-header {
@@ -28,6 +50,11 @@
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  height: 40px;
+  min-width: 80px;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .btn-primary {
@@ -101,10 +128,10 @@
 
 .config-form {
   background: white;
-  border-radius: 8px;
-  padding: 30px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 35px;
+  margin-bottom: 35px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .config-form h3 {
@@ -129,9 +156,25 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 25px;
   margin-bottom: 30px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 在大屏幕上显示3列 */
+@media (min-width: 1600px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 在中等屏幕上显示2列 */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .form-group {
@@ -216,20 +259,124 @@ input:checked + .slider:before {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 20px;
+  padding-top: 25px;
   border-top: 1px solid #eee;
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .action-buttons {
   display: flex;
   gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* 测试连接按钮样式 */
+.test-connection-btn {
+  height: 44px;
+  width: 120px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.test-connection-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.test-connection-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 保存按钮样式 */
+.save-btn {
+  height: 44px;
+  width: 100px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(17, 153, 142, 0.3);
+}
+
+.save-btn:hover {
+  background: linear-gradient(135deg, #0f8a7f 0%, #2ed670 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+}
+
+/* 取消按钮样式 */
+.cancel-btn {
+  height: 44px;
+  width: 100px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border: 1px solid #dee2e6;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: #f8f9fa;
+  color: #6c757d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+  border-color: #adb5bd;
+  transform: translateY(-1px);
+}
+
+/* spinner 样式调整 */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff40;
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .configs-list {
   background: white;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 35px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .configs-list h3 {
@@ -251,8 +398,22 @@ input:checked + .slider:before {
 
 .configs-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 25px;
+}
+
+/* 在大屏幕上显示更多列 */
+@media (min-width: 1400px) {
+  .configs-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 在中等屏幕上显示2列 */
+@media (min-width: 1000px) and (max-width: 1399px) {
+  .configs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .config-card {
@@ -315,6 +476,18 @@ input:checked + .slider:before {
 /* 深色主题支持 */
 .dark-theme .model-config-manager {
   color: #e0e0e0;
+}
+
+.dark-theme .model-config-manager::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.dark-theme .model-config-manager::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+.dark-theme .model-config-manager::-webkit-scrollbar-thumb:hover {
+  background: #777;
 }
 
 .dark-theme .manager-header h2 {
@@ -404,10 +577,44 @@ input:checked + .slider:before {
   border-top-color: #555;
 }
 
+/* 深色主题按钮样式 */
+.dark-theme .test-connection-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.dark-theme .test-connection-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+}
+
+.dark-theme .save-btn {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  box-shadow: 0 2px 8px rgba(17, 153, 142, 0.4);
+}
+
+.dark-theme .save-btn:hover {
+  background: linear-gradient(135deg, #0f8a7f 0%, #2ed670 100%);
+  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.5);
+}
+
+.dark-theme .cancel-btn {
+  background: #3d3d3d;
+  color: #b0b0b0;
+  border-color: #555;
+}
+
+.dark-theme .cancel-btn:hover {
+  background: #4d4d4d;
+  color: #e0e0e0;
+  border-color: #666;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .model-config-manager {
     padding: 15px;
+    height: calc(100vh - 100px);
   }
   
   .manager-header {
@@ -427,11 +634,20 @@ input:checked + .slider:before {
   .form-actions {
     flex-direction: column;
     gap: 15px;
+    align-items: stretch;
   }
   
   .action-buttons {
     width: 100%;
     justify-content: flex-end;
+    gap: 10px;
+  }
+  
+  .test-connection-btn,
+  .save-btn,
+  .cancel-btn {
+    width: 100%;
+    min-width: auto;
   }
 }
 

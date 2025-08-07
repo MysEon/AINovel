@@ -60,7 +60,11 @@ const ModelConfigManager = () => {
   };
 
   const validateForm = () => {
-    const validationErrors = modelConfigService.validateConfig(formData);
+    const validationData = { 
+      ...formData,
+      api_key_masked: editingConfig && editingConfig.api_key_masked
+    };
+    const validationErrors = modelConfigService.validateConfig(validationData);
     setErrors(validationErrors);
     return validationErrors.length === 0;
   };
@@ -73,12 +77,20 @@ const ModelConfigManager = () => {
     }
 
     try {
+      let submitData = { ...formData };
+      
+      // 如果是编辑模式且API密钥为空，则从表单数据中移除api_key字段
+      // 这样后端就不会更新API密钥
+      if (editingConfig && editingConfig.api_key_masked && !submitData.api_key) {
+        delete submitData.api_key;
+      }
+      
       if (isCreating) {
-        await modelConfigService.createModelConfig(formData);
+        await modelConfigService.createModelConfig(submitData);
         showNotification('配置创建成功', 'success');
         setIsCreating(false);
       } else {
-        await modelConfigService.updateModelConfig(editingConfig.id, formData);
+        await modelConfigService.updateModelConfig(editingConfig.id, submitData);
         showNotification('配置更新成功', 'success');
         setEditingConfig(null);
       }
@@ -94,8 +106,14 @@ const ModelConfigManager = () => {
     setEditingConfig(config);
     setFormData({
       ...config,
+      api_key: '',  // 清空API密钥字段，显示遮蔽版本
       stop_sequences: config.stop_sequences || []
     });
+    
+    // 显示遮蔽的API密钥提示
+    if (config.api_key_masked) {
+      showNotification(`当前API密钥: ${config.api_key_masked}`, 'info');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -116,6 +134,18 @@ const ModelConfigManager = () => {
     if (!formData.api_key || !formData.model_type) {
       showNotification('请先填写API密钥和模型类型', 'error');
       return;
+    }
+
+    // 自定义模型需要额外的验证
+    if (formData.model_type === 'custom') {
+      if (!formData.api_url) {
+        showNotification('自定义模型必须提供API URL', 'error');
+        return;
+      }
+      if (!formData.model_name) {
+        showNotification('自定义模型必须提供模型名称', 'error');
+        return;
+      }
     }
 
     try {
@@ -232,17 +262,26 @@ const ModelConfigManager = () => {
 
               <div className="form-group">
                 <label>模型名称</label>
-                <select
-                  value={formData.model_name}
-                  onChange={(e) => handleInputChange('model_name', e.target.value)}
-                >
-                  <option value="">选择模型</option>
-                  {getModelOptions().map(model => (
-                    <option key={model.value} value={model.value}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
+                {formData.model_type === 'custom' ? (
+                  <input
+                    type="text"
+                    value={formData.model_name}
+                    onChange={(e) => handleInputChange('model_name', e.target.value)}
+                    placeholder="输入自定义模型名称"
+                  />
+                ) : (
+                  <select
+                    value={formData.model_name}
+                    onChange={(e) => handleInputChange('model_name', e.target.value)}
+                  >
+                    <option value="">选择模型</option>
+                    {getModelOptions().map(model => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="form-group">
@@ -251,9 +290,14 @@ const ModelConfigManager = () => {
                   type="password"
                   value={formData.api_key}
                   onChange={(e) => handleInputChange('api_key', e.target.value)}
-                  placeholder="输入API密钥"
-                  required
+                  placeholder={editingConfig && editingConfig.api_key_masked ? `当前: ${editingConfig.api_key_masked}` : "输入API密钥"}
+                  required={!editingConfig || !editingConfig.api_key_masked}
                 />
+                {editingConfig && editingConfig.api_key_masked && (
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    留空则保持现有密钥不变，输入新密钥将替换现有密钥
+                  </small>
+                )}
               </div>
 
               <div className="form-group">
@@ -283,7 +327,6 @@ const ModelConfigManager = () => {
                 <input
                   type="number"
                   min="1"
-                  max="32000"
                   value={formData.max_tokens}
                   onChange={(e) => handleInputChange('max_tokens', parseInt(e.target.value))}
                 />
@@ -385,7 +428,7 @@ const ModelConfigManager = () => {
             <div className="form-actions">
               <button 
                 type="button" 
-                className="btn btn-secondary"
+                className="test-connection-btn"
                 onClick={handleTestConnection}
                 disabled={testingConnection}
               >
@@ -394,10 +437,10 @@ const ModelConfigManager = () => {
               </button>
               
               <div className="action-buttons">
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="save-btn">
                   <FaSave /> 保存
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={handleCancel}>
+                <button type="button" className="cancel-btn" onClick={handleCancel}>
                   <FaTimes /> 取消
                 </button>
               </div>

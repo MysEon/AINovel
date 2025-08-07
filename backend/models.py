@@ -180,6 +180,9 @@ class ModelConfig(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 遮蔽的API密钥字段（非数据库字段，仅用于响应）
+    api_key_masked = None
 
 class PromptTemplate(Base):
     """提示词模板表"""
