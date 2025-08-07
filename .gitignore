@@ -147,6 +147,9 @@ Thumbs.db
 
 # AI Novel specific
 ainovel.db
+*.db
+*.sqlite
+*.sqlite3
 *.log
 
 # Test files
@@ -156,6 +159,17 @@ check_*.py
 fix_*.py
 migrate_*.py
 
+# Configuration files (may contain sensitive data)
+*.ini
+config.ini
+settings.ini
+local_settings.ini
+
+# Development databases
+*.db-journal
+*.db-shm
+*.db-wal
+
 # Claude specific
 .claude/
 .claude/specs/
@@ -164,3 +178,4 @@ TODO.md
 check_db.py
 test_db_insert.py
 backend/CHAPTER_FIX_README.md
+backend/DEVELOPMENT_LOG.md
