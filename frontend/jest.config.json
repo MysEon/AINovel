@@ -1,0 +1,39 @@
+{
+  "testEnvironment": "jsdom",
+  "setupFilesAfterEnv": ["<rootDir>/src/__tests__/setup.js"],
+  "testMatch": [
+    "<rootDir>/src/__tests__/**/*.{js,jsx,ts,tsx}",
+    "<rootDir>/src/**/__tests__/*.{js,jsx,ts,tsx}"
+  ],
+  "testPathIgnorePatterns": [
+    "<rootDir>/node_modules/"
+  ],
+  "collectCoverageFrom": [
+    "src/**/*.{js,jsx,ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/main.jsx",
+    "!src/index.css"
+  ],
+  "coverageReporters": [
+    "text",
+    "lcov",
+    "html"
+  ],
+  "moduleNameMapping": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy"
+  },
+  "transform": {
+    "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+  },
+  "moduleFileExtensions": [
+    "js",
+    "jsx",
+    "ts",
+    "tsx",
+    "json"
+  ],
+  "testEnvironmentOptions": {
+    "url": "http://localhost:3000"
+  }
+}

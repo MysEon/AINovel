@@ -4,6 +4,7 @@ import ProjectOverview from './ProjectOverview';
 import WritingEditor from './writing/WritingEditor';
 import PublishedChapters from './writing/PublishedChapters';
 import KanbanBoard from './KanbanBoard';
+import ModelConfigManager from './ModelConfigManager';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import './ProjectEditor.css';
 
@@ -124,6 +125,8 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
           onChapterChange={setCurrentChapterId}
           onProjectsChange={onProjectsChange}
         />;
+      case '模型参数选择':
+        return <ModelConfigManager />;
       default:
         return <textarea placeholder="在这里开始你的创作..."></textarea>;
     }
