@@ -22,9 +22,6 @@ app = FastAPI(
     version="0.1.0"
 )
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
-
 # 配置CORS中间件，允许前端访问
 app.add_middleware(
     CORSMiddleware,
@@ -65,3 +62,6 @@ if LANGCHAIN_AVAILABLE:
 def read_root():
     """根路径，返回欢迎信息"""
     return {"message": "Welcome to AINovel Backend API"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8080)
