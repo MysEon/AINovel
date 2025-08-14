@@ -54,12 +54,41 @@ function AppContent() {
     }
   };
 
-  // 初始化时检查本地存储的用户信息
+  // 初始化时检查本地存储的用户信息和hash路由
   useEffect(() => {
     const savedToken = localStorage.getItem('ainovel_token');
     if (savedToken) {
       fetchCurrentUser(savedToken);
+    } else {
+      // 如果没有token，检查hash路由
+      const hash = window.location.hash;
+      if (hash === '#projects') {
+        setCurrentView('dashboard');
+      }
     }
+  }, []);
+
+  // 监听hash变化
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const savedToken = localStorage.getItem('ainovel_token');
+      
+      if (!savedToken) {
+        if (hash === '#projects') {
+          setCurrentView('dashboard');
+        } else if (hash === '#login') {
+          setCurrentView('login');
+        } else if (hash === '#register') {
+          setCurrentView('register');
+        }
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
       // 用户信息通过token获取，不再直接本地存储user对象

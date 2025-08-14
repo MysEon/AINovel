@@ -1,32 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Flex, 
   Heading, 
   Text, 
-  Button, 
-  Card, 
-  CardHeader, 
-  CardBody, 
-  CardFooter,
-  Grid, 
-  GridItem,
+  Button,
   Avatar,
-      Input,
+  Input,
   Textarea,
-  Stack,
   HStack,
-  VStack,
-  Icon
+  VStack
 } from '@chakra-ui/react';
-import { Field } from '@chakra-ui/react';
 import { 
   FaPlus, 
   FaBook, 
-  FaEdit, 
-  FaTrash, 
-  FaCalendarAlt, 
-  FaFileAlt,
   FaSignOutAlt 
 } from 'react-icons/fa';
 import { useNotification } from './NotificationManager';
@@ -82,10 +69,12 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
     });
   };
 
+  console.log('ProjectDashboard render:', { user, projects: projects.length });
+  
   return (
     <Box 
       minH="100vh" 
-      bg="bg.canvas"
+      bg="gray.50"
       p={6}
     >
       {/* 页面头部 */}
@@ -104,13 +93,13 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           <Box>
             <Heading 
               size="lg" 
-              color="text.primary" 
+              color="gray.800" 
               mb={1}
             >
               我的项目
             </Heading>
             <Text 
-              color="text.secondary" 
+              color="gray.600" 
               fontSize="lg"
             >
               欢迎回来，{user?.name || '用户'}
@@ -120,7 +109,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           <HStack spacing={4}>
             <Button
               leftIcon={<FaPlus />}
-              colorScheme="brand"
+              colorScheme="blue"
               onClick={() => setShowCreateDialog(true)}
               size="lg"
             >
@@ -160,28 +149,28 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
             <Box
               w="20"
               h="20"
-              bg="brand.50"
-              _dark={{ bg: "brand.900" }}
+              bg="blue.50"
+              _dark={{ bg: "blue.900" }}
               borderRadius="full"
               display="flex"
               alignItems="center"
               justifyContent="center"
             >
-              <Icon as={FaBook} fontSize="3xl" color="brand.500" />
+              <Icon as={FaBook} fontSize="3xl" color="blue.500" />
             </Box>
             
             <VStack spacing={2}>
-              <Heading size="md" color="text.primary">
+              <Heading size="md" color="gray.800">
                 还没有项目
               </Heading>
-              <Text color="text.muted">
+              <Text color="gray.500">
                 创建您的第一个小说项目，开始创作之旅
               </Text>
             </VStack>
             
             <Button
               leftIcon={<FaPlus />}
-              colorScheme="brand"
+              colorScheme="blue"
               onClick={() => setShowCreateDialog(true)}
               size="lg"
             >
@@ -190,111 +179,15 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           </VStack>
         </Box>
       ) : (
-        <Grid 
-          templateColumns="repeat(auto-fill, minmax(350px, 1fr))" 
-          gap={6}
-        >
-          {projects.map(project => {
-            const stats = getProjectStats(project);
-            return (
-              <Card 
-                key={project.id} 
-                bg="white" 
-                _dark={{ bg: "gray.800" }}
-                borderRadius="lg" 
-                boxShadow="sm"
-                _hover={{ boxShadow: "md" }}
-                transition="all 0.2s"
-              >
-                <CardHeader pb={3}>
-                  <Flex justify="space-between" align="start">
-                    <Heading size="md" color="text.primary" noOfLines={2}>
-                      {project.name}
-                    </Heading>
-                    
-                    <HStack spacing={1}>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="brand"
-                        onClick={() => onSelectProject(project.id)}
-                        title="编辑项目"
-                      >
-                        <FaEdit />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="red"
-                        onClick={() => handleDeleteProject(project)}
-                        title="删除项目"
-                      >
-                        <FaTrash />
-                      </Button>
-                    </HStack>
-                  </Flex>
-                  
-                  {project.description && (
-                    <Text 
-                      color="text.secondary" 
-                      fontSize="sm" 
-                      noOfLines={2}
-                      mt={2}
-                    >
-                      {project.description}
-                    </Text>
-                  )}
-                </CardHeader>
-                
-                <CardBody py={3}>
-                  <HStack spacing={4}>
-                    <VStack align="start" spacing={1}>
-                      <Text fontSize="xs" color="text.muted" fontWeight="medium">
-                        字数
-                      </Text>
-                      <Text fontSize="lg" fontWeight="bold" color="brand.600">
-                        {stats.wordCount.toLocaleString()}
-                      </Text>
-                    </VStack>
-                    
-                    <VStack align="start" spacing={1}>
-                      <Text fontSize="xs" color="text.muted" fontWeight="medium">
-                        章节
-                      </Text>
-                      <Text fontSize="lg" fontWeight="bold" color="creative.600">
-                        {stats.chapters}
-                      </Text>
-                    </VStack>
-                  </HStack>
-                </CardBody>
-                
-                <CardFooter pt={3}>
-                  <VStack w="full" spacing={3} align="stretch">
-                    <Box borderBottom="1px solid" borderColor="gray.200" my={2} />
-                    
-                    <HStack justify="space-between" align="center">
-                      <HStack spacing={2} color="text.muted">
-                        <Icon as={FaCalendarAlt} fontSize="sm" />
-                        <Text fontSize="sm">
-                          更新于 {formatDate(stats.lastUpdated)}
-                        </Text>
-                      </HStack>
-                      
-                      <Button
-                        size="sm"
-                        colorScheme="brand"
-                        onClick={() => onSelectProject(project.id)}
-                        leftIcon={<FaFileAlt />}
-                      >
-                        打开项目
-                      </Button>
-                    </HStack>
-                  </VStack>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </Grid>
+        <Box>
+          <Text>Projects: {projects.length}</Text>
+          {projects.map(project => (
+            <Box key={project.id} p={4} border="1px solid" borderColor="gray.200" mb={4}>
+              <Text>{project.name}</Text>
+              <Text>{project.description}</Text>
+            </Box>
+          ))}
+        </Box>
       )}
 
       {/* 创建项目对话框 */}
@@ -327,18 +220,18 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
             <Heading size="md" mb={4}>创建新项目</Heading>
             <form onSubmit={handleCreateProject}>
               <VStack spacing={4}>
-                <Field.Root required>
-                  <Field.Label>项目名称</Field.Label>
+                <Box mb={4}>
+                  <Text mb={2} fontWeight="medium">项目名称</Text>
                   <Input
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="输入项目名称"
                     size="lg"
                   />
-                </Field.Root>
+                </Box>
                 
-                <Field.Root>
-                  <Field.Label>项目描述</Field.Label>
+                <Box mb={4}>
+                  <Text mb={2} fontWeight="medium">项目描述</Text>
                   <Textarea
                     value={newProjectDescription}
                     onChange={(e) => setNewProjectDescription(e.target.value)}
@@ -346,7 +239,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                     rows={3}
                     resize="none"
                   />
-                </Field.Root>
+                </Box>
                 
                 <HStack w="full" justify="flex-end" spacing={3} pt={4}>
                   <Button
@@ -357,9 +250,9 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                   </Button>
                   <Button
                     type="submit"
-                    bg="brand.600"
+                    bg="blue.600"
                     color="white"
-                    _hover={{ bg: "brand.700" }}
+                    _hover={{ bg: "blue.700" }}
                     isDisabled={!newProjectName.trim()}
                   >
                     创建项目

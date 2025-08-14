@@ -179,8 +179,7 @@ const RegisterPage = ({ onNavigate }) => {
             boxShadow="0 8px 32px 0 rgba(31, 38, 135, 0.37)"
             border="1px solid rgba(255, 255, 255, 0.18)"
             backdropFilter="blur(4px)"
-            WebkitBackdropFilter="blur(4px)"
-            bg="rgba(255, 255, 255, 0.15)"
+                        bg="rgba(255, 255, 255, 0.15)"
             borderRadius="24px"
             _light={{
               bg: "rgba(255, 255, 255, 0.85)",
@@ -235,8 +234,7 @@ const RegisterPage = ({ onNavigate }) => {
                     boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
                   }}
                   backdropFilter="blur(4px)"
-                  WebkitBackdropFilter="blur(4px)"
-                  borderRadius="12px"
+                                    borderRadius="12px"
                   _light={{
                     bg: "rgba(255, 255, 255, 0.9)",
                     border: "1px solid rgba(0, 0, 0, 0.1)",
@@ -284,8 +282,7 @@ const RegisterPage = ({ onNavigate }) => {
                     boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
                   }}
                   backdropFilter="blur(4px)"
-                  WebkitBackdropFilter="blur(4px)"
-                  borderRadius="12px"
+                                    borderRadius="12px"
                   _light={{
                     bg: "rgba(255, 255, 255, 0.9)",
                     border: "1px solid rgba(0, 0, 0, 0.1)",
@@ -332,8 +329,7 @@ const RegisterPage = ({ onNavigate }) => {
                     boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
                   }}
                   backdropFilter="blur(4px)"
-                  WebkitBackdropFilter="blur(4px)"
-                  borderRadius="12px"
+                                    borderRadius="12px"
                   _light={{
                     bg: "rgba(255, 255, 255, 0.9)",
                     border: "1px solid rgba(0, 0, 0, 0.1)",
@@ -363,8 +359,7 @@ const RegisterPage = ({ onNavigate }) => {
                 border="1px solid rgba(255, 255, 255, 0.25)"
                 boxShadow="0 4px 15px 0 rgba(31, 38, 135, 0.2)"
                 backdropFilter="blur(4px)"
-                WebkitBackdropFilter="blur(4px)"
-                borderRadius="16px"
+                                borderRadius="16px"
                 _hover={{ 
                   bg: "linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%)",
                   borderColor: "rgba(255, 255, 255, 0.35)",
