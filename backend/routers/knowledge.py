@@ -175,13 +175,24 @@ async def get_scene_knowledge_base(
 
 # === 创作技巧知识库 API ===
 
-@router.get("/techniques/{category}", response_model=List[WritingTechniqueKnowledgeBase])
+@router.get("/techniques/{project_id}", response_model=List[WritingTechniqueKnowledgeBase])
 async def get_writing_techniques(
-    category: Optional[str] = None,
-    current_user: User = Depends(get_current_user_dependency)
+    project_id: int,
+    current_user: User = Depends(get_current_user_dependency),
+    db: AsyncSession = Depends(get_db)
 ):
-    """获取创作技巧知识库"""
-    # TODO: 实现创作技巧数据库查询
+    """获取项目的创作技巧知识库"""
+    # 验证项目存在且属于当前用户
+    result = await db.execute(select(Project).where(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ))
+    project = result.scalar_one_or_none()
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    
+    # TODO: 实现创作技巧数据库查询，目前返回示例数据
     techniques = [
         WritingTechniqueKnowledgeBase(
             id=1,
@@ -198,6 +209,22 @@ async def get_writing_techniques(
             ],
             inspiration_notes=["注意情节的起承转合", "保持悬念和冲突"],
             case_studies=["《哈利波特》系列的情节结构"]
+        ),
+        WritingTechniqueKnowledgeBase(
+            id=2,
+            name="角色塑造技巧",
+            category="character",
+            techniques=[
+                WritingTechnique(
+                    technique_name="角色成长弧",
+                    category="character",
+                    description="展示角色从开始到结束的成长变化",
+                    examples=["《哈利波特》中哈利的成长", "《魔戒》中佛罗多的蜕变"],
+                    templates=["初始状态 → 遭遇挑战 → 内心挣扎 → 做出改变 → 最终蜕变"]
+                )
+            ],
+            inspiration_notes=["让角色有缺点和成长空间", "通过行动展示性格变化"],
+            case_studies=["经典文学中的角色发展"]
         )
     ]
     return techniques
