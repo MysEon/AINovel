@@ -1,4 +1,17 @@
 import { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Heading, 
+  Text, 
+  HStack, 
+  VStack, 
+  Icon,
+  useColorMode,
+  useColorModeValue
+} from '@chakra-ui/react';
+import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import Sidebar from '../Sidebar';
 import ProjectOverview from './ProjectOverview';
 import WritingEditor from './writing/WritingEditor';
@@ -6,36 +19,20 @@ import PublishedChapters from './writing/PublishedChapters';
 import KanbanBoard from './KanbanBoard';
 import ModelConfigManager from './ModelConfigManager';
 import KnowledgeBase from './KnowledgeBase';
-import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
-import './ProjectEditor.css';
 
 const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) => {
-  const [theme, setTheme] = useState('system');
-  const [actualTheme, setActualTheme] = useState('dark');
   const [activeItem, setActiveItem] = useState('项目总览');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
+  const { colorMode, toggleColorMode } = useColorMode();
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // 检测系统主题
-  const getSystemTheme = () => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  };
-
-  // 主题切换逻辑
-  const toggleTheme = () => {
-    const themeOrder = ['system', 'light', 'dark'];
-    const currentIndex = themeOrder.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % themeOrder.length;
-    setTheme(themeOrder[nextIndex]);
-  };
-
   // 获取主题图标和文本
   const getThemeInfo = () => {
-    switch (theme) {
+    switch (colorMode) {
       case 'system': 
         return { icon: <FaDesktop />, text: '跟随系统' };
       case 'light': 
@@ -46,37 +43,6 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         return { icon: <FaDesktop />, text: '跟随系统' };
     }
   };
-
-  // 监听系统主题变化
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleSystemThemeChange = (e) => {
-      if (theme === 'system') {
-        setActualTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addListener(handleSystemThemeChange);
-    
-    return () => mediaQuery.removeListener(handleSystemThemeChange);
-  }, [theme]);
-
-  // 更新实际主题
-  useEffect(() => {
-    let newActualTheme;
-    if (theme === 'system') {
-      newActualTheme = getSystemTheme();
-    } else {
-      newActualTheme = theme;
-    }
-    setActualTheme(newActualTheme);
-  }, [theme]);
-
-  // 应用主题到body
-  useEffect(() => {
-    document.body.className = actualTheme + '-theme';
-  }, [actualTheme]);
 
   // 从localStorage加载上次打开的章节
   useEffect(() => {
@@ -113,7 +79,20 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
           onNavigateToDrafts={() => setActiveItem('开始写作')}
         />;
       case '进度追踪':
-        return <div className="progress-tracking">进度追踪功能待实现</div>;
+        return (
+          <Box 
+            p={8} 
+            textAlign="center"
+            bg="white" 
+            _dark={{ bg: "gray.800" }}
+            borderRadius="lg"
+          >
+            <VStack spacing={4}>
+              <Heading size="lg" color="text.primary">进度追踪</Heading>
+              <Text color="text.muted">功能待实现</Text>
+            </VStack>
+          </Box>
+        );
       case '看板页':
         return <KanbanBoard />;
       case '已发布':
@@ -131,12 +110,26 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
       case '知识库总览':
         return <KnowledgeBase projectId={project.id} />;
       default:
-        return <textarea placeholder="在这里开始你的创作..."></textarea>;
+        return (
+          <Box 
+            p={8} 
+            textAlign="center"
+            bg="white" 
+            _dark={{ bg: "gray.800" }}
+            borderRadius="lg"
+          >
+            <VStack spacing={4}>
+              <Heading size="lg" color="text.primary">创作区域</Heading>
+              <Text color="text.muted">在这里开始你的创作...</Text>
+            </VStack>
+          </Box>
+        );
     }
   };
 
   return (
-    <div className={`app-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <Flex h="100vh" bg="bg.canvas">
+      {/* 侧边栏 */}
       <Sidebar 
         menuItems={menuItems}
         activeItem={activeItem}
@@ -152,20 +145,67 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         onBackToDashboard={onBackToDashboard}
         hideBackButton={true} // 隐藏Sidebar中的返回按钮
       />
-      <main className="content">
-        <div className="content-actions">
-          <button onClick={onBackToDashboard} className="back-to-dashboard" title="返回项目列表">
-            <FaArrowLeft />
-            <span>返回项目列表</span>
-          </button>
-          <button onClick={toggleTheme} className="theme-toggle">
-            {getThemeInfo().icon}
-            <span>{getThemeInfo().text}</span>
-          </button>
-        </div>
-        {renderContent()}
-      </main>
-    </div>
+      
+      {/* 主内容区域 */}
+      <Box 
+        flex="1" 
+        display="flex" 
+        flexDirection="column"
+        overflow="hidden"
+      >
+        {/* 顶部操作栏 */}
+        <Box 
+          bg="white" 
+          _dark={{ bg: "gray.800" }}
+          borderBottom="1px" 
+          borderColor="border.default"
+          p={4}
+        >
+          <Flex 
+            justify="space-between" 
+            align="center"
+          >
+            <HStack spacing={4}>
+              <Button
+                leftIcon={<FaArrowLeft />}
+                variant="outline"
+                onClick={onBackToDashboard}
+                size="sm"
+              >
+                返回项目列表
+              </Button>
+              
+              <VStack align="start" spacing={0}>
+                <Heading size="md" color="text.primary">
+                  {project.name}
+                </Heading>
+                <Text fontSize="sm" color="text.secondary">
+                  {activeItem}
+                </Text>
+              </VStack>
+            </HStack>
+            
+            <Button
+              leftIcon={getThemeInfo().icon}
+              variant="outline"
+              onClick={toggleColorMode}
+              size="sm"
+            >
+              {getThemeInfo().text}
+            </Button>
+          </Flex>
+        </Box>
+        
+        {/* 内容区域 */}
+        <Box 
+          flex="1" 
+          p={6}
+          overflow="auto"
+        >
+          {renderContent()}
+        </Box>
+      </Box>
+    </Flex>
   );
 };
 

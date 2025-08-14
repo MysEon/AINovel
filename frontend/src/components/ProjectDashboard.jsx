@@ -1,20 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaBook, FaClock, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Heading, 
+  Text, 
+  Button, 
+  Card, 
+  CardHeader, 
+  CardBody, 
+  CardFooter,
+  Grid, 
+  GridItem,
+  Avatar,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Stack,
+  HStack,
+  VStack,
+  Icon,
+  useToast,
+  Divider
+} from '@chakra-ui/react';
+import { 
+  FaPlus, 
+  FaBook, 
+  FaEdit, 
+  FaTrash, 
+  FaCalendarAlt, 
+  FaFileAlt,
+  FaSignOutAlt 
+} from 'react-icons/fa';
 import { useNotification } from './NotificationManager';
+
 const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, onDeleteProject, onLogout }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const { showConfirmDialog } = useNotification();
-
-  // 确保主题在仪表板页面正确应用
-  useEffect(() => {
-    // 如果body没有主题类，应用默认主题
-    if (!document.body.className.includes('-theme')) {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.body.className = prefersDark ? 'dark-theme' : 'light-theme';
-    }
-  }, []);
+  const toast = useToast();
 
   const handleCreateProject = (e) => {
     e.preventDefault();
@@ -26,6 +57,14 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       setNewProjectName('');
       setNewProjectDescription('');
       setShowCreateDialog(false);
+      
+      toast({
+        title: "项目创建成功",
+        description: `项目 "${newProjectName.trim()}" 已创建`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -38,7 +77,6 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   };
 
   const getProjectStats = (project) => {
-    // 使用真实的项目统计数据（如果后端提供）或者默认值
     return {
       wordCount: project.word_count || 0,
       chapters: project.chapter_count || 0,
@@ -46,158 +84,287 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
     };
   };
 
-  return (
-    <div className="project-dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
-          <h3>我的项目</h3>
-          <p>欢迎回来，{user?.name || '用户'}</p>
-        </div>
-        <div className="header-right">
-          <button className="create-project-btn" onClick={() => setShowCreateDialog(true)}>
-            <FaPlus />
-            新建项目
-          </button>
-          <div className="user-menu">
-            <img src={user?.avatar || '/default-avatar.png'} alt={user?.name || '用户'} className="user-avatar" />
-            <button className="logout-btn" onClick={onLogout}>
-              退出登录
-            </button>
-          </div>
-        </div>
-      </header>
+  const handleDeleteProject = (project) => {
+    showConfirmDialog({
+      title: '确认删除项目',
+      message: `您确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
+      type: 'error',
+      confirmText: '确认删除',
+      onConfirm: () => onDeleteProject(project.id)
+    });
+  };
 
-      <div className="projects-grid">
-        {projects.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">
-              <FaBook />
-            </div>
-            <h3>还没有项目</h3>
-            <button className="create-first-project-btn" onClick={() => setShowCreateDialog(true)}>
-              <FaPlus />
+  return (
+    <Box 
+      minH="100vh" 
+      bg="bg.canvas"
+      p={6}
+    >
+      {/* 页面头部 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        p={6} 
+        mb={6}
+      >
+        <Flex 
+          justify="space-between" 
+          align="center"
+        >
+          <Box>
+            <Heading 
+              size="lg" 
+              color="text.primary" 
+              mb={1}
+            >
+              我的项目
+            </Heading>
+            <Text 
+              color="text.secondary" 
+              fontSize="lg"
+            >
+              欢迎回来，{user?.name || '用户'}
+            </Text>
+          </Box>
+          
+          <HStack spacing={4}>
+            <Button
+              leftIcon={<FaPlus />}
+              colorScheme="brand"
+              onClick={() => setShowCreateDialog(true)}
+              size="lg"
+            >
+              新建项目
+            </Button>
+            
+            <HStack spacing={3}>
+              <Avatar 
+                size="md" 
+                src={user?.avatar} 
+                name={user?.name || '用户'}
+              />
+              <Button
+                leftIcon={<FaSignOutAlt />}
+                variant="ghost"
+                colorScheme="red"
+                onClick={onLogout}
+                size="sm"
+              >
+                退出登录
+              </Button>
+            </HStack>
+          </HStack>
+        </Flex>
+      </Box>
+
+      {/* 项目网格 */}
+      {projects.length === 0 ? (
+        <Box 
+          bg="white" 
+          _dark={{ bg: "gray.800" }}
+          borderRadius="lg" 
+          p={12} 
+          textAlign="center"
+        >
+          <VStack spacing={6}>
+            <Box
+              w="20"
+              h="20"
+              bg="brand.50"
+              _dark={{ bg: "brand.900" }}
+              borderRadius="full"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Icon as={FaBook} fontSize="3xl" color="brand.500" />
+            </Box>
+            
+            <VStack spacing={2}>
+              <Heading size="md" color="text.primary">
+                还没有项目
+              </Heading>
+              <Text color="text.muted">
+                创建您的第一个小说项目，开始创作之旅
+              </Text>
+            </VStack>
+            
+            <Button
+              leftIcon={<FaPlus />}
+              colorScheme="brand"
+              onClick={() => setShowCreateDialog(true)}
+              size="lg"
+            >
               创建项目
-            </button>
-          </div>
-        ) : (
-          projects.map(project => {
+            </Button>
+          </VStack>
+        </Box>
+      ) : (
+        <Grid 
+          templateColumns="repeat(auto-fill, minmax(350px, 1fr))" 
+          gap={6}
+        >
+          {projects.map(project => {
             const stats = getProjectStats(project);
             return (
-              <div key={project.id} className="project-card">
-                <div className="project-header">
-                  <h3>{project.name}</h3>
-                  <div className="project-actions">
-                    <button 
-                      className="action-btn edit-btn"
-                      onClick={() => onSelectProject(project.id)}
-                      title="编辑项目"
+              <Card 
+                key={project.id} 
+                bg="white" 
+                _dark={{ bg: "gray.800" }}
+                borderRadius="lg" 
+                boxShadow="sm"
+                _hover={{ boxShadow: "md" }}
+                transition="all 0.2s"
+              >
+                <CardHeader pb={3}>
+                  <Flex justify="space-between" align="start">
+                    <Heading size="md" color="text.primary" noOfLines={2}>
+                      {project.name}
+                    </Heading>
+                    
+                    <HStack spacing={1}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="brand"
+                        onClick={() => onSelectProject(project.id)}
+                        title="编辑项目"
+                      >
+                        <FaEdit />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="red"
+                        onClick={() => handleDeleteProject(project)}
+                        title="删除项目"
+                      >
+                        <FaTrash />
+                      </Button>
+                    </HStack>
+                  </Flex>
+                  
+                  {project.description && (
+                    <Text 
+                      color="text.secondary" 
+                      fontSize="sm" 
+                      noOfLines={2}
+                      mt={2}
                     >
-                      <FaEdit />
-                    </button>
-                    <button 
-                      className="action-btn delete-btn"
-                      onClick={() => {
-                    showConfirmDialog({
-                      title: '确认删除项目',
-                      message: `您确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
-                      type: 'error',
-                      confirmText: '确认删除',
-                      onConfirm: () => onDeleteProject(project.id)
-                    });
-                  }}
-                      title="删除项目"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
+                      {project.description}
+                    </Text>
+                  )}
+                </CardHeader>
                 
-                {project.description && (
-                  <p className="project-description">{project.description}</p>
-                )}
+                <CardBody py={3}>
+                  <HStack spacing={4}>
+                    <VStack align="start" spacing={1}>
+                      <Text fontSize="xs" color="text.muted" fontWeight="medium">
+                        字数
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold" color="brand.600">
+                        {stats.wordCount.toLocaleString()}
+                      </Text>
+                    </VStack>
+                    
+                    <VStack align="start" spacing={1}>
+                      <Text fontSize="xs" color="text.muted" fontWeight="medium">
+                        章节
+                      </Text>
+                      <Text fontSize="lg" fontWeight="bold" color="creative.600">
+                        {stats.chapters}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </CardBody>
                 
-                <div className="project-stats">
-                  <div className="stat-item">
-                    <span className="stat-label">字数</span>
-                    <span className="stat-value">{stats.wordCount.toLocaleString()}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">章节</span>
-                    <span className="stat-value">{stats.chapters}</span>
-                  </div>
-                </div>
-                
-                <div className="project-footer">
-                  <div className="last-updated">
-                    <FaCalendarAlt />
-                    <span>更新于 {formatDate(stats.lastUpdated)}</span>
-                  </div>
-                  <button 
-                    className="open-project-btn"
-                    onClick={() => onSelectProject(project.id)}
-                  >
-                    打开项目
-                  </button>
-                </div>
-              </div>
+                <CardFooter pt={3}>
+                  <VStack w="full" spacing={3} align="stretch">
+                    <Divider />
+                    
+                    <HStack justify="space-between" align="center">
+                      <HStack spacing={2} color="text.muted">
+                        <Icon as={FaCalendarAlt} fontSize="sm" />
+                        <Text fontSize="sm">
+                          更新于 {formatDate(stats.lastUpdated)}
+                        </Text>
+                      </HStack>
+                      
+                      <Button
+                        size="sm"
+                        colorScheme="brand"
+                        onClick={() => onSelectProject(project.id)}
+                        leftIcon={<FaFileAlt />}
+                      >
+                        打开项目
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </CardFooter>
+              </Card>
             );
-          })
-        )}
-      </div>
+          })}
+        </Grid>
+      )}
 
       {/* 创建项目对话框 */}
-      {showCreateDialog && (
-        <div className="modal-overlay" onClick={() => setShowCreateDialog(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>创建新项目</h2>
-              <button 
-                className="modal-close"
-                onClick={() => setShowCreateDialog(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={handleCreateProject} className="create-project-form">
-              <div className="form-group">
-                <label>项目名称 *</label>
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="输入项目名称"
-                  required
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>项目描述</label>
-                <textarea
-                  value={newProjectDescription}
-                  onChange={(e) => setNewProjectDescription(e.target.value)}
-                  placeholder="简要描述您的小说项目（可选）"
-                  rows="3"
-                />
-              </div>
-              
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="cancel-btn"
-                  onClick={() => setShowCreateDialog(false)}
-                >
-                  取消
-                </button>
-                <button type="submit" className="confirm-btn">
-                  创建项目
-                </button>
-              </div>
+      <Modal 
+        isOpen={showCreateDialog} 
+        onClose={() => setShowCreateDialog(false)}
+        size="md"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>创建新项目</ModalHeader>
+          <ModalCloseButton />
+          
+          <ModalBody pb={6}>
+            <form onSubmit={handleCreateProject}>
+              <VStack spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel>项目名称</FormLabel>
+                  <Input
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="输入项目名称"
+                    size="lg"
+                  />
+                </FormControl>
+                
+                <FormControl>
+                  <FormLabel>项目描述</FormLabel>
+                  <Textarea
+                    value={newProjectDescription}
+                    onChange={(e) => setNewProjectDescription(e.target.value)}
+                    placeholder="简要描述您的小说项目（可选）"
+                    rows={3}
+                    resize="none"
+                  />
+                </FormControl>
+                
+                <HStack w="full" justify="flex-end" spacing={3} pt={4}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    type="submit"
+                    colorScheme="brand"
+                    isDisabled={!newProjectName.trim()}
+                  >
+                    创建项目
+                  </Button>
+                </HStack>
+              </VStack>
             </form>
-          </div>
-        </div>
-      )}
-    </div>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 };
 
