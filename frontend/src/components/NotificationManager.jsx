@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useState } from 'react';
+import { Box } from '@chakra-ui/react';
 import Notification from './Notification';
 import UniversalDialog from './UniversalDialog';
 
@@ -92,17 +93,18 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider value={{ addNotification, removeNotification, showConfirmDialog, hideConfirmDialog }}>
       {children}
-      <div className="notifications-container">
+      <Box position="fixed" top="4" right="4" zIndex={9999} pointerEvents="none">
         {notifications.map((notification) => (
-          <Notification
-            key={notification.id}
-            message={notification.message}
-            type={notification.type}
-            duration={notification.duration}
-            onClose={() => removeNotification(notification.id)}
-          />
+          <Box key={notification.id} pointerEvents="auto">
+            <Notification
+              message={notification.message}
+              type={notification.type}
+              duration={notification.duration}
+              onClose={() => removeNotification(notification.id)}
+            />
+          </Box>
         ))}
-      </div>
+      </Box>
       {confirmDialog && (
         <UniversalDialog
           title={confirmDialog.title}

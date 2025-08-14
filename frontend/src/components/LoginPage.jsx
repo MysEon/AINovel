@@ -56,7 +56,7 @@ const LoginPage = ({ onLogin, onNavigate }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(245, 158, 11, 0.8) 100%)',
+        bg: 'rgba(255, 255, 255, 0.3)',
         backdropFilter: 'blur(2px)',
         zIndex: 1
       }}
@@ -110,20 +110,28 @@ const LoginPage = ({ onLogin, onNavigate }) => {
         <Box flex="1" maxW="md">
           <Card.Root 
             w="100%" 
-            boxShadow="xl"
-            backdropFilter="blur(10px)"
-            bg="rgba(255, 255, 255, 0.95)"
+            boxShadow="0 8px 32px 0 rgba(31, 38, 135, 0.37)"
+            border="1px solid rgba(255, 255, 255, 0.18)"
+            backdropFilter="blur(4px)"
+            WebkitBackdropFilter="blur(4px)"
+            bg="rgba(255, 255, 255, 0.15)"
+            borderRadius="24px"
+            _light={{
+              bg: "rgba(255, 255, 255, 0.85)",
+              borderColor: "rgba(0, 0, 0, 0.1)",
+              boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.1)"
+            }}
             _dark={{
-              bg: "rgba(26, 32, 44, 0.95)",
-              borderColor: "gray.700"
+              bg: "rgba(26, 32, 44, 0.25)",
+              borderColor: "rgba(255, 255, 255, 0.125)"
             }}
           >
-          <Card.Body p={8}>
-              <Box textAlign="center" mb={8}>
-                <Text fontSize="2xl" fontWeight="bold" color="brand.600" mb={2}>
+          <Card.Body p={12}>
+              <Box textAlign="center" mb={12}>
+                <Text fontSize="4xl" fontWeight="200" color="white" mb={4} letterSpacing="tight" _light={{ color: "gray.800" }}>
                   欢迎回来
                 </Text>
-                <Text color="text.muted" fontSize="lg">
+                <Text color="rgba(255, 255, 255, 0.85)" fontSize="lg" fontWeight="300" _light={{ color: "gray.600" }}>
                   登录您的账户继续创作
                 </Text>
               </Box>
@@ -140,6 +148,29 @@ const LoginPage = ({ onLogin, onNavigate }) => {
                   disabled={isLoading}
                   size="lg"
                   variant="outline"
+                  bg="rgba(255, 255, 255, 0.1)"
+                  border="1px solid rgba(255, 255, 255, 0.2)"
+                  color="white"
+                  _placeholder={{ color: "rgba(255, 255, 255, 0.6)" }}
+                  _focus={{ 
+                    bg: "rgba(255, 255, 255, 0.15)",
+                    borderColor: "rgba(255, 255, 255, 0.4)",
+                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                  }}
+                  backdropFilter="blur(4px)"
+                  WebkitBackdropFilter="blur(4px)"
+                  borderRadius="12px"
+                  _light={{
+                    bg: "rgba(255, 255, 255, 0.9)",
+                    border: "1px solid rgba(0, 0, 0, 0.1)",
+                    color: "gray.800",
+                    _placeholder: { color: "gray.400" },
+                    _focus: { 
+                      bg: "white",
+                      borderColor: "brand.500",
+                      boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.3)"
+                    }
+                  }}
                 />
               </Field.Root>
 
@@ -153,6 +184,29 @@ const LoginPage = ({ onLogin, onNavigate }) => {
                   disabled={isLoading}
                   size="lg"
                   variant="outline"
+                  bg="rgba(255, 255, 255, 0.1)"
+                  border="1px solid rgba(255, 255, 255, 0.2)"
+                  color="white"
+                  _placeholder={{ color: "rgba(255, 255, 255, 0.6)" }}
+                  _focus={{ 
+                    bg: "rgba(255, 255, 255, 0.15)",
+                    borderColor: "rgba(255, 255, 255, 0.4)",
+                    boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.3)"
+                  }}
+                  backdropFilter="blur(4px)"
+                  WebkitBackdropFilter="blur(4px)"
+                  borderRadius="12px"
+                  _light={{
+                    bg: "rgba(255, 255, 255, 0.9)",
+                    border: "1px solid rgba(0, 0, 0, 0.1)",
+                    color: "gray.800",
+                    _placeholder: { color: "gray.400" },
+                    _focus: { 
+                      bg: "white",
+                      borderColor: "brand.500",
+                      boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.3)"
+                    }
+                  }}
                 />
               </Field.Root>
 
@@ -165,33 +219,69 @@ const LoginPage = ({ onLogin, onNavigate }) => {
               <Button
                 type="submit"
                 size="lg"
-                bg="brand.600"
+                bg="linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)"
                 color="white"
-                _hover={{ bg: "brand.700" }}
-                _active={{ bg: "brand.800" }}
+                border="1px solid rgba(255, 255, 255, 0.25)"
+                boxShadow="0 4px 15px 0 rgba(31, 38, 135, 0.2)"
+                backdropFilter="blur(4px)"
+                WebkitBackdropFilter="blur(4px)"
+                borderRadius="16px"
+                _hover={{ 
+                  bg: "linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%)",
+                  borderColor: "rgba(255, 255, 255, 0.35)",
+                  boxShadow: "0 6px 20px 0 rgba(31, 38, 135, 0.3)"
+                }}
+                _active={{ 
+                  bg: "linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.3) 100%)",
+                  boxShadow: "0 2px 10px 0 rgba(31, 38, 135, 0.2)"
+                }}
                 disabled={isLoading || !username || !password}
                 loading={isLoading}
                 loadingText="登录中..."
+                fontSize="md"
+                py={7}
+                fontWeight="500"
+                transition="all 0.3s ease"
+                _light={{
+                  bg: "brand.600",
+                  color: "white",
+                  border: "none",
+                  boxShadow: "0 4px 12px 0 rgba(59, 130, 246, 0.3)",
+                  _hover: { 
+                    bg: "brand.700",
+                    boxShadow: "0 6px 16px 0 rgba(59, 130, 246, 0.4)"
+                  },
+                  _active: { 
+                    bg: "brand.800"
+                  }
+                }}
               >
                 登录
               </Button>
             </Flex>
           </form>
 
-          <Box textAlign="center" mt={6}>
-            <Text color="text.muted">
+          <Box textAlign="center" mt={8}>
+            <Text color="rgba(255, 255, 255, 0.7)" fontSize="sm" _light={{ color: "gray.600" }}>
               还没有账号？{' '}
               <Text
                 as="button"
-                color="brand.600"
-                fontWeight="medium"
+                color="white"
+                fontWeight="500"
                 onClick={() => onNavigate('register')}
-                _hover={{ color: "brand.700" }}
+                _hover={{ color: "rgba(255, 255, 255, 0.9)" }}
                 cursor="pointer"
                 bg="none"
                 border="none"
                 p={0}
                 fontSize="inherit"
+                textDecoration="underline"
+                textDecorationStyle="dotted"
+                textUnderlineOffset="2px"
+                _light={{
+                  color: "brand.600",
+                  _hover: { color: "brand.700" }
+                }}
               >
                 立即注册
               </Text>

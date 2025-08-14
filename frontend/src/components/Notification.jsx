@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheckCircle, FaExclamationCircle, FaInfoCircle, FaTimes } from 'react-icons/fa';
+import { 
+  Box, 
+  HStack, 
+  Text, 
+  Icon,
+  CloseButton
+} from '@chakra-ui/react';
+import { FaCheckCircle, FaExclamationCircle, FaInfoCircle } from 'react-icons/fa';
 import './Notification.css';
 
 const Notification = ({ message, type = 'info', duration = 3000, onClose }) => {
@@ -25,26 +32,39 @@ const Notification = ({ message, type = 'info', duration = 3000, onClose }) => {
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <FaCheckCircle className="notification-icon success" />;
+        return <Icon as={FaCheckCircle} color="green.500" boxSize={5} />;
       case 'error':
-        return <FaExclamationCircle className="notification-icon error" />;
+        return <Icon as={FaExclamationCircle} color="red.500" boxSize={5} />;
       case 'warning':
-        return <FaExclamationCircle className="notification-icon warning" />;
+        return <Icon as={FaExclamationCircle} color="orange.500" boxSize={5} />;
       default:
-        return <FaInfoCircle className="notification-icon info" />;
+        return <Icon as={FaInfoCircle} color="blue.500" boxSize={5} />;
     }
   };
 
-  const getTypeClass = () => {
+  const getBgColor = () => {
     switch (type) {
       case 'success':
-        return 'notification-success';
+        return 'green.50';
       case 'error':
-        return 'notification-error';
+        return 'red.50';
       case 'warning':
-        return 'notification-warning';
+        return 'orange.50';
       default:
-        return 'notification-info';
+        return 'blue.50';
+    }
+  };
+
+  const getBorderColor = () => {
+    switch (type) {
+      case 'success':
+        return 'green.200';
+      case 'error':
+        return 'red.200';
+      case 'warning':
+        return 'orange.200';
+      default:
+        return 'blue.200';
     }
   };
 
@@ -53,15 +73,43 @@ const Notification = ({ message, type = 'info', duration = 3000, onClose }) => {
   }
 
   return (
-    <div className={`notification ${getTypeClass()}`}>
-      <div className="notification-content">
+    <Box
+      position="fixed"
+      top="4"
+      right="4"
+      zIndex={9999}
+      maxW="md"
+      bg={getBgColor()}
+      _dark={{
+        bg: type === 'success' ? 'green.900' : 
+             type === 'error' ? 'red.900' : 
+             type === 'warning' ? 'orange.900' : 'blue.900'
+      }}
+      border="1px"
+      borderColor={getBorderColor()}
+      borderRadius="md"
+      boxShadow="lg"
+      p={4}
+      animation="slideIn 0.3s ease-out"
+    >
+      <HStack align="start" spacing={3}>
         {getIcon()}
-        <span className="notification-message">{message}</span>
-        <button className="notification-close" onClick={handleClose}>
-          <FaTimes />
-        </button>
-      </div>
-    </div>
+        <Text 
+          flex="1" 
+          color="text.primary" 
+          fontSize="sm"
+          lineHeight="1.4"
+        >
+          {message}
+        </Text>
+        <CloseButton 
+          size="sm" 
+          onClick={handleClose}
+          color="text.muted"
+          _hover={{ color: "text.primary" }}
+        />
+      </HStack>
+    </Box>
   );
 };
 

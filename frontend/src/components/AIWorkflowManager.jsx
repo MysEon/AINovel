@@ -1,5 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlay, FaPause, FaStop, FaCog, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaBook, FaSpinner } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Heading, 
+  Text, 
+  HStack, 
+  VStack,
+  Icon,
+  Spinner,
+  Grid,
+  Badge,
+  // Divider removed
+  Progress,
+  Switch,
+  Field,
+  FieldLabel,
+  Input,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton
+} from '@chakra-ui/react';
+import { FaPlay, FaPause, FaStop, FaCog, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaBook, FaSpinner as FaSpinnerIcon } from 'react-icons/fa';
 import { aiService } from '../services/aiService';
 import { useNotification } from '../NotificationManager';
 import './AIWorkflowManager.css';
@@ -166,30 +192,30 @@ const AIWorkflowManager = ({ projectId }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'running':
-        return <FaSpinner className="spinner" />;
+        return <Icon as={FaSpinnerIcon} color="blue.500" />;
       case 'completed':
-        return <FaChartLine className="success" />;
+        return <Icon as={FaChartLine} color="green.500" />;
       case 'failed':
-        return <FaStop className="error" />;
+        return <Icon as={FaStop} color="red.500" />;
       case 'stopped':
-        return <FaPause className="warning" />;
+        return <Icon as={FaPause} color="orange.500" />;
       default:
-        return <FaPlay />;
+        return <Icon as={FaPlay} color="gray.500" />;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'running':
-        return 'status-running';
+        return 'blue';
       case 'completed':
-        return 'status-completed';
+        return 'green';
       case 'failed':
-        return 'status-failed';
+        return 'red';
       case 'stopped':
-        return 'status-stopped';
+        return 'orange';
       default:
-        return 'status-idle';
+        return 'gray';
     }
   };
 
@@ -203,117 +229,175 @@ const AIWorkflowManager = ({ projectId }) => {
 
   if (isLoading && workflows.length === 0) {
     return (
-      <div className="ai-workflow-manager loading">
-        <FaSpinner className="spinner" />
-        <p>加载工作流...</p>
-      </div>
+      <Box h="100vh" display="flex" alignItems="center" justifyContent="center" bg="bg.canvas">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="brand.500" />
+          <Text color="text.muted">加载工作流...</Text>
+        </VStack>
+      </Box>
     );
   }
 
   return (
-    <div className="ai-workflow-manager">
-      <div className="workflow-header">
-        <h2>AI写作工作流</h2>
-        <p>智能化创作流程管理，提升写作效率</p>
-      </div>
+    <Box h="100vh" display="flex" flexDirection="column" bg="bg.canvas" p={6}>
+      {/* 头部 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        p={6} 
+        mb={6}
+      >
+        <VStack spacing={2} align="stretch">
+          <Heading size="lg" color="text.primary">AI写作工作流</Heading>
+          <Text color="text.muted">智能化创作流程管理，提升写作效率</Text>
+        </VStack>
+      </Box>
 
-      <div className="workflow-grid">
+      {/* 工作流网格 */}
+      <Grid templateColumns="repeat(auto-fit, minmax(400px, 1fr))" gap={6}>
         {workflows.map(workflow => {
           const status = workflowStatus[workflow.id];
           const isActive = activeWorkflow?.id === workflow.id;
           
           return (
-            <div 
+            <Box 
               key={workflow.id} 
-              className={`workflow-card ${isActive ? 'active' : ''} ${status ? getStatusColor(status.status) : ''}`}
+              bg="white" 
+              _dark={{ bg: "gray.800" }}
+              borderRadius="lg" 
+              boxShadow="sm" 
+              border="2px"
+              borderColor={isActive ? 'brand.500' : status ? `${getStatusColor(status.status)}.500` : 'transparent'}
+              overflow="hidden"
             >
-              <div className="workflow-header">
-                <div className="workflow-icon">
-                  {workflow.icon}
-                </div>
-                <div className="workflow-info">
-                  <h3>{workflow.name}</h3>
-                  <p>{workflow.description}</p>
-                </div>
-                <div className="workflow-status">
-                  {status && getStatusIcon(status.status)}
-                </div>
-              </div>
-
-              <div className="workflow-steps">
-                <h4>工作流程</h4>
-                <div className="steps-list">
-                  {(workflow.steps || []).map((step, index) => (
-                    <div 
-                      key={step.id} 
-                      className={`step-item ${status && status.currentStep === index ? 'active' : ''} ${status && status.currentStep > index ? 'completed' : ''}`}
+              {/* 工作流头部 */}
+              <Box p={4} borderBottom="1px" borderColor="border.default">
+                <HStack justify="space-between" align="start">
+                  <HStack spacing={3} align="start">
+                    <Box 
+                      w="12" 
+                      h="12" 
+                      bg="brand.50" 
+                      _dark={{ bg: "brand.900" }}
+                      borderRadius="full" 
+                      display="flex" 
+                      alignItems="center" 
+                      justifyContent="center"
                     >
-                      <div className="step-icon">
-                        {step.icon}
-                      </div>
-                      <div className="step-info">
-                        <span className="step-name">{step.name}</span>
-                        {status && status.currentStep === index && (
-                          <span className="step-progress">
-                            {Math.round(status.progress)}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                      <Icon as={workflow.icon.type || FaBook} fontSize="xl" color="brand.500" />
+                    </Box>
+                    <VStack align="start" spacing={1} flex="1">
+                      <Heading size="md" color="text.primary">{workflow.name}</Heading>
+                      <Text fontSize="sm" color="text.muted">{workflow.description}</Text>
+                    </VStack>
+                  </HStack>
+                  <Box>
+                    {status && getStatusIcon(status.status)}
+                  </Box>
+                </HStack>
+              </Box>
 
+              {/* 工作流步骤 */}
+              <Box p={4}>
+                <VStack spacing={3} align="stretch">
+                  <Heading size="sm" color="text.primary">工作流程</Heading>
+                  <VStack spacing={2} align="stretch">
+                    {(workflow.steps || []).map((step, index) => (
+                      <HStack 
+                        key={step.id} 
+                        spacing={3}
+                        p={2}
+                        borderRadius="md"
+                        bg={status && status.currentStep === index ? 'brand.50' : 
+                            status && status.currentStep > index ? 'green.50' : 'gray.50'}
+                        _dark={{ bg: status && status.currentStep === index ? 'brand.900' : 
+                                   status && status.currentStep > index ? 'green.900' : 'gray.900'}}
+                      >
+                        <Box 
+                          w="8" 
+                          h="8" 
+                          borderRadius="full" 
+                          display="flex" 
+                          alignItems="center" 
+                          justifyContent="center"
+                          bg={status && status.currentStep === index ? 'brand.500' : 
+                              status && status.currentStep > index ? 'green.500' : 'gray.400'}
+                        >
+                          <Icon as={step.icon.type || FaMagic} fontSize="sm" color="white" />
+                        </Box>
+                        <HStack justify="space-between" flex="1">
+                          <Text fontSize="sm" color="text.primary">{step.name}</Text>
+                          {status && status.currentStep === index && (
+                            <Badge colorScheme="brand" fontSize="xs">
+                              {Math.round(status.progress)}%
+                            </Badge>
+                          )}
+                        </HStack>
+                      </HStack>
+                    ))}
+                  </VStack>
+                </VStack>
+              </Box>
+
+              {/* 进度条 */}
               {status && (
-                <div className="workflow-progress">
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${status.progress || 0}%` }}
-                    ></div>
-                  </div>
-                  <div className="progress-info">
-                    <span className="progress-text">
-                      {status.status === 'running' ? '执行中...' : 
-                       status.status === 'completed' ? '已完成' :
-                       status.status === 'failed' ? '执行失败' :
-                       status.status === 'stopped' ? '已停止' : '准备就绪'}
-                    </span>
-                    {status.startTime && (
-                      <span className="duration">
-                        {formatDuration(status.startTime, status.endTime)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <Box p={4} borderTop="1px" borderColor="border.default">
+                  <VStack spacing={2} align="stretch">
+                    <Progress 
+                      value={status.progress || 0} 
+                      colorScheme={getStatusColor(status.status)}
+                      size="sm"
+                      borderRadius="full"
+                    />
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" color="text.primary">
+                        {status.status === 'running' ? '执行中...' : 
+                         status.status === 'completed' ? '已完成' :
+                         status.status === 'failed' ? '执行失败' :
+                         status.status === 'stopped' ? '已停止' : '准备就绪'}
+                      </Text>
+                      {status.startTime && (
+                        <Text fontSize="sm" color="text.muted">
+                          {formatDuration(status.startTime, status.endTime)}
+                        </Text>
+                      )}
+                    </HStack>
+                  </VStack>
+                </Box>
               )}
 
-              <div className="workflow-actions">
-                <button 
-                  className={`action-btn primary ${status?.status === 'running' ? 'stop' : 'start'}`}
-                  onClick={() => status?.status === 'running' 
-                    ? stopWorkflow(workflow.id) 
-                    : startWorkflow(workflow.id)
-                  }
-                  disabled={isLoading}
-                >
-                  {status?.status === 'running' ? <FaStop /> : <FaPlay />}
-                  {status?.status === 'running' ? '停止' : '启动'}
-                </button>
-                
-                <button 
-                  className="action-btn secondary"
-                  onClick={() => configureWorkflow(workflow)}
-                  disabled={isLoading}
-                >
-                  <FaCog />
-                  配置
-                </button>
-              </div>
-            </div>
+              {/* 操作按钮 */}
+              <Box p={4} borderTop="1px" borderColor="border.default">
+                <HStack spacing={3}>
+                  <Button
+                    leftIcon={status?.status === 'running' ? <Icon as={FaStop} /> : <Icon as={FaPlay} />}
+                    onClick={() => status?.status === 'running' 
+                      ? stopWorkflow(workflow.id) 
+                      : startWorkflow(workflow.id)
+                    }
+                    isDisabled={isLoading}
+                    colorScheme={status?.status === 'running' ? 'red' : 'brand'}
+                    flex="1"
+                  >
+                    {status?.status === 'running' ? '停止' : '启动'}
+                  </Button>
+                  
+                  <Button
+                    leftIcon={<Icon as={FaCog} />}
+                    onClick={() => configureWorkflow(workflow)}
+                    isDisabled={isLoading}
+                    variant="outline"
+                  >
+                    配置
+                  </Button>
+                </HStack>
+              </Box>
+            </Box>
           );
         })}
-      </div>
+      </Grid>
 
       {showConfig && selectedWorkflow && (
         <WorkflowConfigDialog 
@@ -328,7 +412,7 @@ const AIWorkflowManager = ({ projectId }) => {
           }}
         />
       )}
-    </div>
+    </Box>
   );
 };
 
@@ -346,84 +430,88 @@ const WorkflowConfigDialog = ({ workflow, onClose, onSave }) => {
   };
 
   return (
-    <div className="workflow-config-dialog-overlay">
-      <div className="workflow-config-dialog">
-        <div className="dialog-header">
-          <h3>配置工作流: {workflow.name}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
-        </div>
+    <Modal isOpen={true} onClose={onClose} size="lg">
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>
+          <Heading size="md" color="text.primary">配置工作流: {workflow.name}</Heading>
+        </ModalHeader>
+        <ModalCloseButton />
         
-        <div className="dialog-content">
-          <div className="config-section">
-            <h4>执行设置</h4>
-            <div className="config-item">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={config.autoStart}
-                  onChange={(e) => setConfig(prev => ({ ...prev, autoStart: e.target.checked }))}
-                />
-                自动启动
-              </label>
-            </div>
+        <ModalBody>
+          <VStack spacing={6} align="stretch">
+            <Box>
+              <Heading size="sm" color="text.primary" mb={4}>执行设置</Heading>
+              <VStack spacing={4} align="stretch">
+                <Field>
+                  <FieldLabel color="text.primary">自动启动</FieldLabel>
+                  <Switch
+                    isChecked={config.autoStart}
+                    onChange={(e) => setConfig(prev => ({ ...prev, autoStart: e.target.checked }))}
+                  />
+                </Field>
+                
+                <Field>
+                  <FieldLabel color="text.primary">出错时重试</FieldLabel>
+                  <Switch
+                    isChecked={config.retryOnError}
+                    onChange={(e) => setConfig(prev => ({ ...prev, retryOnError: e.target.checked }))}
+                  />
+                </Field>
+                
+                {config.retryOnError && (
+                  <Field>
+                    <FieldLabel color="text.primary">最大重试次数</FieldLabel>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={config.maxRetries}
+                      onChange={(e) => setConfig(prev => ({ ...prev, maxRetries: parseInt(e.target.value) }))}
+                    />
+                  </Field>
+                )}
+                
+                <Field>
+                  <FieldLabel color="text.primary">超时时间(秒)</FieldLabel>
+                  <Input
+                    type="number"
+                    min="30"
+                    max="3600"
+                    value={config.timeout}
+                    onChange={(e) => setConfig(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
+                  />
+                </Field>
+              </VStack>
+            </Box>
             
-            <div className="config-item">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={config.retryOnError}
-                  onChange={(e) => setConfig(prev => ({ ...prev, retryOnError: e.target.checked }))}
-                />
-                出错时重试
-              </label>
-            </div>
-            
-            {config.retryOnError && (
-              <div className="config-item">
-                <label>最大重试次数:</label>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="10" 
-                  value={config.maxRetries}
-                  onChange={(e) => setConfig(prev => ({ ...prev, maxRetries: parseInt(e.target.value) }))}
-                />
-              </div>
-            )}
-            
-            <div className="config-item">
-              <label>超时时间(秒):</label>
-              <input 
-                type="number" 
-                min="30" 
-                max="3600" 
-                value={config.timeout}
-                onChange={(e) => setConfig(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
-              />
-            </div>
-          </div>
-          
-          <div className="config-section">
-            <h4>通知设置</h4>
-            <div className="config-item">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={config.notifications}
-                  onChange={(e) => setConfig(prev => ({ ...prev, notifications: e.target.checked }))}
-                />
-                启用通知
-              </label>
-            </div>
-          </div>
-        </div>
+            <Box>
+              <Heading size="sm" color="text.primary" mb={4}>通知设置</Heading>
+              <VStack spacing={4} align="stretch">
+                <Field>
+                  <FieldLabel color="text.primary">启用通知</FieldLabel>
+                  <Switch
+                    isChecked={config.notifications}
+                    onChange={(e) => setConfig(prev => ({ ...prev, notifications: e.target.checked }))}
+                  />
+                </Field>
+              </VStack>
+            </Box>
+          </VStack>
+        </ModalBody>
         
-        <div className="dialog-actions">
-          <button className="cancel-btn" onClick={onClose}>取消</button>
-          <button className="save-btn" onClick={handleSave}>保存</button>
-        </div>
-      </div>
-    </div>
+        <ModalFooter>
+          <HStack spacing={3}>
+            <Button variant="outline" onClick={onClose}>
+              取消
+            </Button>
+            <Button colorScheme="brand" onClick={handleSave}>
+              保存
+            </Button>
+          </HStack>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 };
 

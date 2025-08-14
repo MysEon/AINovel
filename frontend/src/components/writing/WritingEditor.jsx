@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Heading, 
+  Text, 
+  HStack, 
+  VStack,
+  Select,
+  Textarea,
+  Icon,
+  Spinner,
+  Field
+} from '@chakra-ui/react';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner as FaSpinnerIcon, FaMagic, FaLightbulb, FaUsers } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
 import { aiService } from '../../services/aiService';
@@ -356,43 +370,56 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   // 错误边界检查
   if (!projectId) {
     return (
-      <div className="writing-editor">
-        <div className="editor-content">
-          <div className="error-notice">
-            <h3>错误</h3>
-            <p>项目ID未提供，请返回项目选择页面。</p>
-          </div>
-        </div>
-      </div>
+      <Box p={8} textAlign="center" bg="white" _dark={{ bg: "gray.800" }} borderRadius="lg">
+        <VStack spacing={4}>
+          <Heading size="lg" color="text.primary">错误</Heading>
+          <Text color="text.muted">项目ID未提供，请返回项目选择页面。</Text>
+        </VStack>
+      </Box>
     );
   }
 
   return (
-    <div className="writing-editor">
-      <div className="editor-content">
+    <Box h="100vh" display="flex" flexDirection="column" bg="bg.canvas">
+      {/* 主编辑区域 */}
+      <Box flex="1" overflow="hidden">
         {chapters.length === 0 ? (
-          <div className="empty-chapters-notice">
-            <h3>欢迎开始创作！</h3>
-            <p>您的项目目前还没有章节。</p>
-            <button className="create-chapter-button" onClick={() => {
-              showConfirmDialog({
-                title: '创建第一个章节',
-                message: '请输入章节标题：',
-                showInput: true,
-                inputValue: '',
-                onInputChange: (value) => {},
-                inputPlaceholder: '例如：第一章：开始',
-                required: true,
-                type: 'info',
-                showResultNotification: true,
-                successMessage: '第一个章节已创建',
-                errorMessage: '创建第一个章节失败',
-                onConfirm: handleStartNewChapter
-              });
-            }}>
-              <FaBook /> 创建第一个章节
-            </button>
-            </div>
+          <Box 
+            p={12} 
+            textAlign="center"
+            bg="white" 
+            _dark={{ bg: "gray.800" }}
+            borderRadius="lg"
+            m={4}
+          >
+            <VStack spacing={6}>
+              <Heading size="lg" color="text.primary">欢迎开始创作！</Heading>
+              <Text color="text.muted">您的项目目前还没有章节。</Text>
+              <Button
+                leftIcon={<FaBook />}
+                colorScheme="brand"
+                size="lg"
+                onClick={() => {
+                  showConfirmDialog({
+                    title: '创建第一个章节',
+                    message: '请输入章节标题：',
+                    showInput: true,
+                    inputValue: '',
+                    onInputChange: (value) => {},
+                    inputPlaceholder: '例如：第一章：开始',
+                    required: true,
+                    type: 'info',
+                    showResultNotification: true,
+                    successMessage: '第一个章节已创建',
+                    errorMessage: '创建第一个章节失败',
+                    onConfirm: handleStartNewChapter
+                  });
+                }}
+              >
+                创建第一个章节
+              </Button>
+            </VStack>
+          </Box>
         ) : aiAssisted ? (
           <AiWritingInterface 
             content={content} 
@@ -408,110 +435,165 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             readOnly={isEditorLocked}
           />
         )}
-      </div>
-      <div className="editor-footer">
-        <div className="footer-left">
-          <div className="chapter-selector">
-            <label>当前章节:</label>
-            <select value={currentChapter?.id || ''} onChange={handleChapterChange}>
-              {chapters.map(chapter => (
-                <option key={chapter.id} value={chapter.id}>
-                  第{chapter.chapter_number}章 {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
-                </option>
-              ))}
-            </select>
-            {currentChapter && (
-              <span className={`chapter-status ${currentChapter.status}`}>
-                {currentChapter.status === 'published' ? '已发布' : '草稿'}
-              </span>
-            )}
-            {isEditorLocked && (
-              <button className="action-btn unlock-btn" onClick={handleUnlockClick} title="解锁">
-                <FaLockOpen />
-              </button>
-            )}
-          </div>
-          <button 
-            className={`publish-button ${currentChapter?.status === 'published' ? 'published' : ''}`}
-            onClick={publishChapterContent}
-            disabled={isPublishing || !currentChapter || currentChapter.status === 'published'}
-            title={currentChapter?.status === 'published' ? "章节已发布" : "发布章节"}
-          >
-            <FaUpload />
-            <span>{currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布')}</span>
-          </button>
-          <button 
-            className="batch-publish-button"
-            onClick={handleBatchPublishClick}
-            disabled={!currentChapter}
-            title="批量发布多个章节"
-          >
-            <FaLayerGroup />
-            <span>批量发布</span>
-          </button>
-          <button 
-            className="publish-button"
-            onClick={() => {
-              showConfirmDialog({
-                title: '开启新章节',
-                message: '请输入新章节的标题：',
-                showInput: true,
-                inputValue: newChapterTitle,
-                onInputChange: (value) => setNewChapterTitle(value),
-                inputPlaceholder: '例如：新的征程',
-                required: true,
-                type: 'info',
-                showResultNotification: true,
-                successMessage: '新章节已开启',
-                errorMessage: '开启新章失败',
-                onConfirm: handleStartNewChapter
-              });
-            }}
-            title="开启一个全新的章节"
-          >
-            <FaPlus />
-            <span>开启新章</span>
-          </button>
-        </div>
-        <div className="footer-right">
-          {aiAssisted && (
-            <div className="ai-mode-selector">
-              <span className="ai-mode-label">AI模式:</span>
-              <div className="ai-mode-buttons">
-                <button
-                  className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('optimize')}
+      </Box>
+      
+      {/* 底部工具栏 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderTop="1px" 
+        borderColor="border.default"
+        p={4}
+      >
+        <Flex justify="space-between" align="center" gap={4}>
+          {/* 左侧控制区 */}
+          <HStack spacing={4} flex="1">
+            <VStack align="start" spacing={2}>
+              <Text fontSize="sm" color="text.muted">当前章节</Text>
+              <HStack spacing={2}>
+                <Select 
+                  value={currentChapter?.id || ''} 
+                  onChange={handleChapterChange}
+                  size="sm"
+                  w="200px"
                 >
-                  辅助优化型
-                </button>
-                <button
-                  className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('takeover')}
+                  {chapters.map(chapter => (
+                    <option key={chapter.id} value={chapter.id}>
+                      第{chapter.chapter_number}章 {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
+                    </option>
+                  ))}
+                </Select>
+                {currentChapter && (
+                  <Text 
+                    fontSize="xs" 
+                    px={2} 
+                    py={1} 
+                    borderRadius="md"
+                    bg={currentChapter.status === 'published' ? 'green.100' : 'gray.100'}
+                    color={currentChapter.status === 'published' ? 'green.800' : 'gray.800'}
+                  >
+                    {currentChapter.status === 'published' ? '已发布' : '草稿'}
+                  </Text>
+                )}
+              </HStack>
+            </VStack>
+            
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={publishChapterContent}
+                isDisabled={isPublishing || !currentChapter || currentChapter.status === 'published'}
+                title={currentChapter?.status === 'published' ? "章节已发布" : "发布章节"}
+              >
+                <Icon as={FaUpload} />
+                <Text ml={2}>
+                  {currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布')}
+                </Text>
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBatchPublishClick}
+                isDisabled={!currentChapter}
+                title="批量发布多个章节"
+              >
+                <Icon as={FaLayerGroup} />
+                <Text ml={2}>批量发布</Text>
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  showConfirmDialog({
+                    title: '开启新章节',
+                    message: '请输入新章节的标题：',
+                    showInput: true,
+                    inputValue: newChapterTitle,
+                    onInputChange: (value) => setNewChapterTitle(value),
+                    inputPlaceholder: '例如：新的征程',
+                    required: true,
+                    type: 'info',
+                    showResultNotification: true,
+                    successMessage: '新章节已开启',
+                    errorMessage: '开启新章失败',
+                    onConfirm: handleStartNewChapter
+                  });
+                }}
+                title="开启一个全新的章节"
+              >
+                <Icon as={FaPlus} />
+                <Text ml={2}>开启新章</Text>
+              </Button>
+              
+              {isEditorLocked && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorScheme="orange"
+                  onClick={handleUnlockClick}
+                  title="解锁"
                 >
-                  全面接管型
-                </button>
-              </div>
-            </div>
-          )}
-          <button 
-            className="save-button"
-            onClick={saveContent}
-            disabled={isSaving}
-            title="保存内容 (Ctrl+S)"
-          >
-            <FaSave />
-            <span>{isSaving ? '保存中...' : '保存'}</span>
-          </button>
-          <button 
-            className={`ai-toggle-button ${aiAssisted ? 'active' : ''}`}
-            onClick={toggleAiAssisted}
-            aria-label={aiAssisted ? "关闭AI辅助" : "开启AI辅助"}
-          >
-            {aiAssisted ? <FaRobot /> : <FaFont />}
-            <span>{aiAssisted ? "AI辅助中" : "AI辅助"}</span>
-          </button>
-        </div>
-      </div>
+                  <Icon as={FaLockOpen} />
+                </Button>
+              )}
+            </HStack>
+          </HStack>
+          
+          {/* 右侧控制区 */}
+          <HStack spacing={4}>
+            {aiAssisted && (
+              <VStack align="start" spacing={2}>
+                <Text fontSize="sm" color="text.muted">AI模式</Text>
+                <HStack spacing={1}>
+                  <Button
+                    size="sm"
+                    variant={aiMode === 'optimize' ? 'solid' : 'outline'}
+                    colorScheme="brand"
+                    onClick={() => handleAiModeChange('optimize')}
+                  >
+                    辅助优化型
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={aiMode === 'takeover' ? 'solid' : 'outline'}
+                    colorScheme="brand"
+                    onClick={() => handleAiModeChange('takeover')}
+                  >
+                    全面接管型
+                  </Button>
+                </HStack>
+              </VStack>
+            )}
+            
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={saveContent}
+                isDisabled={isSaving}
+                title="保存内容 (Ctrl+S)"
+              >
+                <Icon as={FaSave} />
+                <Text ml={2}>{isSaving ? '保存中...' : '保存'}</Text>
+              </Button>
+              
+              <Button
+                size="sm"
+                variant={aiAssisted ? 'solid' : 'outline'}
+                colorScheme="brand"
+                onClick={toggleAiAssisted}
+                title={aiAssisted ? "关闭AI辅助" : "开启AI辅助"}
+              >
+                <Icon as={aiAssisted ? FaRobot : FaFont} />
+                <Text ml={2}>{aiAssisted ? "AI辅助中" : "AI辅助"}</Text>
+              </Button>
+            </HStack>
+          </HStack>
+        </Flex>
+      </Box>
 
       {/* 批量发布对话框 */}
       {showBatchPublish && (
@@ -524,9 +606,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           triggerPosition={publishButtonPosition}
         />
       )}
-
-      {/* Unlock confirmation dialog is now handled globally by NotificationManager */}
-    </div>
+    </Box>
   );
 };
 
@@ -539,16 +619,37 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   };
 
   return (
-    <div className="rich-text-editor">
-      {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
-      <textarea
-        className={`content-textarea ${readOnly ? 'locked' : ''}`}
+    <Box position="relative" h="100%" bg="white" _dark={{ bg: "gray.800" }}>
+      {readOnly && (
+        <Box 
+          position="absolute" 
+          top="0" 
+          left="0" 
+          right="0" 
+          bottom="0" 
+          bg="rgba(0, 0, 0, 0.1)" 
+          display="flex" 
+          alignItems="center" 
+          justifyContent="center"
+          zIndex={10}
+        >
+          <Text color="text.muted">编辑区已锁定</Text>
+        </Box>
+      )}
+      <Textarea
+        h="100%"
+        p={4}
+        border="none"
+        resize="none"
+        focusBorderColor="transparent"
         value={content}
         onChange={handleChange}
         placeholder="在这里开始你的创作..."
         readOnly={readOnly}
+        fontSize="md"
+        lineHeight="1.6"
       />
-    </div>
+    </Box>
   );
 };
 
@@ -650,89 +751,168 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
   };
 
   return (
-    <div className="ai-writing-interface">
-      <div className="ai-toolbar">
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('outline')}
-          disabled={isLoading}
-          title="生成章节大纲"
-        >
-          <FaMagic /> 大纲
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('suggestions')}
-          disabled={isLoading}
-          title="获取情节建议"
-        >
-          <FaLightbulb /> 建议
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('optimize')}
-          disabled={isLoading}
-          title="优化当前内容"
-        >
-          <FaSpinner /> 优化
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('ideas')}
-          disabled={isLoading}
-          title="生成创意想法"
-        >
-          <FaUsers /> 创意
-        </button>
-      </div>
-      
-      <div className="chat-container">
-        <div className="chat-messages">
-          {messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              <div className="message-content">
-                {message.content}
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="message assistant loading">
-              <div className="message-content">
-                <FaSpinner className="spinner" /> AI正在思考中...
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="chat-input-container">
-          <textarea
-            className="chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="与AI助手对话，获取写作建议..."
-            rows="3"
-            disabled={isLoading}
-          />
-          <button 
-            className="send-button" 
-            onClick={handleSend}
-            disabled={isLoading || input.trim() === ''}
+    <Box h="100%" display="flex" flexDirection="column" bg="bg.canvas">
+      {/* AI工具栏 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderBottom="1px" 
+        borderColor="border.default"
+        p={2}
+      >
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleAIAction('outline')}
+            isDisabled={isLoading}
+            title="生成章节大纲"
           >
-            {isLoading ? <FaSpinner className="spinner" /> : '发送'}
-          </button>
-        </div>
-      </div>
-      <div className="content-editor">
-        {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
-        <textarea
-          className={`content-textarea ${readOnly ? 'locked' : ''}`}
-          value={content}
-          onChange={handleContentChange}
-          placeholder="在这里创作你的小说内容..."
-          readOnly={readOnly}
-        />
-      </div>
-    </div>
+            <Icon as={FaMagic} />
+            <Text ml={1}>大纲</Text>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleAIAction('suggestions')}
+            isDisabled={isLoading}
+            title="获取情节建议"
+          >
+            <Icon as={FaLightbulb} />
+            <Text ml={1}>建议</Text>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleAIAction('optimize')}
+            isDisabled={isLoading}
+            title="优化当前内容"
+          >
+            <Icon as={FaSpinnerIcon} />
+            <Text ml={1}>优化</Text>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleAIAction('ideas')}
+            isDisabled={isLoading}
+            title="生成创意想法"
+          >
+            <Icon as={FaUsers} />
+            <Text ml={1}>创意</Text>
+          </Button>
+        </HStack>
+      </Box>
+      
+      <Flex flex="1" overflow="hidden">
+        {/* 聊天区域 */}
+        <Box 
+          w="400px" 
+          borderRight="1px" 
+          borderColor="border.default"
+          display="flex" 
+          flexDirection="column"
+        >
+          <Box flex="1" overflow="auto" p={4}>
+            <VStack spacing={3} align="stretch">
+              {messages.map((message) => (
+                <Box
+                  key={message.id}
+                  p={3}
+                  borderRadius="md"
+                  bg={message.role === 'user' ? 'brand.50' : 'gray.50'}
+                  _dark={{ bg: message.role === 'user' ? 'brand.900' : 'gray.900' }}
+                  alignSelf={message.role === 'user' ? 'flex-end' : 'flex-start'}
+                  maxW="80%"
+                >
+                  <Text fontSize="sm" color="text.primary">
+                    {message.content}
+                  </Text>
+                </Box>
+              ))}
+              {isLoading && (
+                <Box
+                  p={3}
+                  borderRadius="md"
+                  bg="gray.50"
+                  _dark={{ bg: "gray.900" }}
+                  alignSelf="flex-start"
+                  maxW="80%"
+                >
+                  <HStack spacing={2}>
+                    <Spinner size="sm" />
+                    <Text fontSize="sm" color="text.muted">AI正在思考中...</Text>
+                  </HStack>
+                </Box>
+              )}
+            </VStack>
+          </Box>
+          
+          <Box 
+            p={3} 
+            borderTop="1px" 
+            borderColor="border.default"
+            bg="white" 
+            _dark={{ bg: "gray.800" }}
+          >
+            <HStack spacing={2}>
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="与AI助手对话，获取写作建议..."
+                rows={2}
+                isDisabled={isLoading}
+                resize="none"
+                fontSize="sm"
+              />
+              <Button
+                colorScheme="brand"
+                onClick={handleSend}
+                isDisabled={isLoading || input.trim() === ''}
+                size="sm"
+                alignSelf="flex-end"
+              >
+                {isLoading ? <Spinner size="sm" /> : '发送'}
+              </Button>
+            </HStack>
+          </Box>
+        </Box>
+        
+        {/* 内容编辑区域 */}
+        <Box flex="1" position="relative">
+          {readOnly && (
+            <Box 
+              position="absolute" 
+              top="0" 
+              left="0" 
+              right="0" 
+              bottom="0" 
+              bg="rgba(0, 0, 0, 0.1)" 
+              display="flex" 
+              alignItems="center" 
+              justifyContent="center"
+              zIndex={10}
+            >
+              <Text color="text.muted">编辑区已锁定</Text>
+            </Box>
+          )}
+          <Textarea
+            h="100%"
+            p={4}
+            border="none"
+            resize="none"
+            focusBorderColor="transparent"
+            value={content}
+            onChange={handleContentChange}
+            placeholder="在这里创作你的小说内容..."
+            readOnly={readOnly}
+            fontSize="md"
+            lineHeight="1.6"
+          />
+        </Box>
+      </Flex>
+    </Box>
   );
 };
 

@@ -7,9 +7,7 @@ import {
   Text, 
   HStack, 
   VStack, 
-  Icon,
-  useColorMode,
-  useColorModeValue
+  Icon
 } from '@chakra-ui/react';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import Sidebar from '../Sidebar';
@@ -24,26 +22,12 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
   const [activeItem, setActiveItem] = useState('项目总览');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
-  const { colorMode, toggleColorMode } = useColorMode();
-
+  
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // 获取主题图标和文本
-  const getThemeInfo = () => {
-    switch (colorMode) {
-      case 'system': 
-        return { icon: <FaDesktop />, text: '跟随系统' };
-      case 'light': 
-        return { icon: <FaSun />, text: '亮色模式' };
-      case 'dark': 
-        return { icon: <FaMoon />, text: '暗色模式' };
-      default: 
-        return { icon: <FaDesktop />, text: '跟随系统' };
-    }
-  };
-
+  
   // 从localStorage加载上次打开的章节
   useEffect(() => {
     const lastChapterId = localStorage.getItem(`lastChapter_${project.id}`);
@@ -184,15 +168,6 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
                 </Text>
               </VStack>
             </HStack>
-            
-            <Button
-              leftIcon={getThemeInfo().icon}
-              variant="outline"
-              onClick={toggleColorMode}
-              size="sm"
-            >
-              {getThemeInfo().text}
-            </Button>
           </Flex>
         </Box>
         

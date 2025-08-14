@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaQuestionCircle } from 'react-icons/fa';
+import { 
+  Box, 
+  Button, 
+  Heading, 
+  Text, 
+  VStack, 
+  HStack,
+  Icon,
+  Input
+} from '@chakra-ui/react';
+import { FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaQuestionCircle } from 'react-icons/fa';
 import './UniversalDialog.css';
 
 const UniversalDialog = ({
@@ -84,17 +94,17 @@ const UniversalDialog = ({
   const getTypeIcon = () => {
     switch (type) {
       case 'error':
-        return <FaExclamationTriangle className="universal-dialog-icon" />;
+        return <Icon as={FaExclamationTriangle} color="red.500" boxSize={6} />;
       case 'warning':
-        return <FaExclamationTriangle className="universal-dialog-icon" />;
+        return <Icon as={FaExclamationTriangle} color="orange.500" boxSize={6} />;
       case 'success':
-        return <FaCheckCircle className="universal-dialog-icon" />;
+        return <Icon as={FaCheckCircle} color="green.500" boxSize={6} />;
       case 'info':
-        return <FaInfoCircle className="universal-dialog-icon" />;
+        return <Icon as={FaInfoCircle} color="blue.500" boxSize={6} />;
       case 'question':
-        return <FaQuestionCircle className="universal-dialog-icon" />;
+        return <Icon as={FaQuestionCircle} color="blue.500" boxSize={6} />;
       default:
-        return <FaInfoCircle className="universal-dialog-icon" />;
+        return <Icon as={FaInfoCircle} color="blue.500" boxSize={6} />;
     }
   };
 
@@ -105,55 +115,120 @@ const UniversalDialog = ({
   }
 
   return (
-    <div className="universal-dialog-overlay">
-      <div className={`universal-dialog ${getTypeClass()} ${className}`}>
-        <div className="universal-dialog-header">
-          <div className="universal-dialog-title">
-            {getTypeIcon()}
-            <h3>{title}</h3>
-          </div>
-          <button className="universal-dialog-close" onClick={handleClose}>
-            <FaTimes />
-          </button>
-        </div>
-        <div className="universal-dialog-content">
-          {message && <p className="universal-dialog-message">{message}</p>}
-          {content && <div className="universal-dialog-custom-content">{content}</div>}
-          {showInput && (
-            <div className="universal-dialog-input-container">
-              <input
-                type={inputType}
-                value={currentInputValue}
-                onChange={(e) => {
-                  setCurrentInputValue(e.target.value);
-                  if (onInputChange) {
-                    onInputChange(e.target.value);
-                  }
-                }}
-                placeholder={inputPlaceholder}
-                className="universal-dialog-input"
-                autoFocus
-              />
-            </div>
-          )}
-        </div>
-        <div className="universal-dialog-actions">
-          <button 
-            className="universal-dialog-button cancel" 
-            onClick={handleCancel}
-          >
-            {cancelText}
-          </button>
-          <button 
-            className="universal-dialog-button confirm" 
-            onClick={handleConfirm}
-            disabled={isConfirmDisabled}
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Box
+      position="fixed"
+      top="0"
+      left="0"
+      right="0"
+      bottom="0"
+      bg="rgba(0, 0, 0, 0.5)"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      zIndex={9999}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <Box
+        bg="white"
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg"
+        boxShadow="xl"
+        maxW="md"
+        w="90%"
+        maxH="80vh"
+        overflow="hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 头部 */}
+        <Box 
+          p={6} 
+          borderBottom="1px" 
+          borderColor="border.default"
+        >
+          <HStack justify="space-between" align="start">
+            <HStack spacing={3} align="start">
+              {getTypeIcon()}
+              <Heading size="md" color="text.primary">
+                {title}
+              </Heading>
+            </HStack>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              color="text.muted"
+              _hover={{ color: "text.primary" }}
+            >
+              ×
+            </Button>
+          </HStack>
+        </Box>
+
+        {/* 内容 */}
+        <Box p={6}>
+          <VStack spacing={4} align="stretch">
+            {message && (
+              <Text color="text.secondary" lineHeight="1.6">
+                {message}
+              </Text>
+            )}
+            {content && (
+              <Box color="text.primary">
+                {content}
+              </Box>
+            )}
+            {showInput && (
+              <VStack spacing={2} align="stretch">
+                <Input
+                  type={inputType}
+                  value={currentInputValue}
+                  onChange={(e) => {
+                    setCurrentInputValue(e.target.value);
+                    if (onInputChange) {
+                      onInputChange(e.target.value);
+                    }
+                  }}
+                  placeholder={inputPlaceholder}
+                  autoFocus
+                />
+                {required && !currentInputValue.trim() && (
+                  <Text color="red.500" fontSize="sm">
+                    此字段为必填项
+                  </Text>
+                )}
+              </VStack>
+            )}
+          </VStack>
+        </Box>
+
+        {/* 底部按钮 */}
+        <Box 
+          p={6} 
+          borderTop="1px" 
+          borderColor="border.default"
+        >
+          <HStack spacing={3} justify="flex-end">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+            >
+              {cancelText}
+            </Button>
+            <Button
+              colorScheme={type === 'error' ? 'red' : type === 'warning' ? 'orange' : 'brand'}
+              onClick={handleConfirm}
+              isDisabled={isConfirmDisabled}
+            >
+              {confirmText}
+            </Button>
+          </HStack>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

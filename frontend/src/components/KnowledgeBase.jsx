@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { FaBrain, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaSpinner } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Heading, 
+  Text, 
+  HStack, 
+  VStack,
+  Icon,
+  Spinner,
+  Grid,
+  Badge,
+  // Divider removed
+  CloseButton
+} from '@chakra-ui/react';
+import { FaBrain, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaSpinner as FaSpinnerIcon } from 'react-icons/fa';
 import { aiService } from '../services/aiService';
 import { useNotification } from './NotificationManager';
 import './KnowledgeBase.css';
@@ -159,278 +174,498 @@ const KnowledgeBase = ({ projectId }) => {
   };
 
   return (
-    <div className="knowledge-base">
-      <div className="knowledge-header">
-        <h2>知识库</h2>
-        <p>系统化管理您的创作素材和技巧</p>
-        <div className="ai-actions">
-          <button 
-            className="ai-action-btn analysis"
-            onClick={performAIAnalysis}
-            disabled={aiAnalyzing || !projectId}
-          >
-            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaBrain />}
-            {aiAnalyzing ? '分析中...' : 'AI分析'}
-          </button>
-          <button 
-            className="ai-action-btn insights"
-            onClick={generateAIInsights}
-            disabled={aiAnalyzing || !projectId}
-          >
-            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaLightbulb />}
-            {aiAnalyzing ? '生成中...' : 'AI洞察'}
-          </button>
-        </div>
-      </div>
+    <Box h="100vh" display="flex" flexDirection="column" bg="bg.canvas" p={6}>
+      {/* 头部 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        p={6} 
+        mb={6}
+      >
+        <VStack spacing={4} align="stretch">
+          <Box>
+            <Heading size="lg" color="text.primary" mb={2}>
+              知识库
+            </Heading>
+            <Text color="text.muted">
+              系统化管理您的创作素材和技巧
+            </Text>
+          </Box>
+          
+          <HStack spacing={3}>
+            <Button
+              leftIcon={aiAnalyzing ? <Spinner size="sm" /> : <Icon as={FaBrain} />}
+              onClick={performAIAnalysis}
+              isDisabled={aiAnalyzing || !projectId}
+              colorScheme="brand"
+              variant="outline"
+            >
+              {aiAnalyzing ? '分析中...' : 'AI分析'}
+            </Button>
+            <Button
+              leftIcon={aiAnalyzing ? <Spinner size="sm" /> : <Icon as={FaLightbulb} />}
+              onClick={generateAIInsights}
+              isDisabled={aiAnalyzing || !projectId}
+              colorScheme="brand"
+              variant="outline"
+            >
+              {aiAnalyzing ? '生成中...' : 'AI洞察'}
+            </Button>
+          </HStack>
+        </VStack>
+      </Box>
 
-      <div className="knowledge-modules">
+      {/* 模块选择 */}
+      <Grid templateColumns="repeat(2, 1fr)" gap={4} mb={6}>
         {modules.map(module => (
-          <div
+          <Box
             key={module.id}
-            className={`module-card ${activeModule === module.id ? 'active' : ''}`}
+            bg="white"
+            _dark={{ bg: "gray.800" }}
+            borderRadius="lg"
+            p={4}
+            cursor="pointer"
+            border="2px"
+            borderColor={activeModule === module.id ? 'brand.500' : 'transparent'}
+            boxShadow="sm"
+            transition="all 0.2s"
+            _hover={{ shadow: "md" }}
             onClick={() => setActiveModule(module.id)}
-            style={{ '--module-color': module.color }}
           >
-            <div className="module-icon">{module.icon}</div>
-            <div className="module-info">
-              <h3>{module.name}</h3>
-              <p>{module.description}</p>
-            </div>
-            <div className="module-indicator">{activeModule === module.id && <div className="active-indicator"></div>}</div>
-          </div>
+            <HStack spacing={3} align="start">
+              <Text fontSize="2xl">{module.icon}</Text>
+              <VStack align="start" spacing={1} flex="1">
+                <Heading size="sm" color="text.primary">{module.name}</Heading>
+                <Text fontSize="sm" color="text.muted">{module.description}</Text>
+              </VStack>
+              {activeModule === module.id && (
+                <Box 
+                  w="3" 
+                  h="3" 
+                  borderRadius="full" 
+                  bg="brand.500"
+                />
+              )}
+            </HStack>
+          </Box>
         ))}
-      </div>
+      </Grid>
 
-      <div className="knowledge-content">
+      {/* 内容区域 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        flex="1"
+        overflow="hidden"
+        display="flex" 
+        flexDirection="column"
+      >
         {loading ? (
-          <div className="loading">
-            <div className="loading-spinner"></div>
-            <p>加载中...</p>
-          </div>
+          <Box flex="1" display="flex" alignItems="center" justifyContent="center">
+            <VStack spacing={4}>
+              <Spinner size="xl" color="brand.500" />
+              <Text color="text.muted">加载中...</Text>
+            </VStack>
+          </Box>
         ) : (
-          <div className="knowledge-content-wrapper">
-            {aiAnalysis && (
-              <div className="ai-analysis-panel">
-                <div className="ai-analysis-header">
-                  <FaBrain className="ai-icon" />
-                  <h3>AI分析结果</h3>
-                  <button 
-                    className="close-analysis"
-                    onClick={() => setAiAnalysis(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="ai-analysis-content">
-                  {typeof aiAnalysis === 'string' ? (
-                    <p>{aiAnalysis}</p>
-                  ) : (
-                    <div className="ai-analysis-structured">
-                      {aiAnalysis.content && <p>{aiAnalysis.content}</p>}
-                      {aiAnalysis.suggestions && (
-                        <div className="suggestions-list">
-                          <h4>建议:</h4>
-                          <ul>
-                            {aiAnalysis.suggestions.map((suggestion, index) => (
-                              <li key={index}>{suggestion}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiAnalysis.insights && (
-                        <div className="insights-list">
-                          <h4>洞察:</h4>
-                          <ul>
-                            {aiAnalysis.insights.map((insight, index) => (
-                              <li key={index}>{insight}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiAnalysis.recommendations && (
-                        <div className="recommendations-list">
-                          <h4>推荐:</h4>
-                          <ul>
-                            {aiAnalysis.recommendations.map((recommendation, index) => (
-                              <li key={index}>{recommendation}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {renderModuleContent()}
-          </div>
+          <Box flex="1" overflow="auto" p={6}>
+            <VStack spacing={6} align="stretch">
+              {aiAnalysis && (
+                <Box 
+                  bg="brand.50" 
+                  _dark={{ bg: "brand.900", borderColor: "brand.700" }}
+                  borderRadius="md" 
+                  p={4}
+                  border="1px"
+                  borderColor="brand.200"
+                >
+                  <HStack justify="space-between" align="start" mb={3}>
+                    <HStack spacing={2}>
+                      <Icon as={FaBrain} color="brand.500" />
+                      <Heading size="md" color="text.primary">AI分析结果</Heading>
+                    </HStack>
+                    <CloseButton 
+                      size="sm"
+                      onClick={() => setAiAnalysis(null)}
+                    />
+                  </HStack>
+                  
+                  <Box color="text.primary">
+                    {typeof aiAnalysis === 'string' ? (
+                      <Text>{aiAnalysis}</Text>
+                    ) : (
+                      <VStack spacing={4} align="stretch">
+                        {aiAnalysis.content && (
+                          <Text>{aiAnalysis.content}</Text>
+                        )}
+                        {aiAnalysis.suggestions && (
+                          <Box>
+                            <Heading size="sm" color="text.primary" mb={2}>建议:</Heading>
+                            <VStack spacing={1} align="stretch" pl={4}>
+                              {aiAnalysis.suggestions.map((suggestion, index) => (
+                                <Text key={index} fontSize="sm" color="text.secondary">• {suggestion}</Text>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                        {aiAnalysis.insights && (
+                          <Box>
+                            <Heading size="sm" color="text.primary" mb={2}>洞察:</Heading>
+                            <VStack spacing={1} align="stretch" pl={4}>
+                              {aiAnalysis.insights.map((insight, index) => (
+                                <Text key={index} fontSize="sm" color="text.secondary">• {insight}</Text>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                        {aiAnalysis.recommendations && (
+                          <Box>
+                            <Heading size="sm" color="text.primary" mb={2}>推荐:</Heading>
+                            <VStack spacing={1} align="stretch" pl={4}>
+                              {aiAnalysis.recommendations.map((recommendation, index) => (
+                                <Text key={index} fontSize="sm" color="text.secondary">• {recommendation}</Text>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                      </VStack>
+                    )}
+                  </Box>
+                </Box>
+              )}
+              
+              {renderModuleContent()}
+            </VStack>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 
 // 角色知识库总览组件
 const CharacterKnowledgeBase = ({ data }) => (
-  <div className="character-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>角色知识库</h3>
-      <div className="stats-badge">{data.length} 个角色</div>
-    </div>
+  <Box>
+    <HStack justify="space-between" align="center" mb={4}>
+      <Heading size="md" color="text.primary">角色知识库</Heading>
+      <Badge colorScheme="brand">{data.length} 个角色</Badge>
+    </HStack>
+    
     {data.length > 0 ? (
-      <div className="characters-overview">
-        {data.slice(0, 6).map(character => (
-          <div key={character.id} className="character-summary-card">
-            <div className="character-avatar">
-              <div className="avatar-icon">👤</div>
-            </div>
-            <div className="character-summary-info">
-              <h4>{character.name}</h4>
-              <p className="character-personality">{character.personality || '暂无性格描述'}</p>
-              <div className="character-tags">
-                <span className="tag">{character.dialogue_style || '对话风格未设置'}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+      <VStack spacing={3} align="stretch">
+        <Grid templateColumns="repeat(2, 1fr)" gap={3}>
+          {data.slice(0, 6).map(character => (
+            <Box 
+              key={character.id} 
+              bg="gray.50" 
+              _dark={{ bg: "gray.900" }}
+              borderRadius="md" 
+              p={3}
+              border="1px"
+              borderColor="border.default"
+            >
+              <HStack spacing={3} align="start">
+                <Text fontSize="xl">👤</Text>
+                <VStack align="start" spacing={1} flex="1">
+                  <Heading size="sm" color="text.primary">{character.name}</Heading>
+                  <Text fontSize="sm" color="text.muted">
+                    {character.personality || '暂无性格描述'}
+                  </Text>
+                  <Badge 
+                    variant="outline" 
+                    fontSize="xs"
+                    colorScheme="gray"
+                  >
+                    {character.dialogue_style || '对话风格未设置'}
+                  </Badge>
+                </VStack>
+              </HStack>
+            </Box>
+          ))}
+        </Grid>
+        
         {data.length > 6 && (
-          <div className="view-more">
-            <span>+{data.length - 6} 个更多角色</span>
-          </div>
+          <Box 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={3}
+            textAlign="center"
+          >
+            <Text fontSize="sm" color="text.muted">
+              +{data.length - 6} 个更多角色
+            </Text>
+          </Box>
         )}
-      </div>
+      </VStack>
     ) : (
-      <div className="empty-state">
-        <div className="empty-icon">👥</div>
-        <p>暂无角色数据</p>
-        <span className="empty-hint">开始创建您的第一个角色</span>
-      </div>
+      <Box 
+        bg="gray.50" 
+        _dark={{ bg: "gray.900" }}
+        borderRadius="md" 
+        p={8} 
+        textAlign="center"
+      >
+        <VStack spacing={3}>
+          <Text fontSize="3xl">👥</Text>
+          <Text color="text.muted">暂无角色数据</Text>
+          <Text fontSize="sm" color="text.secondary">开始创建您的第一个角色</Text>
+        </VStack>
+      </Box>
     )}
-  </div>
+  </Box>
 );
 
 // 世界观知识库总览组件
 const WorldviewKnowledgeBase = ({ data }) => (
-  <div className="worldview-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>世界观知识库</h3>
-      <div className="stats-badge">{data.length} 个世界观</div>
-    </div>
+  <Box>
+    <HStack justify="space-between" align="center" mb={4}>
+      <Heading size="md" color="text.primary">世界观知识库</Heading>
+      <Badge colorScheme="brand">{data.length} 个世界观</Badge>
+    </HStack>
+    
     {data.length > 0 ? (
-      <div className="worldviews-overview">
+      <VStack spacing={3} align="stretch">
         {data.slice(0, 4).map(worldview => (
-          <div key={worldview.id} className="worldview-summary-card">
-            <div className="worldview-icon">🌍</div>
-            <div className="worldview-summary-info">
-              <h4>{worldview.name}</h4>
-              <p className="worldview-desc">{worldview.description || '暂无描述'}</p>
-              <div className="worldview-features">
-                {worldview.magic_system && (
-                  <span className="feature-tag">魔法: {worldview.magic_system}</span>
-                )}
-                {worldview.technology_level && (
-                  <span className="feature-tag">科技: {worldview.technology_level}</span>
-                )}
-              </div>
-            </div>
-          </div>
+          <Box 
+            key={worldview.id} 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={4}
+            border="1px"
+            borderColor="border.default"
+          >
+            <HStack spacing={3} align="start">
+              <Text fontSize="2xl">🌍</Text>
+              <VStack align="start" spacing={2} flex="1">
+                <Heading size="sm" color="text.primary">{worldview.name}</Heading>
+                <Text fontSize="sm" color="text.muted">
+                  {worldview.description || '暂无描述'}
+                </Text>
+                <HStack spacing={2} flexWrap="wrap">
+                  {worldview.magic_system && (
+                    <Badge 
+                      variant="outline" 
+                      fontSize="xs"
+                      colorScheme="purple"
+                    >
+                      魔法: {worldview.magic_system}
+                    </Badge>
+                  )}
+                  {worldview.technology_level && (
+                    <Badge 
+                      variant="outline" 
+                      fontSize="xs"
+                      colorScheme="blue"
+                    >
+                      科技: {worldview.technology_level}
+                    </Badge>
+                  )}
+                </HStack>
+              </VStack>
+            </HStack>
+          </Box>
         ))}
+        
         {data.length > 4 && (
-          <div className="view-more">
-            <span>+{data.length - 4} 个更多世界观</span>
-          </div>
+          <Box 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={3}
+            textAlign="center"
+          >
+            <Text fontSize="sm" color="text.muted">
+              +{data.length - 4} 个更多世界观
+            </Text>
+          </Box>
         )}
-      </div>
+      </VStack>
     ) : (
-      <div className="empty-state">
-        <div className="empty-icon">🌍</div>
-        <p>暂无世界观数据</p>
-        <span className="empty-hint">开始构建您的世界观</span>
-      </div>
+      <Box 
+        bg="gray.50" 
+        _dark={{ bg: "gray.900" }}
+        borderRadius="md" 
+        p={8} 
+        textAlign="center"
+      >
+        <VStack spacing={3}>
+          <Text fontSize="3xl">🌍</Text>
+          <Text color="text.muted">暂无世界观数据</Text>
+          <Text fontSize="sm" color="text.secondary">开始构建您的世界观</Text>
+        </VStack>
+      </Box>
     )}
-  </div>
+  </Box>
 );
 
 // 场景知识库总览组件
 const SceneKnowledgeBase = ({ data }) => (
-  <div className="scene-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>场景知识库</h3>
-      <div className="stats-badge">{data.length} 个场景</div>
-    </div>
+  <Box>
+    <HStack justify="space-between" align="center" mb={4}>
+      <Heading size="md" color="text.primary">场景知识库</Heading>
+      <Badge colorScheme="brand">{data.length} 个场景</Badge>
+    </HStack>
+    
     {data.length > 0 ? (
-      <div className="scenes-overview">
-        {data.slice(0, 6).map(scene => (
-          <div key={scene.id} className="scene-summary-card">
-            <div className="scene-icon">🏞️</div>
-            <div className="scene-summary-info">
-              <h4>{scene.name}</h4>
-              <p className="scene-desc">{scene.description || '暂无描述'}</p>
-              <div className="scene-meta">
-                <span className="usage-count">使用 {scene.usage_count || 0} 次</span>
-                {scene.geography && (
-                  <span className="location-tag">{scene.geography}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      <VStack spacing={3} align="stretch">
+        <Grid templateColumns="repeat(2, 1fr)" gap={3}>
+          {data.slice(0, 6).map(scene => (
+            <Box 
+              key={scene.id} 
+              bg="gray.50" 
+              _dark={{ bg: "gray.900" }}
+              borderRadius="md" 
+              p={3}
+              border="1px"
+              borderColor="border.default"
+            >
+              <HStack spacing={3} align="start">
+                <Text fontSize="xl">🏞️</Text>
+                <VStack align="start" spacing={1} flex="1">
+                  <Heading size="sm" color="text.primary">{scene.name}</Heading>
+                  <Text fontSize="sm" color="text.muted">
+                    {scene.description || '暂无描述'}
+                  </Text>
+                  <HStack spacing={2} flexWrap="wrap">
+                    <Badge 
+                      variant="outline" 
+                      fontSize="xs"
+                      colorScheme="green"
+                    >
+                      使用 {scene.usage_count || 0} 次
+                    </Badge>
+                    {scene.geography && (
+                      <Badge 
+                        variant="outline" 
+                        fontSize="xs"
+                        colorScheme="orange"
+                      >
+                        {scene.geography}
+                      </Badge>
+                    )}
+                  </HStack>
+                </VStack>
+              </HStack>
+            </Box>
+          ))}
+        </Grid>
+        
         {data.length > 6 && (
-          <div className="view-more">
-            <span>+{data.length - 6} 个更多场景</span>
-          </div>
+          <Box 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={3}
+            textAlign="center"
+          >
+            <Text fontSize="sm" color="text.muted">
+              +{data.length - 6} 个更多场景
+            </Text>
+          </Box>
         )}
-      </div>
+      </VStack>
     ) : (
-      <div className="empty-state">
-        <div className="empty-icon">🏞️</div>
-        <p>暂无场景数据</p>
-        <span className="empty-hint">开始创建您的场景库</span>
-      </div>
+      <Box 
+        bg="gray.50" 
+        _dark={{ bg: "gray.900" }}
+        borderRadius="md" 
+        p={8} 
+        textAlign="center"
+      >
+        <VStack spacing={3}>
+          <Text fontSize="3xl">🏞️</Text>
+          <Text color="text.muted">暂无场景数据</Text>
+          <Text fontSize="sm" color="text.secondary">开始创建您的场景库</Text>
+        </VStack>
+      </Box>
     )}
-  </div>
+  </Box>
 );
 
 // 创作技巧知识库总览组件
 const WritingTechniqueKnowledgeBase = ({ data }) => (
-  <div className="technique-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>创作技巧库</h3>
-      <div className="stats-badge">{data.length} 个分类</div>
-    </div>
+  <Box>
+    <HStack justify="space-between" align="center" mb={4}>
+      <Heading size="md" color="text.primary">创作技巧库</Heading>
+      <Badge colorScheme="brand">{data.length} 个分类</Badge>
+    </HStack>
+    
     {data.length > 0 ? (
-      <div className="techniques-overview">
+      <VStack spacing={3} align="stretch">
         {data.slice(0, 3).map(technique => (
-          <div key={technique.id} className="technique-summary-card">
-            <div className="technique-icon">✍️</div>
-            <div className="technique-summary-info">
-              <h4>{technique.name}</h4>
-              <span className="technique-category-badge">{technique.category}</span>
-              <div className="technique-preview">
-                <p>{technique.inspiration_notes && technique.inspiration_notes.length > 0 
-                  ? technique.inspiration_notes[0] 
-                  : '暂无灵感记录'}</p>
-              </div>
-              <div className="technique-stats">
-                <span className="technique-count">{technique.techniques ? technique.techniques.length : 0} 个技巧</span>
-              </div>
-            </div>
-          </div>
+          <Box 
+            key={technique.id} 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={4}
+            border="1px"
+            borderColor="border.default"
+          >
+            <HStack spacing={3} align="start">
+              <Text fontSize="2xl">✍️</Text>
+              <VStack align="start" spacing={2} flex="1">
+                <Heading size="sm" color="text.primary">{technique.name}</Heading>
+                <Badge 
+                  variant="solid" 
+                  fontSize="xs"
+                  colorScheme="creative"
+                >
+                  {technique.category}
+                </Badge>
+                <Text fontSize="sm" color="text.muted">
+                  {technique.inspiration_notes && technique.inspiration_notes.length > 0 
+                    ? technique.inspiration_notes[0] 
+                    : '暂无灵感记录'}
+                </Text>
+                <Badge 
+                  variant="outline" 
+                  fontSize="xs"
+                  colorScheme="gray"
+                >
+                  {technique.techniques ? technique.techniques.length : 0} 个技巧
+                </Badge>
+              </VStack>
+            </HStack>
+          </Box>
         ))}
+        
         {data.length > 3 && (
-          <div className="view-more">
-            <span>+{data.length - 3} 个更多分类</span>
-          </div>
+          <Box 
+            bg="gray.50" 
+            _dark={{ bg: "gray.900" }}
+            borderRadius="md" 
+            p={3}
+            textAlign="center"
+          >
+            <Text fontSize="sm" color="text.muted">
+              +{data.length - 3} 个更多分类
+            </Text>
+          </Box>
         )}
-      </div>
+      </VStack>
     ) : (
-      <div className="empty-state">
-        <div className="empty-icon">✍️</div>
-        <p>暂无技巧数据</p>
-        <span className="empty-hint">开始收集创作技巧</span>
-      </div>
+      <Box 
+        bg="gray.50" 
+        _dark={{ bg: "gray.900" }}
+        borderRadius="md" 
+        p={8} 
+        textAlign="center"
+      >
+        <VStack spacing={3}>
+          <Text fontSize="3xl">✍️</Text>
+          <Text color="text.muted">暂无技巧数据</Text>
+          <Text fontSize="sm" color="text.secondary">开始收集创作技巧</Text>
+        </VStack>
+      </Box>
     )}
-  </div>
+  </Box>
 );
 
 export default KnowledgeBase;

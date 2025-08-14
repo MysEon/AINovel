@@ -12,23 +12,14 @@ import {
   Grid, 
   GridItem,
   Avatar,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  FormControl,
-  FormLabel,
-  Input,
+      Input,
   Textarea,
   Stack,
   HStack,
   VStack,
-  Icon,
-  useToast,
-  Divider
+  Icon
 } from '@chakra-ui/react';
+import { Field } from '@chakra-ui/react';
 import { 
   FaPlus, 
   FaBook, 
@@ -44,8 +35,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
-  const { showConfirmDialog } = useNotification();
-  const toast = useToast();
+  const { showConfirmDialog, addNotification } = useNotification();
 
   const handleCreateProject = (e) => {
     e.preventDefault();
@@ -58,12 +48,10 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       setNewProjectDescription('');
       setShowCreateDialog(false);
       
-      toast({
-        title: "项目创建成功",
-        description: `项目 "${newProjectName.trim()}" 已创建`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
+      addNotification({
+        message: `项目 "${newProjectName.trim()}" 已创建`,
+        type: "success",
+        duration: 3000
       });
     }
   };
@@ -282,7 +270,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                 
                 <CardFooter pt={3}>
                   <VStack w="full" spacing={3} align="stretch">
-                    <Divider />
+                    <Box borderBottom="1px solid" borderColor="gray.200" my={2} />
                     
                     <HStack justify="space-between" align="center">
                       <HStack spacing={2} color="text.muted">
@@ -310,31 +298,47 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       )}
 
       {/* 创建项目对话框 */}
-      <Modal 
-        isOpen={showCreateDialog} 
-        onClose={() => setShowCreateDialog(false)}
-        size="md"
-      >
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>创建新项目</ModalHeader>
-          <ModalCloseButton />
-          
-          <ModalBody pb={6}>
+      {showCreateDialog && (
+        <Box
+          position="fixed"
+          top="0"
+          left="0"
+          right="0"
+          bottom="0"
+          bg="rgba(0, 0, 0, 0.5)"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          zIndex={1000}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCreateDialog(false);
+            }
+          }}
+        >
+          <Box
+            bg="white"
+            p={6}
+            borderRadius="md"
+            maxWidth="500px"
+            width="90%"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Heading size="md" mb={4}>创建新项目</Heading>
             <form onSubmit={handleCreateProject}>
               <VStack spacing={4}>
-                <FormControl isRequired>
-                  <FormLabel>项目名称</FormLabel>
+                <Field.Root required>
+                  <Field.Label>项目名称</Field.Label>
                   <Input
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="输入项目名称"
                     size="lg"
                   />
-                </FormControl>
+                </Field.Root>
                 
-                <FormControl>
-                  <FormLabel>项目描述</FormLabel>
+                <Field.Root>
+                  <Field.Label>项目描述</Field.Label>
                   <Textarea
                     value={newProjectDescription}
                     onChange={(e) => setNewProjectDescription(e.target.value)}
@@ -342,7 +346,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                     rows={3}
                     resize="none"
                   />
-                </FormControl>
+                </Field.Root>
                 
                 <HStack w="full" justify="flex-end" spacing={3} pt={4}>
                   <Button
@@ -353,7 +357,9 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                   </Button>
                   <Button
                     type="submit"
-                    colorScheme="brand"
+                    bg="brand.600"
+                    color="white"
+                    _hover={{ bg: "brand.700" }}
                     isDisabled={!newProjectName.trim()}
                   >
                     创建项目
@@ -361,9 +367,9 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                 </HStack>
               </VStack>
             </form>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

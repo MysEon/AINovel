@@ -1,7 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaFlask, FaCheck, FaSpinner } from 'react-icons/fa';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Heading, 
+  Text, 
+  HStack, 
+  VStack,
+  Icon,
+  Spinner,
+  Grid,
+  Badge,
+  // Divider removed
+  Input,
+  Select,
+  Switch,
+  Field,
+  FieldLabel,
+  FieldErrorText,
+  // Alert components removed - using custom notification instead
+  CloseButton
+} from '@chakra-ui/react';
+import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaFlask, FaCheck, FaSpinner as FaSpinnerIcon } from 'react-icons/fa';
 import modelConfigService from '../services/modelConfigService';
-import Notification from './Notification';
+import { useNotification } from './NotificationManager';
 import UniversalDialog from './UniversalDialog';
 import './ModelConfigManager.css';
 
@@ -10,9 +32,9 @@ const ModelConfigManager = () => {
   const [loading, setLoading] = useState(true);
   const [editingConfig, setEditingConfig] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [notification, setNotification] = useState(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null);
+  const { addNotification } = useNotification();
 
   // 表单状态
   const [formData, setFormData] = useState(modelConfigService.getDefaultConfig());
@@ -35,8 +57,7 @@ const ModelConfigManager = () => {
   };
 
   const showNotification = (message, type = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
+    addNotification({ message, type, duration: 3000 });
   };
 
   const handleInputChange = (field, value) => {
@@ -204,319 +225,381 @@ const ModelConfigManager = () => {
 
   if (loading) {
     return (
-      <div className="model-config-manager">
-        <div className="loading">
-          <FaSpinner className="spinner" />
-          <p>加载配置...</p>
-        </div>
-      </div>
+      <Box h="100vh" display="flex" alignItems="center" justifyContent="center" bg="bg.canvas">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="brand.500" />
+          <Text color="text.muted">加载配置...</Text>
+        </VStack>
+      </Box>
     );
   }
 
   return (
-    <div className="model-config-manager">
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-
-      <div className="manager-header">
-        <h3>模型配置管理</h3>
-        {!isCreating && !editingConfig && (
-          <button 
-            className="btn btn-primary"
-            onClick={() => setIsCreating(true)}
-          >
-            <FaPlus /> 新建配置
-          </button>
-        )}
-      </div>
+    <Box h="100vh" display="flex" flexDirection="column" bg="bg.canvas" p={6}>
+      {/* 头部 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        p={6} 
+        mb={6}
+      >
+        <Flex justify="space-between" align="center">
+          <Heading size="lg" color="text.primary">模型配置管理</Heading>
+          {!isCreating && !editingConfig && (
+            <Button
+              leftIcon={<Icon as={FaPlus} />}
+              colorScheme="brand"
+              onClick={() => setIsCreating(true)}
+            >
+              新建配置
+            </Button>
+          )}
+        </Flex>
+      </Box>
 
       {(isCreating || editingConfig) && (
-        <div className="config-form">
-          <h3>{isCreating ? '新建配置' : '编辑配置'}</h3>
-          
-          {errors.length > 0 && (
-            <div className="error-messages">
-              {errors.map((error, index) => (
-                <div key={index} className="error-message">{error}</div>
-              ))}
-            </div>
-          )}
+        <Box 
+          bg="white" 
+          _dark={{ bg: "gray.800" }}
+          borderRadius="lg" 
+          boxShadow="sm" 
+          p={6} 
+          mb={6}
+        >
+          <VStack spacing={4} align="stretch">
+            <Heading size="md" color="text.primary">
+              {isCreating ? '新建配置' : '编辑配置'}
+            </Heading>
+            
+            {errors.length > 0 && (
+              <Box 
+                bg="red.50" 
+                _dark={{ bg: "red.900", borderColor: "red.700" }}
+                borderRadius="md" 
+                p={4}
+                border="1px"
+                borderColor="red.200"
+              >
+                <VStack spacing={2} align="stretch">
+                  <Heading size="sm" color="red.800" _dark={{ color: "red.200" }}>
+                    表单验证错误
+                  </Heading>
+                  <VStack spacing={1} align="stretch">
+                    {errors.map((error, index) => (
+                      <Text key={index} fontSize="sm" color="red.700" _dark={{ color: "red.300" }}>
+                        {error}
+                      </Text>
+                    ))}
+                  </VStack>
+                </VStack>
+              </Box>
+            )}
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>配置名称 *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="输入配置名称"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>模型类型 *</label>
-                <select
-                  value={formData.model_type}
-                  onChange={(e) => handleInputChange('model_type', e.target.value)}
-                  required
-                >
-                  {modelConfigService.getModelTypes().map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>模型名称</label>
-                {formData.model_type === 'custom' ? (
-                  <input
-                    type="text"
-                    value={formData.model_name}
-                    onChange={(e) => handleInputChange('model_name', e.target.value)}
-                    placeholder="输入自定义模型名称"
+            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+            <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                <Field required>
+                  <FieldLabel color="text.primary">配置名称</FieldLabel>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="输入配置名称"
                   />
-                ) : (
-                  <select
-                    value={formData.model_name}
-                    onChange={(e) => handleInputChange('model_name', e.target.value)}
+                </Field>
+
+                <Field required>
+                  <FieldLabel color="text.primary">模型类型</FieldLabel>
+                  <Select
+                    value={formData.model_type}
+                    onChange={(e) => handleInputChange('model_type', e.target.value)}
                   >
-                    <option value="">选择模型</option>
-                    {getModelOptions().map(model => (
-                      <option key={model.value} value={model.value}>
-                        {model.label}
+                    {modelConfigService.getModelTypes().map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
-                  </select>
-                )}
-              </div>
+                  </Select>
+                </Field>
 
-              <div className="form-group">
-                <label>API密钥 *</label>
-                <input
-                  type="password"
-                  value={formData.api_key}
-                  onChange={(e) => handleInputChange('api_key', e.target.value)}
-                  placeholder={editingConfig && editingConfig.api_key_masked ? `当前: ${editingConfig.api_key_masked}` : "输入API密钥"}
-                  required={!editingConfig || !editingConfig.api_key_masked}
-                />
-                {editingConfig && editingConfig.api_key_masked && (
-                  <small style={{ color: '#666', fontSize: '12px' }}>
-                    留空则保持现有密钥不变，输入新密钥将替换现有密钥
-                  </small>
-                )}
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">模型名称</FieldLabel>
+                  {formData.model_type === 'custom' ? (
+                    <Input
+                      value={formData.model_name}
+                      onChange={(e) => handleInputChange('model_name', e.target.value)}
+                      placeholder="输入自定义模型名称"
+                    />
+                  ) : (
+                    <Select
+                      value={formData.model_name}
+                      onChange={(e) => handleInputChange('model_name', e.target.value)}
+                    >
+                      <option value="">选择模型</option>
+                      {getModelOptions().map(model => (
+                        <option key={model.value} value={model.value}>
+                          {model.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
 
-              <div className="form-group">
-                <label>自定义API URL</label>
-                <input
-                  type="url"
-                  value={formData.api_url}
-                  onChange={(e) => handleInputChange('api_url', e.target.value)}
-                  placeholder="留空使用默认URL"
-                />
-              </div>
+                <Field required={!editingConfig || !editingConfig.api_key_masked}>
+                  <FieldLabel color="text.primary">API密钥</FieldLabel>
+                  <Input
+                    type="password"
+                    value={formData.api_key}
+                    onChange={(e) => handleInputChange('api_key', e.target.value)}
+                    placeholder={editingConfig && editingConfig.api_key_masked ? `当前: ${editingConfig.api_key_masked}` : "输入API密钥"}
+                  />
+                  {editingConfig && editingConfig.api_key_masked && (
+                    <Text fontSize="xs" color="text.muted" mt={1}>
+                      留空则保持现有密钥不变，输入新密钥将替换现有密钥
+                    </Text>
+                  )}
+                </Field>
 
-              <div className="form-group">
-                <label>温度 (0-2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="2"
-                  value={formData.temperature}
-                  onChange={(e) => handleInputChange('temperature', parseFloat(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">自定义API URL</FieldLabel>
+                  <Input
+                    type="url"
+                    value={formData.api_url}
+                    onChange={(e) => handleInputChange('api_url', e.target.value)}
+                    placeholder="留空使用默认URL"
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>最大令牌数</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.max_tokens}
-                  onChange={(e) => handleInputChange('max_tokens', parseInt(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">温度 (0-2)</FieldLabel>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    value={formData.temperature}
+                    onChange={(e) => handleInputChange('temperature', parseFloat(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>Top P (0-1)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={formData.top_p}
-                  onChange={(e) => handleInputChange('top_p', parseFloat(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">最大令牌数</FieldLabel>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.max_tokens}
+                    onChange={(e) => handleInputChange('max_tokens', parseInt(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>Top K (0-100)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.top_k}
-                  onChange={(e) => handleInputChange('top_k', parseInt(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">Top P (0-1)</FieldLabel>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={formData.top_p}
+                    onChange={(e) => handleInputChange('top_p', parseFloat(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>频率惩罚 (-2 to 2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="-2"
-                  max="2"
-                  value={formData.frequency_penalty}
-                  onChange={(e) => handleInputChange('frequency_penalty', parseFloat(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">Top K (0-100)</FieldLabel>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.top_k}
+                    onChange={(e) => handleInputChange('top_k', parseInt(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>存在惩罚 (-2 to 2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="-2"
-                  max="2"
-                  value={formData.presence_penalty}
-                  onChange={(e) => handleInputChange('presence_penalty', parseFloat(e.target.value))}
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">频率惩罚 (-2 to 2)</FieldLabel>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="-2"
+                    max="2"
+                    value={formData.frequency_penalty}
+                    onChange={(e) => handleInputChange('frequency_penalty', parseFloat(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>停止序列</label>
-                <input
-                  type="text"
-                  value={formData.stop_sequences.join(', ')}
-                  onChange={(e) => handleStopSequencesChange(e.target.value)}
-                  placeholder="用逗号分隔，如: ###, END"
-                />
-              </div>
+                <Field>
+                  <FieldLabel color="text.primary">存在惩罚 (-2 to 2)</FieldLabel>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="-2"
+                    max="2"
+                    value={formData.presence_penalty}
+                    onChange={(e) => handleInputChange('presence_penalty', parseFloat(e.target.value))}
+                  />
+                </Field>
 
-              <div className="form-group">
-                <label>流式输出</label>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={formData.stream}
+                <Field>
+                  <FieldLabel color="text.primary">停止序列</FieldLabel>
+                  <Input
+                    value={formData.stop_sequences.join(', ')}
+                    onChange={(e) => handleStopSequencesChange(e.target.value)}
+                    placeholder="用逗号分隔，如: ###, END"
+                  />
+                </Field>
+
+                <Field>
+                  <FieldLabel color="text.primary">流式输出</FieldLabel>
+                  <Switch
+                    isChecked={formData.stream}
                     onChange={(e) => handleInputChange('stream', e.target.checked)}
                   />
-                  <span className="slider"></span>
-                </label>
-              </div>
+                </Field>
 
-              <div className="form-group">
-                <label>对数概率</label>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={formData.logprobs}
+                <Field>
+                  <FieldLabel color="text.primary">对数概率</FieldLabel>
+                  <Switch
+                    isChecked={formData.logprobs}
                     onChange={(e) => handleInputChange('logprobs', e.target.checked)}
                   />
-                  <span className="slider"></span>
-                </label>
-              </div>
+                </Field>
 
-              <div className="form-group">
-                <label>Top Logprobs (0-20)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={formData.top_logprobs}
-                  onChange={(e) => handleInputChange('top_logprobs', parseInt(e.target.value))}
-                />
-              </div>
-            </div>
+                <Field>
+                  <FieldLabel color="text.primary">Top Logprobs (0-20)</FieldLabel>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={formData.top_logprobs}
+                    onChange={(e) => handleInputChange('top_logprobs', parseInt(e.target.value))}
+                  />
+                </Field>
+              </Grid>
 
-            <div className="form-actions">
-              <button 
-                type="button" 
-                className="test-connection-btn"
-                onClick={handleTestConnection}
-                disabled={testingConnection}
-              >
-                {testingConnection ? <FaSpinner className="spinner" /> : <FaFlask />}
-                {testingConnection ? '测试中...' : '测试连接'}
-              </button>
+            <Box borderBottom="1px" borderColor="border.default" my={4} />
               
-              <div className="action-buttons">
-                <button type="submit" className="save-btn">
-                  <FaSave /> 保存
-                </button>
-                <button type="button" className="cancel-btn" onClick={handleCancel}>
-                  <FaTimes /> 取消
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+              <Flex justify="space-between" align="center">
+                <Button
+                  leftIcon={testingConnection ? <Spinner size="sm" /> : <Icon as={FaFlask} />}
+                  onClick={handleTestConnection}
+                  isDisabled={testingConnection}
+                  colorScheme="orange"
+                  variant="outline"
+                >
+                  {testingConnection ? '测试中...' : '测试连接'}
+                </Button>
+                
+                <HStack spacing={3}>
+                  <Button 
+                    type="submit"
+                    colorScheme="brand"
+                  >
+                    <Icon as={FaSave} mr={2} />
+                    保存
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                  >
+                    <Icon as={FaTimes} mr={2} />
+                    取消
+                  </Button>
+                </HStack>
+              </Flex>
+            </form>
+          </VStack>
+        </Box>
       )}
 
-      <div className="configs-list">
-        <h3>现有配置</h3>
-        {configs.length === 0 ? (
-          <div className="no-configs">
-            <p>暂无配置，点击"新建配置"开始创建</p>
-          </div>
-        ) : (
-          <div className="configs-grid">
-            {configs.map(config => (
-              <div key={config.id} className="config-card">
-                <div className="config-header">
-                  <h4>{config.name}</h4>
-                  <div className="config-actions">
-                    <button 
-                      className="btn-icon"
-                      onClick={() => handleEdit(config)}
-                      title="编辑"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button 
-                      className="btn-icon btn-danger"
-                      onClick={() => handleDelete(config.id)}
-                      title="删除"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="config-details">
-                  <div className="config-item">
-                    <span className="label">模型类型:</span>
-                    <span className="value">{config.model_type}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">模型名称:</span>
-                    <span className="value">{config.model_name || '默认'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">温度:</span>
-                    <span className="value">{config.temperature}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">最大令牌:</span>
-                    <span className="value">{config.max_tokens}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 配置列表 */}
+      <Box 
+        bg="white" 
+        _dark={{ bg: "gray.800" }}
+        borderRadius="lg" 
+        boxShadow="sm" 
+        flex="1"
+        overflow="hidden"
+        display="flex" 
+        flexDirection="column"
+      >
+        <Box p={6} borderBottom="1px" borderColor="border.default">
+          <Heading size="md" color="text.primary">现有配置</Heading>
+        </Box>
+        
+        <Box flex="1" overflow="auto" p={6}>
+          {configs.length === 0 ? (
+            <Box 
+              bg="gray.50" 
+              _dark={{ bg: "gray.900" }}
+              borderRadius="md" 
+              p={8} 
+              textAlign="center"
+            >
+              <VStack spacing={3}>
+                <Text fontSize="3xl">⚙️</Text>
+                <Text color="text.muted">暂无配置，点击"新建配置"开始创建</Text>
+              </VStack>
+            </Box>
+          ) : (
+            <Grid templateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+              {configs.map(config => (
+                <Box 
+                  key={config.id} 
+                  bg="gray.50" 
+                  _dark={{ bg: "gray.900" }}
+                  borderRadius="md" 
+                  p={4}
+                  border="1px"
+                  borderColor="border.default"
+                >
+                  <HStack justify="space-between" align="start" mb={3}>
+                    <Heading size="sm" color="text.primary">{config.name}</Heading>
+                    <HStack spacing={1}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEdit(config)}
+                        title="编辑"
+                      >
+                        <Icon as={FaEdit} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="red"
+                        onClick={() => handleDelete(config.id)}
+                        title="删除"
+                      >
+                        <Icon as={FaTrash} />
+                      </Button>
+                    </HStack>
+                  </HStack>
+                  
+                  <VStack spacing={2} align="stretch">
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" color="text.muted">模型类型:</Text>
+                      <Badge variant="outline" fontSize="xs">{config.model_type}</Badge>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" color="text.muted">模型名称:</Text>
+                      <Text fontSize="sm" color="text.primary">{config.model_name || '默认'}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" color="text.muted">温度:</Text>
+                      <Text fontSize="sm" color="text.primary">{config.temperature}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" color="text.muted">最大令牌:</Text>
+                      <Text fontSize="sm" color="text.primary">{config.max_tokens}</Text>
+                    </HStack>
+                  </VStack>
+                </Box>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      </Box>
 
       {deleteConfirmDialog && (
         <UniversalDialog
@@ -529,7 +612,7 @@ const ModelConfigManager = () => {
           onCancel={cancelDelete}
         />
       )}
-    </div>
+    </Box>
   );
 };
 
