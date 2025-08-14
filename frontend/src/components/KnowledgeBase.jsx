@@ -196,6 +196,7 @@ const KnowledgeBase = ({ projectId }) => {
               <h3>{module.name}</h3>
               <p>{module.description}</p>
             </div>
+            <div className="module-indicator">{activeModule === module.id && <div className="active-indicator"></div>}</div>
           </div>
         ))}
       </div>
@@ -269,169 +270,166 @@ const KnowledgeBase = ({ projectId }) => {
   );
 };
 
-// 角色知识库组件
+// 角色知识库总览组件
 const CharacterKnowledgeBase = ({ data }) => (
   <div className="character-knowledge">
-    <div className="knowledge-section-header">
+    <div className="knowledge-overview-header">
       <h3>角色知识库</h3>
-      <button className="add-button">+ 添加角色</button>
+      <div className="stats-badge">{data.length} 个角色</div>
     </div>
-    <div className="characters-grid">
-      {data.map(character => (
-        <div key={character.id} className="character-card">
-          <div className="character-header">
-            <h4>{character.name}</h4>
-            <div className="character-actions">
-              <button className="edit-btn">编辑</button>
-              <button className="delete-btn">删除</button>
+    {data.length > 0 ? (
+      <div className="characters-overview">
+        {data.slice(0, 6).map(character => (
+          <div key={character.id} className="character-summary-card">
+            <div className="character-avatar">
+              <div className="avatar-icon">👤</div>
+            </div>
+            <div className="character-summary-info">
+              <h4>{character.name}</h4>
+              <p className="character-personality">{character.personality || '暂无性格描述'}</p>
+              <div className="character-tags">
+                <span className="tag">{character.dialogue_style || '对话风格未设置'}</span>
+              </div>
             </div>
           </div>
-          <div className="character-info">
-            <p><strong>性格:</strong> {character.personality}</p>
-            <p><strong>背景:</strong> {character.background}</p>
-            <p><strong>外貌:</strong> {character.appearance}</p>
-            <p><strong>对话风格:</strong> {character.dialogue_style || '未设置'}</p>
+        ))}
+        {data.length > 6 && (
+          <div className="view-more">
+            <span>+{data.length - 6} 个更多角色</span>
           </div>
-          <div className="character-relations">
-            <h5>角色关系</h5>
-            <div className="relations-list">
-              {character.relations && character.relations.length > 0 ? (
-                character.relations.map((relation, index) => (
-                  <div key={index} className="relation-item">
-                    <span className="relation-type">{relation.relation_type}</span>
-                    <span className="relation-desc">{relation.description}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="no-relations">暂无关系记录</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+        )}
+      </div>
+    ) : (
+      <div className="empty-state">
+        <div className="empty-icon">👥</div>
+        <p>暂无角色数据</p>
+        <span className="empty-hint">开始创建您的第一个角色</span>
+      </div>
+    )}
   </div>
 );
 
-// 世界观知识库组件
+// 世界观知识库总览组件
 const WorldviewKnowledgeBase = ({ data }) => (
   <div className="worldview-knowledge">
-    <div className="knowledge-section-header">
+    <div className="knowledge-overview-header">
       <h3>世界观知识库</h3>
-      <button className="add-button">+ 添加世界观</button>
+      <div className="stats-badge">{data.length} 个世界观</div>
     </div>
-    <div className="worldviews-grid">
-      {data.map(worldview => (
-        <div key={worldview.id} className="worldview-card">
-          <div className="worldview-header">
-            <h4>{worldview.name}</h4>
-            <div className="worldview-actions">
-              <button className="edit-btn">编辑</button>
-              <button className="delete-btn">删除</button>
+    {data.length > 0 ? (
+      <div className="worldviews-overview">
+        {data.slice(0, 4).map(worldview => (
+          <div key={worldview.id} className="worldview-summary-card">
+            <div className="worldview-icon">🌍</div>
+            <div className="worldview-summary-info">
+              <h4>{worldview.name}</h4>
+              <p className="worldview-desc">{worldview.description || '暂无描述'}</p>
+              <div className="worldview-features">
+                {worldview.magic_system && (
+                  <span className="feature-tag">魔法: {worldview.magic_system}</span>
+                )}
+                {worldview.technology_level && (
+                  <span className="feature-tag">科技: {worldview.technology_level}</span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="worldview-info">
-            <p><strong>描述:</strong> {worldview.description}</p>
-            <p><strong>魔法体系:</strong> {worldview.magic_system || '未设置'}</p>
-            <p><strong>科技水平:</strong> {worldview.technology || '未设置'}</p>
+        ))}
+        {data.length > 4 && (
+          <div className="view-more">
+            <span>+{data.length - 4} 个更多世界观</span>
           </div>
-          <div className="worldview-rules">
-            <h5>世界规则</h5>
-            <div className="rules-list">
-              {worldview.rules && worldview.rules.length > 0 ? (
-                worldview.rules.map((rule, index) => (
-                  <div key={index} className="rule-item">
-                    <span className="rule-name">{rule.rule_name}</span>
-                    <span className="rule-desc">{rule.rule_description}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="no-rules">暂无规则记录</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+        )}
+      </div>
+    ) : (
+      <div className="empty-state">
+        <div className="empty-icon">🌍</div>
+        <p>暂无世界观数据</p>
+        <span className="empty-hint">开始构建您的世界观</span>
+      </div>
+    )}
   </div>
 );
 
-// 场景知识库组件
+// 场景知识库总览组件
 const SceneKnowledgeBase = ({ data }) => (
   <div className="scene-knowledge">
-    <div className="knowledge-section-header">
+    <div className="knowledge-overview-header">
       <h3>场景知识库</h3>
-      <button className="add-button">+ 添加场景</button>
+      <div className="stats-badge">{data.length} 个场景</div>
     </div>
-    <div className="scenes-grid">
-      {data.map(scene => (
-        <div key={scene.id} className="scene-card">
-          <div className="scene-header">
-            <h4>{scene.name}</h4>
-            <div className="scene-actions">
-              <button className="edit-btn">编辑</button>
-              <button className="delete-btn">删除</button>
+    {data.length > 0 ? (
+      <div className="scenes-overview">
+        {data.slice(0, 6).map(scene => (
+          <div key={scene.id} className="scene-summary-card">
+            <div className="scene-icon">🏞️</div>
+            <div className="scene-summary-info">
+              <h4>{scene.name}</h4>
+              <p className="scene-desc">{scene.description || '暂无描述'}</p>
+              <div className="scene-meta">
+                <span className="usage-count">使用 {scene.usage_count || 0} 次</span>
+                {scene.geography && (
+                  <span className="location-tag">{scene.geography}</span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="scene-info">
-            <p><strong>描述:</strong> {scene.description}</p>
-            <p><strong>地理环境:</strong> {scene.geography}</p>
-            <p><strong>文化特色:</strong> {scene.culture}</p>
-            <p><strong>使用次数:</strong> {scene.usage_count}</p>
+        ))}
+        {data.length > 6 && (
+          <div className="view-more">
+            <span>+{data.length - 6} 个更多场景</span>
           </div>
-          <div className="scene-tags">
-            <h5>场景标签</h5>
-            <div className="tags-list">
-              {scene.atmosphere_tags && scene.atmosphere_tags.length > 0 ? (
-                scene.atmosphere_tags.map((tag, index) => (
-                  <span key={index} className="tag">{tag.tag_name}</span>
-                ))
-              ) : (
-                <p className="no-tags">暂无标签</p>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+        )}
+      </div>
+    ) : (
+      <div className="empty-state">
+        <div className="empty-icon">🏞️</div>
+        <p>暂无场景数据</p>
+        <span className="empty-hint">开始创建您的场景库</span>
+      </div>
+    )}
   </div>
 );
 
-// 创作技巧知识库组件
+// 创作技巧知识库总览组件
 const WritingTechniqueKnowledgeBase = ({ data }) => (
   <div className="technique-knowledge">
-    <div className="knowledge-section-header">
+    <div className="knowledge-overview-header">
       <h3>创作技巧库</h3>
-      <button className="add-button">+ 添加技巧</button>
+      <div className="stats-badge">{data.length} 个分类</div>
     </div>
-    <div className="techniques-grid">
-      {data.map(technique => (
-        <div key={technique.id} className="technique-card">
-          <div className="technique-header">
-            <h4>{technique.name}</h4>
-            <span className="technique-category">{technique.category}</span>
-          </div>
-          <div className="technique-content">
-            <div className="techniques-list">
-              {technique.techniques && technique.techniques.map((tech, index) => (
-                <div key={index} className="technique-item">
-                  <h5>{tech.technique_name}</h5>
-                  <p>{tech.description}</p>
-                  <div className="technique-examples">
-                    <strong>示例:</strong>
-                    <ul>
-                      {tech.examples.map((example, i) => (
-                        <li key={i}>{example}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
+    {data.length > 0 ? (
+      <div className="techniques-overview">
+        {data.slice(0, 3).map(technique => (
+          <div key={technique.id} className="technique-summary-card">
+            <div className="technique-icon">✍️</div>
+            <div className="technique-summary-info">
+              <h4>{technique.name}</h4>
+              <span className="technique-category-badge">{technique.category}</span>
+              <div className="technique-preview">
+                <p>{technique.inspiration_notes && technique.inspiration_notes.length > 0 
+                  ? technique.inspiration_notes[0] 
+                  : '暂无灵感记录'}</p>
+              </div>
+              <div className="technique-stats">
+                <span className="technique-count">{technique.techniques ? technique.techniques.length : 0} 个技巧</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+        {data.length > 3 && (
+          <div className="view-more">
+            <span>+{data.length - 3} 个更多分类</span>
+          </div>
+        )}
+      </div>
+    ) : (
+      <div className="empty-state">
+        <div className="empty-icon">✍️</div>
+        <p>暂无技巧数据</p>
+        <span className="empty-hint">开始收集创作技巧</span>
+      </div>
+    )}
   </div>
 );
 
