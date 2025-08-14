@@ -3,7 +3,7 @@
 使用SQLAlchemy ORM定义所有数据表结构
 """
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -196,3 +196,72 @@ class PromptTemplate(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class LangGraphWorkflow(Base):
+    """LangGraph工作流表"""
+    __tablename__ = "langgraph_workflows"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    workflow_type = Column(String(50), nullable=False)  # outline_to_draft, dialogue_generation, plot_planning
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    model_config_id = Column(Integer, ForeignKey("model_configs.id"), nullable=False)
+    status = Column(String(20), default="active")  # active, paused, completed
+    config_data = Column(Text)  # JSON格式的工作流配置
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 关系
+    project = relationship("Project", backref="langgraph_workflows")
+    model_config = relationship("ModelConfig")
+    sessions = relationship("LangGraphSession", back_populates="workflow", cascade="all, delete-orphan")
+    generated_contents = relationship("AIGeneratedContent", back_populates="workflow")
+
+
+class LangGraphSession(Base):
+    """LangGraph会话表"""
+    __tablename__ = "langgraph_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey("langgraph_workflows.id"), nullable=False)
+    thread_id = Column(String(100), nullable=False, unique=True)
+    session_data = Column(Text)  # JSON格式的会话数据
+    messages_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 关系
+    workflow = relationship("LangGraphWorkflow", back_populates="sessions")
+    generated_contents = relationship("AIGeneratedContent", back_populates="session")
+
+
+class AIGeneratedContent(Base):
+    """AI生成内容表"""
+    __tablename__ = "ai_generated_content"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content_type = Column(String(50), nullable=False)  # outline, draft, dialogue, suggestion
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
+    workflow_id = Column(Integer, ForeignKey("langgraph_workflows.id"), nullable=True)
+    session_id = Column(Integer, ForeignKey("langgraph_sessions.id"), nullable=True)
+    model_config_id = Column(Integer, ForeignKey("model_configs.id"), nullable=False)
+    title = Column(String(200))
+    content = Column(Text, nullable=False)
+    content_metadata = Column(Text)  # JSON格式的元数据
+    word_count = Column(Integer, default=0)
+    tokens_used = Column(Integer, default=0)
+    quality_score = Column(Float)  # AI质量评分
+    user_feedback = Column(Text)  # 用户反馈
+    is_approved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 关系
+    project = relationship("Project", backref="ai_contents")
+    chapter = relationship("Chapter", backref="ai_contents")
+    workflow = relationship("LangGraphWorkflow", back_populates="generated_contents")
+    session = relationship("LangGraphSession", back_populates="generated_contents")
+    model_config = relationship("ModelConfig")

@@ -5,6 +5,14 @@ import uvicorn
 from database import create_tables
 from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
 
+# 尝试导入LangChain路由（如果依赖已安装）
+try:
+    from routers import langchain_ai
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    print("Warning: LangChain dependencies not installed. AI features will not be available.")
+
 # 应用启动时创建数据库表
 create_tables()
 
@@ -48,6 +56,10 @@ app.include_router(model_configs.router)
 app.include_router(prompt_templates.router)
 # 挂载知识库路由
 app.include_router(knowledge.router)
+
+# 如果LangChain可用，挂载AI路由
+if LANGCHAIN_AVAILABLE:
+    app.include_router(langchain_ai.router)
 
 @app.get("/", tags=["Root"])
 def read_root():
