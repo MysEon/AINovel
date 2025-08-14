@@ -165,7 +165,7 @@ const Sidebar = ({
         <div className="sidebar-menu">
           {Object.entries(menuItems).map(([section, items]) => (
             <div key={section} className="menu-section">
-              {section !== '开始写作' && <h3>{section}</h3>}
+              {!isCollapsed && section !== '开始写作' && <h3>{section}</h3>}
               <ul>
                 {items.map((item) => (
                   <li 
@@ -174,7 +174,7 @@ const Sidebar = ({
                   >
                     <a href="#" onClick={() => setActiveItem(item)}>
                       {menuIcons[item] || <FaBook />}
-                      <span>{item}</span>
+                      {!isCollapsed && <span>{item}</span>}
                     </a>
                   </li>
                 ))}
