@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { FaBrain, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaSpinner } from 'react-icons/fa';
+import { aiService } from '../services/aiService';
+import { useNotification } from '../NotificationManager';
 import './KnowledgeBase.css';
 
 const KnowledgeBase = ({ projectId }) => {
   const [activeModule, setActiveModule] = useState('characters');
   const [knowledgeData, setKnowledgeData] = useState({});
   const [loading, setLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const { addNotification } = useNotification();
 
   // 四个知识库模块
   const modules = [
@@ -69,9 +75,71 @@ const KnowledgeBase = ({ projectId }) => {
       }
     } catch (error) {
       console.error('加载知识库数据失败:', error);
-      // 可以在这里添加错误提示，但为了简单起见，我们只记录错误
+      addNotification({
+        message: '加载知识库数据失败: ' + error.message,
+        type: 'error'
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const performAIAnalysis = async () => {
+    if (!projectId) return;
+
+    setAiAnalyzing(true);
+    try {
+      let analysisResult;
+      switch (activeModule) {
+        case 'characters':
+          analysisResult = await aiService.analyzeCharacterRelationships(projectId);
+          break;
+        case 'worldviews':
+          analysisResult = await aiService.checkWorldviewConsistency(projectId, '');
+          break;
+        case 'scenes':
+          analysisResult = await aiService.generateCreativeIdeas(projectId, '分析场景知识库并提供改进建议');
+          break;
+        case 'techniques':
+          analysisResult = await aiService.getWritingSuggestions(projectId, '', { type: 'techniques' });
+          break;
+        default:
+          analysisResult = await aiService.analyzeKnowledgeBase(projectId, activeModule);
+      }
+      
+      setAiAnalysis(analysisResult);
+      addNotification({
+        message: 'AI分析完成',
+        type: 'success'
+      });
+    } catch (error) {
+      addNotification({
+        message: 'AI分析失败: ' + error.message,
+        type: 'error'
+      });
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
+  const generateAIInsights = async () => {
+    if (!projectId) return;
+
+    setAiAnalyzing(true);
+    try {
+      const insights = await aiService.generateCreativeIdeas(projectId, `基于${activeModule}知识库提供创作建议`);
+      setAiAnalysis(insights);
+      addNotification({
+        message: 'AI洞察生成完成',
+        type: 'success'
+      });
+    } catch (error) {
+      addNotification({
+        message: 'AI洞察生成失败: ' + error.message,
+        type: 'error'
+      });
+    } finally {
+      setAiAnalyzing(false);
     }
   };
 
@@ -95,6 +163,24 @@ const KnowledgeBase = ({ projectId }) => {
       <div className="knowledge-header">
         <h2>知识库</h2>
         <p>系统化管理您的创作素材和技巧</p>
+        <div className="ai-actions">
+          <button 
+            className="ai-action-btn analysis"
+            onClick={performAIAnalysis}
+            disabled={aiAnalyzing || !projectId}
+          >
+            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaBrain />}
+            {aiAnalyzing ? '分析中...' : 'AI分析'}
+          </button>
+          <button 
+            className="ai-action-btn insights"
+            onClick={generateAIInsights}
+            disabled={aiAnalyzing || !projectId}
+          >
+            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaLightbulb />}
+            {aiAnalyzing ? '生成中...' : 'AI洞察'}
+          </button>
+        </div>
       </div>
 
       <div className="knowledge-modules">
@@ -121,7 +207,62 @@ const KnowledgeBase = ({ projectId }) => {
             <p>加载中...</p>
           </div>
         ) : (
-          renderModuleContent()
+          <div className="knowledge-content-wrapper">
+            {aiAnalysis && (
+              <div className="ai-analysis-panel">
+                <div className="ai-analysis-header">
+                  <FaBrain className="ai-icon" />
+                  <h3>AI分析结果</h3>
+                  <button 
+                    className="close-analysis"
+                    onClick={() => setAiAnalysis(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="ai-analysis-content">
+                  {typeof aiAnalysis === 'string' ? (
+                    <p>{aiAnalysis}</p>
+                  ) : (
+                    <div className="ai-analysis-structured">
+                      {aiAnalysis.content && <p>{aiAnalysis.content}</p>}
+                      {aiAnalysis.suggestions && (
+                        <div className="suggestions-list">
+                          <h4>建议:</h4>
+                          <ul>
+                            {aiAnalysis.suggestions.map((suggestion, index) => (
+                              <li key={index}>{suggestion}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiAnalysis.insights && (
+                        <div className="insights-list">
+                          <h4>洞察:</h4>
+                          <ul>
+                            {aiAnalysis.insights.map((insight, index) => (
+                              <li key={index}>{insight}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {aiAnalysis.recommendations && (
+                        <div className="recommendations-list">
+                          <h4>推荐:</h4>
+                          <ul>
+                            {aiAnalysis.recommendations.map((recommendation, index) => (
+                              <li key={index}>{recommendation}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {renderModuleContent()}
+          </div>
         )}
       </div>
     </div>

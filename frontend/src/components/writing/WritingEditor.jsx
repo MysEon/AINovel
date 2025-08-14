@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
+import { aiService } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import './WritingEditorSimple.css';
 
@@ -396,7 +397,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           <AiWritingInterface 
             content={content} 
             onContentChange={handleContentChange} 
-            readOnly={isEditorLocked} 
+            readOnly={isEditorLocked}
+            projectId={projectId}
+            currentChapter={currentChapter}
           />
         ) : (
           <RichTextEditor 
@@ -549,34 +552,43 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter }) => {
   const [messages, setMessages] = useState([
-    { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你 brainstorm ideas, improve your writing, or answer questions about your story. What would you like to work on today?' }
+    { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
   ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleContentChange = (e) => {
     onContentChange(e.target.value);
   };
 
-  const handleSend = () => {
-    if (input.trim() === '') return;
+  const handleSend = async () => {
+    if (input.trim() === '' || isLoading) return;
 
-    // 添加用户消息
     const userMessage = { id: messages.length + 1, role: 'user', content: input };
     setMessages([...messages, userMessage]);
-    
-    // 模拟AI回复
-    setTimeout(() => {
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await aiService.chatWithAI(projectId, input, messages);
       const aiResponse = { 
         id: messages.length + 2, 
         role: 'assistant', 
-        content: `这是一个模拟的AI回复，针对你的问题: "${input}"。在实际实现中，这里会调用AI API来生成真实的回复。`
+        content: response.content || response.response || '抱歉，我暂时无法回复。'
       };
       setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
-    
-    setInput('');
+    } catch (error) {
+      const errorMessage = { 
+        id: messages.length + 2, 
+        role: 'assistant', 
+        content: `抱歉，AI服务暂时不可用: ${error.message}`
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -586,8 +598,94 @@ const AiWritingInterface = ({ content, onContentChange, readOnly }) => {
     }
   };
 
+  const handleAIAction = async (action) => {
+    if (!currentChapter || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      let response;
+      switch (action) {
+        case 'outline':
+          response = await aiService.generateChapterOutline(projectId, {
+            title: currentChapter.title,
+            current_content: content,
+            chapter_number: currentChapter.chapter_number
+          });
+          break;
+        case 'suggestions':
+          response = await aiService.getPlotSuggestions(projectId, {
+            title: currentChapter.title,
+            content: content
+          });
+          break;
+        case 'optimize':
+          response = await aiService.optimizeContent(projectId, content);
+          if (response.optimized_content) {
+            onContentChange(response.optimized_content);
+          }
+          break;
+        case 'ideas':
+          response = await aiService.generateCreativeIdeas(projectId, '请为当前章节提供一些创意建议');
+          break;
+        default:
+          return;
+      }
+
+      const aiResponse = { 
+        id: messages.length + 1, 
+        role: 'assistant', 
+        content: response.content || response.suggestions || response.optimized_content || '操作完成'
+      };
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      const errorMessage = { 
+        id: messages.length + 1, 
+        role: 'assistant', 
+        content: `${action} 操作失败: ${error.message}`
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="ai-writing-interface">
+      <div className="ai-toolbar">
+        <button 
+          className="ai-toolbar-btn" 
+          onClick={() => handleAIAction('outline')}
+          disabled={isLoading}
+          title="生成章节大纲"
+        >
+          <FaMagic /> 大纲
+        </button>
+        <button 
+          className="ai-toolbar-btn" 
+          onClick={() => handleAIAction('suggestions')}
+          disabled={isLoading}
+          title="获取情节建议"
+        >
+          <FaLightbulb /> 建议
+        </button>
+        <button 
+          className="ai-toolbar-btn" 
+          onClick={() => handleAIAction('optimize')}
+          disabled={isLoading}
+          title="优化当前内容"
+        >
+          <FaSpinner /> 优化
+        </button>
+        <button 
+          className="ai-toolbar-btn" 
+          onClick={() => handleAIAction('ideas')}
+          disabled={isLoading}
+          title="生成创意想法"
+        >
+          <FaUsers /> 创意
+        </button>
+      </div>
+      
       <div className="chat-container">
         <div className="chat-messages">
           {messages.map((message) => (
@@ -597,6 +695,13 @@ const AiWritingInterface = ({ content, onContentChange, readOnly }) => {
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="message assistant loading">
+              <div className="message-content">
+                <FaSpinner className="spinner" /> AI正在思考中...
+              </div>
+            </div>
+          )}
         </div>
         <div className="chat-input-container">
           <textarea
@@ -606,9 +711,14 @@ const AiWritingInterface = ({ content, onContentChange, readOnly }) => {
             onKeyPress={handleKeyPress}
             placeholder="与AI助手对话，获取写作建议..."
             rows="3"
+            disabled={isLoading}
           />
-          <button className="send-button" onClick={handleSend}>
-            发送
+          <button 
+            className="send-button" 
+            onClick={handleSend}
+            disabled={isLoading || input.trim() === ''}
+          >
+            {isLoading ? <FaSpinner className="spinner" /> : '发送'}
           </button>
         </div>
       </div>

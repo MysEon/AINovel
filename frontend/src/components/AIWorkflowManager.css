@@ -1,0 +1,634 @@
+.ai-workflow-manager {
+  padding: 2rem;
+  background-color: #ffffff;
+  color: #333333;
+  min-height: 100%;
+}
+
+.workflow-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.workflow-header h2 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.workflow-header p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.workflow-card {
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.workflow-card.active {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.workflow-card.status-running {
+  border-color: #17a2b8;
+}
+
+.workflow-card.status-completed {
+  border-color: #28a745;
+}
+
+.workflow-card.status-failed {
+  border-color: #dc3545;
+}
+
+.workflow-card.status-stopped {
+  border-color: #ffc107;
+}
+
+.workflow-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.workflow-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.workflow-info {
+  flex: 1;
+}
+
+.workflow-info h3 {
+  margin: 0 0 0.25rem 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.workflow-info p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.workflow-status {
+  font-size: 1.5rem;
+  color: #6c757d;
+}
+
+.workflow-card.status-running .workflow-status {
+  color: #17a2b8;
+}
+
+.workflow-card.status-completed .workflow-status {
+  color: #28a745;
+}
+
+.workflow-card.status-failed .workflow-status {
+  color: #dc3545;
+}
+
+.workflow-card.status-stopped .workflow-status {
+  color: #ffc107;
+}
+
+.workflow-steps {
+  margin-bottom: 1rem;
+}
+
+.workflow-steps h4 {
+  margin: 0 0 0.75rem 0;
+  color: #495057;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.step-item.active {
+  background-color: #e3f2fd;
+  border-left: 3px solid #007bff;
+}
+
+.step-item.completed {
+  background-color: #e8f5e8;
+  border-left: 3px solid #28a745;
+}
+
+.step-icon {
+  width: 24px;
+  height: 24px;
+  background-color: #6c757d;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.step-item.active .step-icon {
+  background-color: #007bff;
+}
+
+.step-item.completed .step-icon {
+  background-color: #28a745;
+}
+
+.step-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.step-name {
+  font-weight: 500;
+  color: #495057;
+}
+
+.step-progress {
+  font-size: 0.8rem;
+  color: #007bff;
+  font-weight: 600;
+}
+
+.workflow-progress {
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.progress-text {
+  color: #495057;
+  font-weight: 500;
+}
+
+.duration {
+  color: #6c757d;
+}
+
+.workflow-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.action-btn.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.action-btn.primary:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.action-btn.primary.stop {
+  background-color: #dc3545;
+}
+
+.action-btn.primary.stop:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.action-btn.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.action-btn.secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 配置对话框 */
+.workflow-config-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.workflow-config-dialog {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.dialog-content {
+  padding: 1.5rem;
+}
+
+.config-section {
+  margin-bottom: 1.5rem;
+}
+
+.config-section h4 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+}
+
+.config-item {
+  margin-bottom: 1rem;
+}
+
+.config-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #495057;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.config-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #007bff;
+}
+
+.config-item input[type="number"] {
+  width: 80px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.cancel-btn {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.save-btn {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.save-btn:hover {
+  background-color: #0056b3;
+}
+
+/* 加载状态 */
+.ai-workflow-manager.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #6c757d;
+}
+
+.ai-workflow-manager.loading .spinner {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #007bff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ai-workflow-manager {
+    padding: 1rem;
+  }
+  
+  .workflow-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .workflow-card {
+    padding: 1rem;
+  }
+  
+  .workflow-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .workflow-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    justify-content: center;
+  }
+  
+  .workflow-config-dialog {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .dialog-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .workflow-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .workflow-header p {
+    font-size: 1rem;
+  }
+  
+  .workflow-info h3 {
+    font-size: 1.1rem;
+  }
+  
+  .step-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* 暗色主题 */
+.dark-theme .ai-workflow-manager {
+  background-color: #2d2d2d;
+  color: #ffffff;
+}
+
+.dark-theme .workflow-header h2 {
+  color: #ffffff;
+}
+
+.dark-theme .workflow-header p {
+  color: #b0b0b0;
+}
+
+.dark-theme .workflow-card {
+  background-color: #3d3d3d;
+  border-color: #4d4d4d;
+  color: #ffffff;
+}
+
+.dark-theme .workflow-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .workflow-card.active {
+  border-color: #007bff;
+}
+
+.dark-theme .workflow-info h3 {
+  color: #ffffff;
+}
+
+.dark-theme .workflow-info p {
+  color: #b0b0b0;
+}
+
+.dark-theme .step-item {
+  background-color: #4d4d4d;
+}
+
+.dark-theme .step-item.active {
+  background-color: #1e3a5f;
+}
+
+.dark-theme .step-item.completed {
+  background-color: #1e3a1e;
+}
+
+.dark-theme .step-name {
+  color: #ffffff;
+}
+
+.dark-theme .progress-bar {
+  background-color: #4d4d4d;
+}
+
+.dark-theme .progress-text {
+  color: #ffffff;
+}
+
+.dark-theme .duration {
+  color: #b0b0b0;
+}
+
+.dark-theme .workflow-config-dialog {
+  background-color: #3d3d3d;
+  color: #ffffff;
+}
+
+.dark-theme .dialog-header {
+  border-bottom-color: #4d4d4d;
+}
+
+.dark-theme .dialog-header h3 {
+  color: #ffffff;
+}
+
+.dark-theme .close-btn {
+  color: #b0b0b0;
+}
+
+.dark-theme .close-btn:hover {
+  background-color: #4d4d4d;
+  color: #ffffff;
+}
+
+.dark-theme .config-section h4 {
+  color: #ffffff;
+}
+
+.dark-theme .config-item label {
+  color: #ffffff;
+}
+
+.dark-theme .config-item input[type="number"] {
+  background-color: #4d4d4d;
+  color: #ffffff;
+  border-color: #5d5d5d;
+}
+
+.dark-theme .dialog-actions {
+  border-top-color: #4d4d4d;
+}
+
+.dark-theme .cancel-btn {
+  background-color: #6c757d;
+}
+
+.dark-theme .save-btn {
+  background-color: #007bff;
+}
+
+.dark-theme .ai-workflow-manager.loading {
+  color: #b0b0b0;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.workflow-card.status-running {
+  animation: pulse 2s infinite;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

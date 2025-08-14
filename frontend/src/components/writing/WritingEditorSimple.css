@@ -307,9 +307,60 @@
 
 .ai-writing-interface {
   display: flex;
+  flex-direction: column;
   height: 100%;
   padding: 0;
   overflow: hidden;
+}
+
+.ai-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  flex-wrap: wrap;
+}
+
+.ai-writing-interface .chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  min-height: 0;
+  border-top: 1px solid #e9ecef;
+}
+
+.ai-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background-color: #e9ecef;
+  color: #495057;
+  border: 1px solid #dee2e6;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ai-toolbar-btn:hover:not(:disabled) {
+  background-color: #dee2e6;
+  border-color: #adb5bd;
+  transform: translateY(-1px);
+}
+
+.ai-toolbar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ai-toolbar-btn svg {
+  font-size: 0.9rem;
 }
 
 .chat-container {
@@ -352,6 +403,25 @@
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;
+}
+
+.message.loading {
+  opacity: 0.7;
+}
+
+.message.loading .message-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .chat-input-container {
@@ -749,6 +819,22 @@
   background-color: #2d2d2d;
   border-left: 1px solid #4d4d4d;
   overflow: auto;
+}
+
+.dark-theme .ai-toolbar {
+  background-color: #3d3d3d;
+  border-bottom: 1px solid #4d4d4d;
+}
+
+.dark-theme .ai-toolbar-btn {
+  background-color: #4d4d4d;
+  color: #ffffff;
+  border: 1px solid #5d5d5d;
+}
+
+.dark-theme .ai-toolbar-btn:hover:not(:disabled) {
+  background-color: #5d5d5d;
+  border-color: #6d6d6d;
 }
 
 /* 空章节提示 */
