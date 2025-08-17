@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useReducer, useState } from 'react';
+import { Modal, message } from 'antd';
+import { 
+  ExclamationCircleOutlined, 
+  CheckCircleOutlined, 
+  InfoCircleOutlined, 
+  QuestionCircleOutlined 
+} from '@ant-design/icons';
 import Notification from './Notification';
-import UniversalDialog from './UniversalDialog';
 
 const NotificationContext = createContext();
 
@@ -42,9 +48,9 @@ export const NotificationProvider = ({ children }) => {
     content,
     onConfirm,
     onCancel,
-    confirmText,
-    cancelText,
-    type,
+    confirmText = '确认',
+    cancelText = '取消',
+    type = 'info',
     showInput = false,
     inputValue = '',
     onInputChange,
@@ -56,26 +62,77 @@ export const NotificationProvider = ({ children }) => {
     errorMessage = '操作失败',
     className = ''
   }) => {
-    setConfirmDialog({
+    const getIcon = () => {
+      switch (type) {
+        case 'error':
+          return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+        case 'warning':
+          return <ExclamationCircleOutlined style={{ color: '#faad14' }} />;
+        case 'success':
+          return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+        case 'question':
+          return <QuestionCircleOutlined style={{ color: '#1890ff' }} />;
+        default:
+          return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+      }
+    };
+
+    const modal = Modal.confirm({
       title,
-      message,
-      content,
-      onConfirm,
-      onCancel,
-      confirmText,
-      cancelText,
-      type,
-      showInput,
-      inputValue,
-      onInputChange,
-      inputPlaceholder,
-      inputType,
-      required,
-      showResultNotification,
-      successMessage,
-      errorMessage,
-      className
+      content: (
+        <div>
+          {message && <p style={{ marginBottom: content ? '12px' : '0' }}>{message}</p>}
+          {content}
+          {showInput && (
+            <input
+              type={inputType}
+              value={inputValue}
+              onChange={(e) => {
+                if (onInputChange) onInputChange(e.target.value);
+              }}
+              placeholder={inputPlaceholder}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
+                marginTop: '12px',
+                fontSize: '14px'
+              }}
+              autoFocus
+            />
+          )}
+        </div>
+      ),
+      icon: getIcon(),
+      okText: confirmText,
+      cancelText: cancelText,
+      okButtonProps: {
+        disabled: showInput && required && !inputValue.trim(),
+        danger: type === 'error'
+      },
+      onOk: async () => {
+        try {
+          if (onConfirm) await onConfirm(inputValue);
+          
+          if (showResultNotification) {
+            message.success(successMessage);
+          }
+        } catch (error) {
+          if (showResultNotification) {
+            message.error(errorMessage);
+          }
+          throw error;
+        }
+      },
+      onCancel: () => {
+        if (onCancel) onCancel();
+      },
+      className: `confirm-dialog-${type} ${className}`,
+      width: showInput ? 480 : 420
     });
+
+    setConfirmDialog(modal);
   };
 
   const hideConfirmDialog = () => {
@@ -103,53 +160,6 @@ export const NotificationProvider = ({ children }) => {
           />
         ))}
       </div>
-      {confirmDialog && (
-        <UniversalDialog
-          title={confirmDialog.title}
-          message={confirmDialog.message}
-          content={confirmDialog.content}
-          onConfirm={async (inputValue) => {
-            try {
-              if (confirmDialog.onConfirm) await confirmDialog.onConfirm(inputValue);
-              hideConfirmDialog();
-              
-              // 显示操作成功通知
-              if (confirmDialog.showResultNotification) {
-                addNotification({
-                  message: confirmDialog.successMessage,
-                  type: 'success',
-                  duration: 3000
-                });
-              }
-            } catch (error) {
-              hideConfirmDialog();
-              
-              // 显示操作失败通知
-              if (confirmDialog.showResultNotification) {
-                addNotification({
-                  message: confirmDialog.errorMessage,
-                  type: 'error',
-                  duration: 3000
-                });
-              }
-            }
-          }}
-          onCancel={() => {
-            if (confirmDialog.onCancel) confirmDialog.onCancel();
-            hideConfirmDialog();
-          }}
-          confirmText={confirmDialog.confirmText}
-          cancelText={confirmDialog.cancelText}
-          type={confirmDialog.type}
-          showInput={confirmDialog.showInput}
-          inputValue={confirmDialog.inputValue}
-          onInputChange={confirmDialog.onInputChange}
-          inputPlaceholder={confirmDialog.inputPlaceholder}
-          inputType={confirmDialog.inputType}
-          required={confirmDialog.required}
-          className={confirmDialog.className}
-        />
-      )}
     </NotificationContext.Provider>
   );
 };

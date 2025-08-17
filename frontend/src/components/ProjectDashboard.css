@@ -1,0 +1,526 @@
+.dashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.dashboard-header {
+  padding: 2rem 2rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left {
+  flex: 1;
+  min-width: 300px;
+}
+
+.dashboard-title {
+  color: #ffffff !important;
+  margin: 0 0 0.5rem 0 !important;
+  font-weight: 700 !important;
+  font-size: 2.5rem !important;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-text {
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0 !important;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.create-project-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  border-radius: 12px;
+  height: 48px;
+  padding: 0 1.5rem;
+}
+
+.create-project-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-menu:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.user-avatar {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.username {
+  color: #ffffff !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.projects-content {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.projects-grid {
+  margin: 0 !important;
+}
+
+.project-card {
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  height: 100%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.project-header {
+  margin-bottom: 0.75rem;
+  padding: 0 4px;
+}
+
+.project-title {
+  color: #1a1a1a !important;
+  margin: 0 !important;
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+  line-height: 1.2;
+}
+
+.project-description {
+  color: #666 !important;
+  margin-bottom: 1rem !important;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  min-height: 2.1rem;
+  padding: 0 4px;
+}
+
+.project-stats {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.15);
+}
+
+.project-stats .ant-statistic-title {
+  color: #666 !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.project-stats .ant-statistic-content {
+  color: #1a1a1a !important;
+}
+
+.project-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: 0.5rem;
+}
+
+.footer-icon {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.update-text {
+  font-size: 0.85rem !important;
+}
+
+.open-project-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-weight: 500;
+  height: 36px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.9rem;
+}
+
+.open-project-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.project-menu-btn {
+  color: #666 !important;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 16px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid transparent !important;
+}
+
+.project-menu-btn:hover {
+  color: #667eea !important;
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.2) !important;
+  transform: scale(1.05);
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.empty-content {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.empty-title {
+  color: #ffffff !important;
+  margin: 0 0 1rem 0 !important;
+  font-weight: 600 !important;
+}
+
+.empty-description {
+  color: rgba(255, 255, 255, 0.8) !important;
+  margin: 0 !important;
+  font-size: 1rem;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.create-first-project-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  height: 48px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.create-first-project-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 模态框样式 */
+.create-project-modal .ant-modal-content {
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+}
+
+.create-project-modal .ant-modal-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 16px 16px 0 0 !important;
+  background: transparent !important;
+}
+
+.create-project-modal .ant-modal-title {
+  color: #1a1a1a !important;
+  font-weight: 600 !important;
+}
+
+.create-project-modal .ant-modal-close {
+  color: #666 !important;
+}
+
+.create-project-modal .ant-modal-close:hover {
+  color: #1a1a1a !important;
+}
+
+.create-project-form .ant-form-item-label {
+  font-weight: 500 !important;
+  color: #1a1a1a !important;
+}
+
+.form-input,
+.form-textarea {
+  border-radius: 8px !important;
+  border: 1px solid #e0e0e0 !important;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
+}
+
+.cancel-btn {
+  border-radius: 8px !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #666 !important;
+  font-weight: 500;
+  height: 44px;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  border-color: #d0d0d0 !important;
+  color: #1a1a1a !important;
+  transform: translateY(-1px);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600;
+  height: 44px;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.form-actions {
+  margin-bottom: 0 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 1.5rem 1rem 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-title {
+    font-size: 2rem !important;
+  }
+  
+  .welcome-text {
+    font-size: 1rem;
+  }
+  
+  .projects-content {
+    padding: 1rem;
+  }
+  
+  .projects-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .project-card {
+    margin-bottom: 1rem;
+  }
+  
+  .create-project-btn {
+    padding: 0 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .user-menu {
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .username {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-title {
+    font-size: 1.75rem !important;
+  }
+  
+  .welcome-text {
+    font-size: 0.95rem;
+  }
+  
+  .projects-content {
+    padding: 0.75rem;
+  }
+  
+  .create-project-btn {
+    height: 40px;
+    font-size: 0.85rem;
+    padding: 0 0.75rem;
+  }
+  
+  .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .username {
+    display: none;
+  }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .project-card {
+    background: rgba(30, 30, 30, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .project-title {
+    color: #ffffff !important;
+  }
+  
+  .project-description {
+    color: #cccccc !important;
+  }
+  
+  .project-stats {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  }
+  
+  .project-stats .ant-statistic-title {
+    color: #cccccc !important;
+  }
+  
+  .project-stats .ant-statistic-content {
+    color: #ffffff !important;
+  }
+  
+  .project-footer {
+    border-top-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .update-text {
+    color: #cccccc !important;
+  }
+  
+  .footer-icon {
+    color: #cccccc;
+  }
+  
+  .create-project-modal .ant-modal-content {
+    background: rgba(30, 30, 30, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .create-project-modal .ant-modal-title {
+    color: #ffffff !important;
+  }
+  
+  .create-project-modal .ant-modal-close {
+    color: #cccccc !important;
+  }
+  
+  .create-project-modal .ant-modal-close:hover {
+    color: #ffffff !important;
+  }
+  
+  .create-project-form .ant-form-item-label {
+    color: #ffffff !important;
+  }
+  
+  .form-input,
+  .form-textarea {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
+  
+  .form-input:focus,
+  .form-textarea:focus {
+    border-color: #667eea !important;
+  }
+  
+  .cancel-btn {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #cccccc !important;
+  }
+  
+  .cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.project-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.project-card:nth-child(1) { animation-delay: 0.1s; }
+.project-card:nth-child(2) { animation-delay: 0.2s; }
+.project-card:nth-child(3) { animation-delay: 0.3s; }
+.project-card:nth-child(4) { animation-delay: 0.4s; }
+.project-card:nth-child(5) { animation-delay: 0.5s; }
+.project-card:nth-child(6) { animation-delay: 0.6s; }
