@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import RegisterPage from './components/RegisterPage';
-import LoginPage from './components/LoginPage';
+import AuthPage from './components/AuthPage';
 import ProjectDashboard from './components/ProjectDashboard';
 import ProjectEditor from './components/ProjectEditor';
 import { NotificationProvider, useNotification } from './components/NotificationManager';
@@ -9,7 +8,7 @@ import './App.css';
 
 function AppContent() {
   // 应用状态
-  const [currentView, setCurrentView] = useState('login'); // 'login' | 'register' | 'dashboard' | 'editor'
+  const [currentView, setCurrentView] = useState('auth'); // 'auth' | 'dashboard' | 'editor'
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
@@ -74,7 +73,7 @@ function AppContent() {
   const handleLogout = () => {
     setUser(null);
     setCurrentProject(null);
-    setCurrentView('login');
+    setCurrentView('auth');
     localStorage.removeItem('ainovel_user');
     localStorage.removeItem('ainovel_token');
   };
@@ -137,18 +136,11 @@ function AppContent() {
     setCurrentView('dashboard');
   };
 
-  const handleNavigate = (view) => {
-    setCurrentView(view);
-  };
-
   // 渲染当前视图
   const renderCurrentView = () => {
     switch (currentView) {
-      case 'login':
-        return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
-      
-      case 'register':
-        return <RegisterPage onNavigate={handleNavigate} />;
+      case 'auth':
+        return <AuthPage onLogin={handleLogin} />;
 
       case 'dashboard':
         return (
@@ -173,7 +165,7 @@ function AppContent() {
         );
       
       default:
-        return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
+        return <AuthPage onLogin={handleLogin} />;
     }
   };
 
