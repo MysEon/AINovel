@@ -150,10 +150,6 @@ export const NotificationProvider = ({ children }) => {
             message.success(successMessage);
           }
           setConfirmDialog(null);
-          // 手动关闭模态框
-          if (modalInstance && modalInstance.destroy) {
-            modalInstance.destroy();
-          }
         } catch (error) {
           if (showResultNotification) {
             message.error(errorMessage);
@@ -166,7 +162,10 @@ export const NotificationProvider = ({ children }) => {
         setConfirmDialog(null);
       },
       className: `confirm-dialog-${type} ${className}`,
-      width: showInput ? 480 : 420
+      width: showInput ? 480 : 420,
+      afterClose: () => {
+        setConfirmDialog(null);
+      }
     });
 
     setConfirmDialog(modalInstance);
