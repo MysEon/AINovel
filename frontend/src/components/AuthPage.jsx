@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, message, Tabs, Divider } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Space, Alert, Spin } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, GlobalOutlined, BulbOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 const { TabPane } = Tabs;
 
@@ -10,6 +10,50 @@ const AuthPage = ({ onLogin }) => {
   const [registerForm] = Form.useForm();
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [language, setLanguage] = useState('zh');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // 检查系统主题
+    const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDarkMode(darkMode);
+  }, []);
+
+  const calculatePasswordStrength = (password) => {
+    if (!password) return 0;
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (password.length >= 12) strength += 25;
+    if (/[a-z]/.test(password)) strength += 12.5;
+    if (/[A-Z]/.test(password)) strength += 12.5;
+    if (/[0-9]/.test(password)) strength += 12.5;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
+    return Math.min(strength, 100);
+  };
+
+  const handlePasswordChange = (e) => {
+    const password = e.target.value;
+    setPasswordStrength(calculatePasswordStrength(password));
+  };
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'zh' ? 'en' : 'zh');
+  };
+
+  const handleSocialLogin = (provider) => {
+    message.info(`${provider} 登录功能开发中`);
+  };
+
+  const handleForgotPassword = () => {
+    message.info('忘记密码功能开发中');
+  };
 
   const handleLogin = async (values) => {
     setIsLoginLoading(true);
@@ -77,6 +121,17 @@ const AuthPage = ({ onLogin }) => {
   return (
     <div className="auth-container">
       <Card className="auth-card" bordered={false}>
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            closable
+            onClose={() => setError(null)}
+            style={{ marginBottom: '24px' }}
+          />
+        )}
+        
         <div className="auth-header">
           <h1>AINovel</h1>
           <p className="auth-subtitle">AI驱动的小说创作平台</p>
@@ -125,6 +180,21 @@ const AuthPage = ({ onLogin }) => {
               </Form.Item>
 
               <Form.Item>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <Checkbox 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  >
+                    记住我
+                  </Checkbox>
+                  <Button 
+                    type="link" 
+                    onClick={handleForgotPassword}
+                    style={{ padding: 0, height: 'auto' }}
+                  >
+                    忘记密码？
+                  </Button>
+                </div>
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -196,8 +266,38 @@ const AuthPage = ({ onLogin }) => {
                   disabled={isRegisterLoading}
                   iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
                   className="auth-input"
+                  onChange={handlePasswordChange}
                 />
               </Form.Item>
+              
+              {passwordStrength > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12px', marginRight: '8px' }}>
+                      密码强度: 
+                    </span>
+                    <div style={{ 
+                      flex: 1, 
+                      height: '4px', 
+                      background: '#f0f0f0', 
+                      borderRadius: '2px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: `${passwordStrength}%`, 
+                        height: '100%', 
+                        background: passwordStrength < 40 ? '#ff4d4f' : 
+                                 passwordStrength < 70 ? '#faad14' : '#52c41a',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '12px', marginLeft: '8px' }}>
+                      {passwordStrength < 40 ? '弱' : 
+                       passwordStrength < 70 ? '中' : '强'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <Form.Item>
                 <Button
@@ -214,7 +314,56 @@ const AuthPage = ({ onLogin }) => {
             </Form>
           </TabPane>
         </Tabs>
-      </Card>
+        
+        {/* 第三方登录 */}
+        <div style={{ marginTop: '24px' }}>
+          <Divider>或</Divider>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Button
+              icon={<GithubOutlined />}
+              onClick={() => handleSocialLogin('GitHub')}
+              size="large"
+              style={{ flex: 1 }}
+            >
+              GitHub
+            </Button>
+            <Button
+              icon={<WechatOutlined />}
+              onClick={() => handleSocialLogin('微信')}
+              size="large"
+              style={{ flex: 1, background: '#07C160', borderColor: '#07C160', color: 'white' }}
+            >
+              微信
+            </Button>
+          </div>
+        </div>
+        
+        </Card>
+      
+      {/* 页面底部信息 */}
+      <div style={{ position: 'absolute', bottom: '20px', left: '0', right: '0', textAlign: 'center', color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>
+        <div style={{ marginBottom: '8px' }}>
+          AINovel v1.0.0 | AI驱动的小说创作平台
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+          <Button
+            type="text"
+            icon={<GlobalOutlined />}
+            onClick={toggleLanguage}
+            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
+          >
+            {language === 'zh' ? 'English' : '中文'}
+          </Button>
+          <Button
+            type="text"
+            icon={isDarkMode ? '☀️' : '🌙'}
+            onClick={toggleTheme}
+            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
+          >
+            {isDarkMode ? '亮色主题' : '暗色主题'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
