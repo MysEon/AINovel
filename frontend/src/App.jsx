@@ -111,23 +111,17 @@ function AppContent() {
   };
 
   // 删除项目
-  const handleDeleteProject = (projectId) => {
-    showConfirmDialog({
-      title: '删除项目',
-      message: '确定要删除这个项目吗？此操作不可撤销。',
-      type: 'warning',
-      showResultNotification: true,
-      successMessage: '项目删除成功',
-      errorMessage: '删除项目失败',
-      onConfirm: async () => {
-        await deleteProject(projectId);
-        setProjects(projects.filter(p => p.id !== projectId));
-        if (currentProject && currentProject.id === projectId) {
-          setCurrentProject(null);
-          setCurrentView('dashboard');
-        }
+  const handleDeleteProject = async (projectId) => {
+    try {
+      await deleteProject(projectId);
+      setProjects(projects.filter(p => p.id !== projectId));
+      if (currentProject && currentProject.id === projectId) {
+        setCurrentProject(null);
+        setCurrentView('dashboard');
       }
-    });
+    } catch (error) {
+      console.error('删除项目失败:', error);
+    }
   };
 
   // 返回项目仪表板

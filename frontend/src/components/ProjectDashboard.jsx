@@ -95,11 +95,31 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       label: '删除项目',
       onClick: () => {
         showConfirmDialog({
-          title: '确认删除项目',
+          title: '删除项目',
           message: `您确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
+          content: (
+            <div style={{ marginTop: '12px' }}>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                请输入项目名称 <strong style={{ color: '#ff4d4f' }}>{project.name}</strong> 以确认删除：
+              </p>
+            </div>
+          ),
           type: 'error',
           confirmText: '确认删除',
-          onConfirm: () => onDeleteProject(project.id)
+          showInput: true,
+          expectedValue: project.name,
+          inputPlaceholder: `请输入: ${project.name}`,
+          required: true,
+          showResultNotification: true,
+          successMessage: '项目删除成功',
+          errorMessage: '删除项目失败',
+          onConfirm: (inputValue) => {
+            if (inputValue === project.name) {
+              return onDeleteProject(project.id);
+            } else {
+              throw new Error('项目名称不匹配，删除已取消');
+            }
+          }
         });
       },
       danger: true

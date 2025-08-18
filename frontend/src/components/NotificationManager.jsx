@@ -53,6 +53,7 @@ export const NotificationProvider = ({ children }) => {
     type = 'info',
     showInput = false,
     inputValue = '',
+    expectedValue = '',
     onInputChange,
     inputPlaceholder = '',
     inputType = 'text',
@@ -77,19 +78,26 @@ export const NotificationProvider = ({ children }) => {
       }
     };
 
-    const modal = Modal.confirm({
-      title,
-      content: (
+    // 创建受控输入组件
+    const ConfirmInput = ({ onValueChange }) => {
+      const [inputValueState, setInputValueState] = React.useState(inputValue);
+      
+      const handleChange = (e) => {
+        const value = e.target.value;
+        setInputValueState(value);
+        if (onValueChange) onValueChange(value);
+        if (onInputChange) onInputChange(value);
+      };
+      
+      return (
         <div>
           {message && <p style={{ marginBottom: content ? '12px' : '0' }}>{message}</p>}
           {content}
           {showInput && (
             <input
               type={inputType}
-              value={inputValue}
-              onChange={(e) => {
-                if (onInputChange) onInputChange(e.target.value);
-              }}
+              value={inputValueState}
+              onChange={handleChange}
               placeholder={inputPlaceholder}
               style={{
                 width: '100%',
@@ -103,20 +111,48 @@ export const NotificationProvider = ({ children }) => {
             />
           )}
         </div>
-      ),
+      );
+    };
+
+    let modalValue = '';
+    let modalInstance = null;
+    
+    const updateOkButton = (value) => {
+      if (modalInstance && modalInstance.update) {
+        const isMatch = value.trim() === expectedValue.trim();
+        modalInstance.update({
+          okButtonProps: {
+            disabled: showInput && required && !isMatch,
+            danger: type === 'error'
+          }
+        });
+      }
+    };
+    
+    modalInstance = Modal.confirm({
+      title,
+      content: <ConfirmInput onValueChange={(value) => { 
+        modalValue = value;
+        updateOkButton(value);
+      }} />,
       icon: getIcon(),
       okText: confirmText,
       cancelText: cancelText,
       okButtonProps: {
-        disabled: showInput && required && !inputValue.trim(),
+        disabled: showInput && required,
         danger: type === 'error'
       },
       onOk: async () => {
         try {
-          if (onConfirm) await onConfirm(inputValue);
+          if (onConfirm) await onConfirm(modalValue);
           
           if (showResultNotification) {
             message.success(successMessage);
+          }
+          setConfirmDialog(null);
+          // 手动关闭模态框
+          if (modalInstance && modalInstance.destroy) {
+            modalInstance.destroy();
           }
         } catch (error) {
           if (showResultNotification) {
@@ -127,12 +163,13 @@ export const NotificationProvider = ({ children }) => {
       },
       onCancel: () => {
         if (onCancel) onCancel();
+        setConfirmDialog(null);
       },
       className: `confirm-dialog-${type} ${className}`,
       width: showInput ? 480 : 420
     });
 
-    setConfirmDialog(modal);
+    setConfirmDialog(modalInstance);
   };
 
   const hideConfirmDialog = () => {
