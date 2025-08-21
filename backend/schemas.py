@@ -249,6 +249,7 @@ class ModelConfigBase(BaseModel):
     logprobs: Optional[bool] = Field(False, description="对数概率")
     top_logprobs: Optional[int] = Field(0, ge=0, le=20, description="顶部对数概率数量")
     proxy_url: Optional[str] = Field(None, max_length=500, description="代理URL")
+    enable_proxy: Optional[bool] = Field(False, description="是否启用代理")
 
 class ModelConfigCreate(ModelConfigBase):
     api_key: Optional[str] = Field(None, min_length=1, max_length=500, description="API密钥将加密存储")
@@ -272,6 +273,7 @@ class ModelConfigUpdate(BaseModel):
     logprobs: Optional[bool] = Field(None)
     top_logprobs: Optional[int] = Field(None, ge=0, le=20)
     proxy_url: Optional[str] = Field(None, max_length=500)
+    enable_proxy: Optional[bool] = Field(None)
 
 class ModelConfigResponse(ModelConfigBase):
     id: int

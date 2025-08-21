@@ -149,6 +149,11 @@ class ModelConfigService {
       errors.push('Top Logprobs值必须在0-20之间');
     }
 
+    // 检查代理配置
+    if (config.enable_proxy && (!config.proxy_url || config.proxy_url.trim() === '')) {
+      errors.push('启用代理时必须填写代理URL');
+    }
+
     return errors;
   }
 
@@ -170,6 +175,8 @@ class ModelConfigService {
       stream: false,
       logprobs: false,
       top_logprobs: 0,
+      proxy_url: '',
+      enable_proxy: false,
     };
   }
 }

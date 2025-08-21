@@ -143,11 +143,13 @@ const ModelConfigManager = () => {
         result = await modelConfigService.testExistingConnection(editingConfig.id);
       } else if (apiKey) {
         // 新建模式，或编辑模式下输入了新密钥
+        const proxyUrl = values.enable_proxy ? values.proxy_url : null;
         result = await modelConfigService.testConnection({
           api_key: apiKey,
           api_url: values.api_url,
           model_type: values.model_type,
-          model_name: values.model_name
+          model_name: values.model_name,
+          proxy_url: proxyUrl
         });
       } else {
         notification.error({ message: '请输入API密钥以进行测试' });
@@ -189,7 +191,8 @@ const ModelConfigManager = () => {
         models = await modelConfigService.listAvailableModelsById(editingConfig.id);
       } else if (apiKey) {
         // 新建模式，或编辑模式下输入了新密钥
-        const proxyUrl = form.getFieldValue('proxy_url');
+        const enableProxy = form.getFieldValue('enable_proxy');
+        const proxyUrl = enableProxy ? form.getFieldValue('proxy_url') : null;
         models = await modelConfigService.listAvailableModels(apiKey, modelType, proxyUrl);
       } else {
         notification.error({ message: '请输入API密钥以获取模型列表' });
@@ -341,12 +344,33 @@ const ModelConfigManager = () => {
               </Col>
             )}
             <Col span={24}>
+              <Form.Item 
+                name="enable_proxy" 
+                label="启用代理" 
+                valuePropName="checked"
+                extra="开启后需要填写代理地址"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
               <Form.Item
                 name="proxy_url"
                 label="代理URL"
                 extra="如果需要，请输入代理服务器的URL"
+                dependencies={['enable_proxy']}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (getFieldValue('enable_proxy') && !value) {
+                        return Promise.reject(new Error('启用代理时必须填写代理URL'));
+                      }
+                      return Promise.resolve();
+                    },
+                  }),
+                ]}
               >
-                <Input placeholder="http://127.0.0.1:7890" />
+                <Input placeholder="http://127.0.0.1:7890" disabled={!form.getFieldValue('enable_proxy')} />
               </Form.Item>
             </Col>
             <Col span={12}>

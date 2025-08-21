@@ -221,7 +221,7 @@ async def test_existing_model_connection(
         model_type=config.model_type,
         model_name=config.model_name,
         api_url=config.api_url,
-        proxy_url=config.proxy_url
+        proxy_url=config.proxy_url if config.enable_proxy else None
     )
     
     return await test_model_connection(test_data, current_user)
@@ -242,7 +242,7 @@ async def list_available_models_by_id(
     request = ListModelsRequest(
         api_key=decrypted_key,
         model_type=config.model_type,
-        proxy_url=config.proxy_url
+        proxy_url=config.proxy_url if config.enable_proxy else None
     )
     return await list_available_models(request, current_user)
 
