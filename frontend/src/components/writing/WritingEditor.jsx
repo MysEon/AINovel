@@ -5,6 +5,10 @@ import { getChapters, updateChapter, publishChapter, createChapter, getChapter, 
 import { aiService, getAvailableModelConfigs } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css'; // 代码高亮样式
 import './WritingEditorSimple.css';
 
 const { Sider, Content } = Layout;
@@ -991,7 +995,6 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                       borderRadius: '18px',
                       borderBottomLeftRadius: message.role === 'assistant' ? '4px' : '18px',
                       borderBottomRightRadius: message.role === 'user' ? '4px' : '18px',
-                      whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                     }}
@@ -1000,8 +1003,67 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                       <>
                         <Spin size="small" /> AI正在思考中...
                       </>
+                    ) : message.role === 'assistant' ? (
+                      <div className="ai-chat-markdown">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            // 自定义组件样式以适配聊天气泡
+                            p: ({ children }) => <p style={{ margin: '0.5em 0', lineHeight: '1.6' }}>{children}</p>,
+                            h1: ({ children }) => <h1 style={{ fontSize: '1.2em', margin: '0.5em 0', fontWeight: 'bold' }}>{children}</h1>,
+                            h2: ({ children }) => <h2 style={{ fontSize: '1.1em', margin: '0.4em 0', fontWeight: 'bold' }}>{children}</h2>,
+                            h3: ({ children }) => <h3 style={{ fontSize: '1.05em', margin: '0.3em 0', fontWeight: 'bold' }}>{children}</h3>,
+                            ul: ({ children }) => <ul style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ul>,
+                            ol: ({ children }) => <ol style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ol>,
+                            li: ({ children }) => <li style={{ margin: '0.2em 0' }}>{children}</li>,
+                            code: ({ inline, children }) => inline ? 
+                              <code style={{ 
+                                backgroundColor: 'rgba(0,0,0,0.05)', 
+                                padding: '2px 4px', 
+                                borderRadius: '3px',
+                                fontSize: '0.9em',
+                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+                              }}>{children}</code> : 
+                              <code style={{ fontSize: '0.9em' }}>{children}</code>,
+                            pre: ({ children }) => (
+                              <pre style={{ 
+                                backgroundColor: 'rgba(0,0,0,0.05)', 
+                                padding: '12px', 
+                                borderRadius: '6px',
+                                margin: '0.5em 0',
+                                overflow: 'auto',
+                                fontSize: '0.9em',
+                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+                              }}>
+                                {children}
+                              </pre>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote style={{
+                                borderLeft: '4px solid #1890ff',
+                                paddingLeft: '12px',
+                                margin: '0.5em 0',
+                                fontStyle: 'italic',
+                                opacity: 0.8
+                              }}>
+                                {children}
+                              </blockquote>
+                            ),
+                            strong: ({ children }) => <strong style={{ fontWeight: 'bold' }}>{children}</strong>,
+                            em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', textDecoration: 'underline' }}>
+                                {children}
+                              </a>
+                            )
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
                     ) : (
-                      message.content
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
                     )}
                   </div>
                   <div 
