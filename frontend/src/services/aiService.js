@@ -227,6 +227,66 @@ class AIService {
     });
   }
 
+  // AI智能体对话 - 流式输出
+  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
+    const response = await fetch(`${this.baseURL}/chat-stream`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        project_id: projectId,
+        message: message,
+        history: history,
+        model_config_id: modelConfig.id
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.message || 'AI服务请求失败');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              if (onComplete) onComplete();
+              return;
+            }
+            // 加强空内容过滤：检查数据是否存在、不是错误消息、且不为空白
+            if (data && data.trim() && !data.startsWith('错误:')) {
+              if (onChunk) onChunk(data);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('流式输出错误:', error);
+      throw error;
+    }
+  }
+
   // 内容优化
   async optimizeContent(projectId, content, optimizationType = 'general') {
     // 检查模型配置可用性

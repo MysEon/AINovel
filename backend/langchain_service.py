@@ -468,6 +468,110 @@ class LangChainService:
         
         return context
     
+    async def chat_with_ai_stream_with_context(
+        self,
+        project_context: dict,
+        message: str,
+        history: List[dict],
+        model_config: ModelConfig
+    ):
+        """与AI助手对话 - 流式输出（使用预先获取的上下文数据）"""
+        try:
+            # 初始化模型
+            model = await self.get_model(model_config)
+            
+            # 准备对话历史
+            messages = []
+            
+            # 添加系统提示
+            system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+            
+            messages.append(SystemMessage(content=system_prompt))
+            
+            # 添加历史消息
+            for hist_msg in history:
+                if hist_msg['role'] == 'user':
+                    messages.append(HumanMessage(content=hist_msg['content']))
+                elif hist_msg['role'] == 'assistant':
+                    messages.append(AIMessage(content=hist_msg['content']))
+            
+            # 添加当前消息
+            messages.append(HumanMessage(content=message))
+            
+            # 检查是否支持流式输出
+            if hasattr(model, 'astream'):
+                print(f"使用流式输出，模型类型: {type(model)}")
+                try:
+                    # 使用流式输出
+                    chunk_count = 0
+                    valid_chunk_count = 0
+                    async for chunk in model.astream(messages):
+                        chunk_count += 1
+                        
+                        # 调试：打印前几个chunk的详细信息
+                        if chunk_count <= 5:
+                            print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
+                        
+                        # 检查chunk是否有content属性且内容不为空
+                        if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
+                            valid_chunk_count += 1
+                            yield chunk.content
+                        # 如果chunk本身就是字符串且不为空，直接yield
+                        elif isinstance(chunk, str) and chunk.strip():
+                            valid_chunk_count += 1
+                            yield chunk
+                        # 不处理没有实际content的chunk对象
+                        # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
+                    
+                    print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                    
+                    # 如果没有有效chunks，回退到非流式
+                    if valid_chunk_count == 0:
+                        print("没有接收到有效chunks，回退到非流式输出")
+                        response = await model.ainvoke(messages)
+                        if hasattr(response, 'content') and response.content:
+                            yield response.content
+                        else:
+                            yield str(response)
+                            
+                except Exception as stream_error:
+                    print(f"流式输出失败，回退到非流式: {str(stream_error)}")
+                    # 流式输出失败，回退到非流式
+                    response = await model.ainvoke(messages)
+                    if hasattr(response, 'content') and response.content:
+                        yield response.content
+                    else:
+                        yield str(response)
+            else:
+                # 不支持流式输出，返回完整响应
+                print("模型不支持流式输出，使用非流式")
+                response = await model.ainvoke(messages)
+                if hasattr(response, 'content') and response.content:
+                    yield response.content
+                else:
+                    yield str(response)
+            
+        except Exception as e:
+            print(f"AI对话失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            yield f"抱歉，AI服务暂时不可用: {str(e)}"
+    
     async def _get_characters_info(
         self, 
         project_id: int, 
@@ -614,7 +718,7 @@ async def chat_with_ai(
         project_context = await self._get_project_context(project_id, db)
         
         # 初始化模型
-        model = await self._initialize_model(model_config)
+        model = await self.get_model(model_config)
         
         # 准备对话历史
         messages = []
@@ -672,7 +776,7 @@ async def optimize_content(
         project_context = await self._get_project_context(project_id, db)
         
         # 初始化模型
-        model = await self._initialize_model(model_config)
+        model = await self.get_model(model_config)
         
         # 准备优化提示
         optimization_prompt = f"""请优化以下小说内容：
@@ -720,7 +824,7 @@ async def generate_creative_ideas(
         project_context = await self._get_project_context(project_id, db)
         
         # 初始化模型
-        model = await self._initialize_model(model_config)
+        model = await self.get_model(model_config)
         
         # 准备创意生成提示
         creative_prompt = f"""请为以下小说项目生成创意想法：
@@ -784,7 +888,116 @@ async def generate_creative_ideas(
             "impact": 1
         }
 
+async def chat_with_ai_stream(
+    self,
+    project_id: int,
+    message: str,
+    history: List[dict],
+    model_config: ModelConfig,
+    db: AsyncSession
+):
+    """与AI助手对话 - 流式输出"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self.get_model(model_config)
+        
+        # 准备对话历史
+        messages = []
+        
+        # 添加系统提示
+        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+        
+        messages.append(SystemMessage(content=system_prompt))
+        
+        # 添加历史消息
+        for hist_msg in history:
+            if hist_msg['role'] == 'user':
+                messages.append(HumanMessage(content=hist_msg['content']))
+            elif hist_msg['role'] == 'assistant':
+                messages.append(AIMessage(content=hist_msg['content']))
+        
+        # 添加当前消息
+        messages.append(HumanMessage(content=message))
+        
+        # 检查是否支持流式输出
+        if hasattr(model, 'astream'):
+            print(f"使用流式输出，模型类型: {type(model)}")
+            try:
+                # 使用流式输出
+                chunk_count = 0
+                valid_chunk_count = 0
+                async for chunk in model.astream(messages):
+                    chunk_count += 1
+                    
+                    # 调试：打印前几个chunk的详细信息
+                    if chunk_count <= 5:
+                        print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
+                    
+                    # 检查chunk是否有content属性且内容不为空
+                    if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
+                        valid_chunk_count += 1
+                        yield chunk.content
+                    # 如果chunk本身就是字符串且不为空，直接yield
+                    elif isinstance(chunk, str) and chunk.strip():
+                        valid_chunk_count += 1
+                        yield chunk
+                    # 不处理没有实际content的chunk对象
+                    # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
+                
+                print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                
+                # 如果没有有效chunks，回退到非流式
+                if valid_chunk_count == 0:
+                    print("没有接收到有效chunks，回退到非流式输出")
+                    response = await model.ainvoke(messages)
+                    if hasattr(response, 'content') and response.content:
+                        yield response.content
+                    else:
+                        yield str(response)
+                        
+            except Exception as stream_error:
+                print(f"流式输出失败，回退到非流式: {str(stream_error)}")
+                # 流式输出失败，回退到非流式
+                response = await model.ainvoke(messages)
+                if hasattr(response, 'content') and response.content:
+                    yield response.content
+                else:
+                    yield str(response)
+        else:
+            # 不支持流式输出，返回完整响应
+            print("模型不支持流式输出，使用非流式")
+            response = await model.ainvoke(messages)
+            if hasattr(response, 'content') and response.content:
+                yield response.content
+            else:
+                yield str(response)
+        
+    except Exception as e:
+        print(f"AI对话失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        yield f"抱歉，AI服务暂时不可用: {str(e)}"
+
 # 将方法添加到LangChainService类
 LangChainService.chat_with_ai = chat_with_ai
 LangChainService.optimize_content = optimize_content
 LangChainService.generate_creative_ideas = generate_creative_ideas
+LangChainService.chat_with_ai_stream = chat_with_ai_stream

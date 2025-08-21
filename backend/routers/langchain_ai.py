@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
 from datetime import datetime
+from fastapi.responses import StreamingResponse
 
 from database import get_db
 from models import User, Project, ModelConfig
@@ -408,6 +409,70 @@ async def chat_with_ai(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"AI对话失败: {str(e)}"
+        )
+
+
+@router.post("/chat-stream")
+async def chat_with_ai_stream(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """与AI助手对话 - 流式输出"""
+    try:
+        # 验证项目权限
+        await get_project_for_user(request.project_id, current_user.id, db)
+        
+        # 获取模型配置
+        model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
+        
+        # 预先获取项目上下文数据，避免在流式输出中使用数据库连接
+        project_context = await langchain_service._get_project_context(request.project_id, db)
+        
+        # 直接使用流式生成器
+        async def generate_response():
+            try:
+                # 使用预先获取的项目上下文，不传递数据库连接
+                stream_generator = langchain_service.chat_with_ai_stream_with_context(
+                    project_context,
+                    request.message,
+                    request.history,
+                    model_config
+                )
+                async for chunk in stream_generator:
+                    if chunk:  # 确保chunk不为空
+                        yield f"data: {chunk}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                print(f"流式响应生成错误: {str(e)}")
+                yield f"data: 抱歉，AI服务暂时不可用: {str(e)}\n\n"
+                yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+        
+    except Exception as e:
+        async def generate_error():
+            yield f"data: 错误: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_error(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
         )
 
 

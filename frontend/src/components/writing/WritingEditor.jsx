@@ -677,22 +677,76 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
     setInput('');
     setIsLoading(true);
 
+    // 检查是否支持流式输出
+    const supportsStream = selectedModelConfig && selectedModelConfig.stream;
+    
+    // 立即创建AI消息显示"正在思考中"
+    const aiResponseId = messages.length + 2;
+    const aiResponse = {
+      id: aiResponseId,
+      role: 'assistant',
+      content: 'AI正在思考中...',
+      isThinking: true  // 统一标记为思考状态
+    };
+    setMessages(prev => [...prev, aiResponse]);
+    
     try {
-      const response = await aiService.chatWithAI(projectId, input, messages);
-      const aiResponse = {
-        id: messages.length + 2,
-        role: 'assistant',
-        content: response.content || response.response || '抱歉，我暂时无法回复。'
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      if (supportsStream) {
+        // 使用流式输出
+        let isFirstChunk = true;
+        
+        await aiService.chatWithAIStream(
+          projectId,
+          input,
+          messages,
+          (chunk) => {
+            // 过滤空内容chunk
+            if (!chunk || !chunk.trim()) {
+              return; // 忽略空的chunk
+            }
+            
+            // 更新消息内容
+            setMessages(prev => prev.map(msg => 
+              msg.id === aiResponseId 
+                ? { 
+                    ...msg, 
+                    content: isFirstChunk ? chunk : msg.content + chunk,
+                    isThinking: false  // 收到内容后取消思考状态
+                  }
+                : msg
+            ));
+            if (isFirstChunk) isFirstChunk = false;
+          },
+          () => {
+            setIsLoading(false);
+          }
+        );
+      } else {
+        // 使用普通输出
+        const response = await aiService.chatWithAI(projectId, input, messages);
+        // 更新思考中的消息为实际回复
+        setMessages(prev => prev.map(msg => 
+          msg.id === aiResponseId 
+            ? { 
+                ...msg, 
+                content: response.content || response.response || '抱歉，我暂时无法回复。',
+                isThinking: false
+              }
+            : msg
+        ));
+        setIsLoading(false);
+      }
     } catch (error) {
-      const errorMessage = {
-        id: messages.length + 2,
-        role: 'assistant',
-        content: `抱歉，AI服务暂时不可用: ${error.message}`
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
+      // 更新现有消息显示错误信息
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: `抱歉，AI服务暂时不可用: ${error.message}`,
+              isThinking: false
+            }
+          : msg
+      ));
       setIsLoading(false);
     }
   };
@@ -719,6 +773,17 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
     }
 
     setIsLoading(true);
+    
+    // 立即创建AI消息显示"正在思考中"
+    const aiResponseId = messages.length + 1;
+    const aiResponse = {
+      id: aiResponseId,
+      role: 'assistant',
+      content: 'AI正在思考中...',
+      isThinking: true
+    };
+    setMessages(prev => [...prev, aiResponse]);
+    
     try {
       let response;
       switch (action) {
@@ -746,19 +811,27 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           return;
       }
 
-      const aiResponse = {
-        id: messages.length + 1,
-        role: 'assistant',
-        content: response.content || response.suggestions || response.optimized_content || '操作完成'
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      // 更新现有消息显示结果
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: response.content || response.suggestions || response.optimized_content || '操作完成',
+              isThinking: false
+            }
+          : msg
+      ));
     } catch (error) {
-      const errorMessage = {
-        id: messages.length + 1,
-        role: 'assistant',
-        content: `${action} 操作失败: ${error.message}`
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // 更新现有消息显示错误
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: `${action} 操作失败: ${error.message}`,
+              isThinking: false
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -923,7 +996,13 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                     }}
                   >
-                    {message.content}
+                    {message.role === 'assistant' && message.isThinking ? (
+                      <>
+                        <Spin size="small" /> AI正在思考中...
+                      </>
+                    ) : (
+                      message.content
+                    )}
                   </div>
                   <div 
                     style={{ 
@@ -948,56 +1027,6 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                 )}
               </div>
             ))}
-            {isLoading && (
-              <div style={{ 
-                marginBottom: '16px',
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'flex-start'
-              }}>
-                <Avatar 
-                  icon={<FaRobot />} 
-                  style={{ 
-                    backgroundColor: '#1890ff',
-                    marginRight: '8px',
-                    flexShrink: 0
-                  }}
-                />
-                <div 
-                  style={{ 
-                    maxWidth: '70%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start'
-                  }}
-                >
-                  <div 
-                    style={{ 
-                      padding: '12px 16px',
-                      background: '#f5f5f5',
-                      color: '#333',
-                      borderRadius: '18px',
-                      borderBottomLeftRadius: '4px',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}
-                  >
-                    <Spin size="small" /> AI正在思考中...
-                  </div>
-                  <div 
-                    style={{ 
-                      fontSize: '12px',
-                      color: '#999',
-                      marginTop: '4px',
-                      textAlign: 'left'
-                    }}
-                  >
-                    AI助手
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 输入框区域 - 固定在底部 */}
