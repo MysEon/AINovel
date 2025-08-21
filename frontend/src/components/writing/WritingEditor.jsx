@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
-import { aiService } from '../../services/aiService';
+import { aiService, getAvailableModelConfigs } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
-import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar } from 'antd';
+import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
 import './WritingEditorSimple.css';
 
 const { Sider, Content } = Layout;
@@ -24,6 +24,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const [showBatchPublish, setShowBatchPublish] = useState(false);
   const [publishButtonPosition, setPublishButtonPosition] = useState(null);
+  const [modelConfigs, setModelConfigs] = useState([]);
+  const [selectedModelConfig, setSelectedModelConfig] = useState(null);
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
   const { addNotification, showConfirmDialog } = useNotification();
 
   // 当 currentChapter 改变时，也更新 content 和锁定状态
@@ -37,12 +40,57 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     }
   }, [currentChapter]);
 
-  // 获取项目章节数据
+  // 获取项目章节数据和模型配置
   useEffect(() => {
     if (projectId) {
       fetchChapters();
+      fetchModelConfigs();
     }
   }, [projectId]);
+
+  // 处理模型配置选择
+  const handleModelConfigChange = (configId) => {
+    const config = modelConfigs.find(c => c.id === configId);
+    if (config) {
+      setSelectedModelConfig(config);
+      aiService.setSelectedModelConfigId(configId);
+      addNotification({
+        message: `已切换到 ${config.name} 模型`,
+        type: 'success',
+        duration: 2000
+      });
+    }
+  };
+
+  const fetchModelConfigs = async () => {
+    setIsLoadingConfigs(true);
+    try {
+      console.log('WritingEditor: 开始获取模型配置...');
+      const configs = await getAvailableModelConfigs();
+      console.log('WritingEditor: 获取到的模型配置:', configs);
+      setModelConfigs(configs);
+      
+      // 如果有配置且没有选择过配置，选择第一个
+      if (configs.length > 0 && !selectedModelConfig) {
+        const firstConfig = configs[0];
+        console.log('WritingEditor: 选择第一个模型配置:', firstConfig);
+        setSelectedModelConfig(firstConfig);
+        aiService.setSelectedModelConfigId(firstConfig.id);
+      }
+    } catch (error) {
+      console.error('WritingEditor: Error fetching model configs:', error);
+      // 只在非401错误时显示通知
+      if (error.message && !error.message.includes('401')) {
+        addNotification({
+          message: '获取AI模型配置失败: ' + error.message,
+          type: 'error',
+          duration: 3000
+        });
+      }
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  };
 
   const fetchChapters = async () => {
     try {
@@ -411,13 +459,16 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             </button>
             </div>
         ) : aiAssisted ? (
-          <AiWritingInterface 
-            content={content} 
-            onContentChange={handleContentChange} 
+          <AiWritingInterface
+            content={content}
+            onContentChange={handleContentChange}
             readOnly={isEditorLocked}
             projectId={projectId}
             currentChapter={currentChapter}
             layoutMode={layoutMode}
+            modelConfigs={modelConfigs}
+            selectedModelConfig={selectedModelConfig}
+            onModelConfigChange={handleModelConfigChange}
           />
         ) : (
           <RichTextEditor 
@@ -583,19 +634,43 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, onModelConfigChange }) => {
   const [messages, setMessages] = useState([
     { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const messagesContainerRef = useRef(null);
 
   const handleContentChange = (e) => {
     onContentChange(e.target.value);
   };
 
+  // 自动滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, []);
+
+  // 当消息变化时自动滚动到底部
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
+
   const handleSend = async () => {
     if (input.trim() === '' || isLoading) return;
+
+    // 检查是否有可用的模型配置
+    if (modelConfigs.length === 0) {
+      const errorMessage = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: '未找到可用的AI模型配置。请先在设置中添加您的AI服务配置（如OpenAI、Claude、Gemini等）。'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
 
     const userMessage = { id: messages.length + 1, role: 'user', content: input };
     setMessages([...messages, userMessage]);
@@ -604,16 +679,16 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
 
     try {
       const response = await aiService.chatWithAI(projectId, input, messages);
-      const aiResponse = { 
-        id: messages.length + 2, 
-        role: 'assistant', 
+      const aiResponse = {
+        id: messages.length + 2,
+        role: 'assistant',
         content: response.content || response.response || '抱歉，我暂时无法回复。'
       };
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      const errorMessage = { 
-        id: messages.length + 2, 
-        role: 'assistant', 
+      const errorMessage = {
+        id: messages.length + 2,
+        role: 'assistant',
         content: `抱歉，AI服务暂时不可用: ${error.message}`
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -631,6 +706,17 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
 
   const handleAIAction = async (action) => {
     if (!currentChapter || isLoading) return;
+
+    // 检查是否有可用的模型配置
+    if (modelConfigs.length === 0) {
+      const errorMessage = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: '未找到可用的AI模型配置。请先在设置中添加您的AI服务配置（如OpenAI、Claude、Gemini等）。'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -660,16 +746,16 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           return;
       }
 
-      const aiResponse = { 
-        id: messages.length + 1, 
-        role: 'assistant', 
+      const aiResponse = {
+        id: messages.length + 1,
+        role: 'assistant',
         content: response.content || response.suggestions || response.optimized_content || '操作完成'
       };
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      const errorMessage = { 
-        id: messages.length + 1, 
-        role: 'assistant', 
+      const errorMessage = {
+        id: messages.length + 1,
+        role: 'assistant',
         content: `${action} 操作失败: ${error.message}`
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -679,24 +765,196 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
   };
 
   const chatSider = (
-    <Sider width="45%" style={{ background: 'transparent', padding: '0 8px' }}>
-      <Card 
-        title="AI写作助手" 
-        style={{ height: '100%', borderRadius: '8px' }}
-        bodyStyle={{ padding: 0, height: 'calc(100% - 57px)', display: 'flex', flexDirection: 'column' }}
-      >
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {messages.map((message) => (
-            <div 
-              key={message.id} 
-              style={{ 
+    <Sider width="45%" style={{ background: 'transparent', padding: '0 8px', height: '100%', overflow: 'hidden' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* AI快捷操作按钮 - 固定在顶部 */}
+        <Card
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>AI写作助手</span>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {selectedModelConfig && (
+                  <Tag color="blue" style={{ marginRight: 8 }}>
+                    {selectedModelConfig.name}
+                  </Tag>
+                )}
+                <Dropdown
+                  overlay={
+                    <Menu onClick={(e) => onModelConfigChange && onModelConfigChange(parseInt(e.key))}>
+                      {modelConfigs.map(config => (
+                        <Menu.Item key={config.id}>
+                          {config.name} ({config.model_type})
+                        </Menu.Item>
+                      ))}
+                      {modelConfigs.length === 0 && (
+                        <Menu.Item disabled>
+                          <span style={{ color: '#999' }}>暂无可用模型配置</span>
+                        </Menu.Item>
+                      )}
+                    </Menu>
+                  }
+                  trigger={['click']}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<FaCog />}
+                    title="选择AI模型"
+                    loading={false}
+                  />
+                </Dropdown>
+              </div>
+            </div>
+          }
+          style={{
+            borderRadius: '8px 8px 0 0',
+            flexShrink: 0
+          }}
+          bodyStyle={{ padding: '12px 16px' }}
+        >
+          <Space wrap>
+            <Button
+              icon={<FaMagic />}
+              onClick={() => handleAIAction('outline')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              大纲
+            </Button>
+            <Button
+              icon={<FaLightbulb />}
+              onClick={() => handleAIAction('suggestions')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              建议
+            </Button>
+            <Button
+              icon={<FaSpinner />}
+              onClick={() => handleAIAction('optimize')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              优化
+            </Button>
+            <Button
+              icon={<FaUsers />}
+              onClick={() => handleAIAction('ideas')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              创意
+            </Button>
+          </Space>
+          {modelConfigs.length === 0 && (
+            <div style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              请先在设置中配置AI模型
+            </div>
+          )}
+        </Card>
+
+        {/* 聊天消息区域 - 固定高度，可滚动 */}
+        <Card 
+          style={{ 
+            flex: 1, 
+            borderRadius: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0, // 关键：允许flex子项收缩
+            overflow: 'hidden' // 关键：防止内容溢出
+          }}
+          bodyStyle={{ 
+            padding: 0, 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden' // 关键：防止内容溢出
+          }}
+        >
+          <div
+            ref={messagesContainerRef}
+            className="messages-container ai-chat-container"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px',
+              minHeight: 0, // 关键：允许flex子项收缩
+              maxHeight: 'calc(100vh - 350px)' // 限制最大高度，为footer和其他UI元素预留空间
+            }}
+          >
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                style={{ 
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  alignItems: 'flex-start'
+                }}
+              >
+                {message.role === 'assistant' && (
+                  <Avatar 
+                    icon={<FaRobot />} 
+                    style={{ 
+                      backgroundColor: '#1890ff',
+                      marginRight: '8px',
+                      flexShrink: 0
+                    }}
+                  />
+                )}
+                <div 
+                  style={{ 
+                    maxWidth: '70%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: message.role === 'user' ? 'flex-end' : 'flex-start'
+                  }}
+                >
+                  <div 
+                    style={{ 
+                      padding: '12px 16px',
+                      background: message.role === 'user' ? '#1890ff' : '#f5f5f5',
+                      color: message.role === 'user' ? 'white' : '#333',
+                      borderRadius: '18px',
+                      borderBottomLeftRadius: message.role === 'assistant' ? '4px' : '18px',
+                      borderBottomRightRadius: message.role === 'user' ? '4px' : '18px',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {message.content}
+                  </div>
+                  <div 
+                    style={{ 
+                      fontSize: '12px',
+                      color: '#999',
+                      marginTop: '4px',
+                      textAlign: message.role === 'user' ? 'right' : 'left'
+                    }}
+                  >
+                    {message.role === 'user' ? '用户' : 'AI助手'}
+                  </div>
+                </div>
+                {message.role === 'user' && (
+                  <Avatar 
+                    icon={<FaUser />} 
+                    style={{ 
+                      backgroundColor: '#52c41a',
+                      marginLeft: '8px',
+                      flexShrink: 0
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div style={{ 
                 marginBottom: '16px',
                 display: 'flex',
-                justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                justifyContent: 'flex-start',
                 alignItems: 'flex-start'
-              }}
-            >
-              {message.role === 'assistant' && (
+              }}>
                 <Avatar 
                   icon={<FaRobot />} 
                   style={{ 
@@ -705,135 +963,83 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                     flexShrink: 0
                   }}
                 />
-              )}
-              <div 
-                style={{ 
-                  maxWidth: '70%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: message.role === 'user' ? 'flex-end' : 'flex-start'
-                }}
-              >
                 <div 
                   style={{ 
-                    padding: '12px 16px',
-                    background: message.role === 'user' ? '#1890ff' : '#f5f5f5',
-                    color: message.role === 'user' ? 'white' : '#333',
-                    borderRadius: '18px',
-                    borderBottomLeftRadius: message.role === 'assistant' ? '4px' : '18px',
-                    borderBottomRightRadius: message.role === 'user' ? '4px' : '18px',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    maxWidth: '70%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start'
                   }}
                 >
-                  {message.content}
-                </div>
-                <div 
-                  style={{ 
-                    fontSize: '12px',
-                    color: '#999',
-                    marginTop: '4px',
-                    textAlign: message.role === 'user' ? 'right' : 'left'
-                  }}
-                >
-                  {message.role === 'user' ? '用户' : 'AI助手'}
+                  <div 
+                    style={{ 
+                      padding: '12px 16px',
+                      background: '#f5f5f5',
+                      color: '#333',
+                      borderRadius: '18px',
+                      borderBottomLeftRadius: '4px',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <Spin size="small" /> AI正在思考中...
+                  </div>
+                  <div 
+                    style={{ 
+                      fontSize: '12px',
+                      color: '#999',
+                      marginTop: '4px',
+                      textAlign: 'left'
+                    }}
+                  >
+                    AI助手
+                  </div>
                 </div>
               </div>
-              {message.role === 'user' && (
-                <Avatar 
-                  icon={<FaUser />} 
-                  style={{ 
-                    backgroundColor: '#52c41a',
-                    marginLeft: '8px',
-                    flexShrink: 0
-                  }}
-                />
-              )}
-            </div>
-          ))}
-          {isLoading && (
-            <div style={{ 
-              marginBottom: '16px',
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'flex-start'
+            )}
+          </div>
+
+          {/* 输入框区域 - 固定在底部 */}
+          <div 
+            className="chat-input-area"
+            style={{ 
+              padding: '16px', 
+              borderTop: '1px solid #f0f0f0',
+              flexShrink: 0,
+              backgroundColor: '#fff'
             }}>
-              <Avatar 
-                icon={<FaRobot />} 
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <TextArea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="与AI助手对话，获取写作建议..."
+                rows={3}
+                disabled={isLoading}
                 style={{ 
-                  backgroundColor: '#1890ff',
-                  marginRight: '8px',
-                  flexShrink: 0
+                  resize: 'none',
+                  flex: 1,
+                  minHeight: '76px'
                 }}
               />
-              <div 
+              <Button 
+                type="primary"
+                onClick={handleSend}
+                disabled={isLoading || input.trim() === ''}
+                loading={isLoading}
                 style={{ 
-                  maxWidth: '70%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start'
+                  height: '76px',
+                  width: '80px',
+                  alignSelf: 'flex-end'
                 }}
               >
-                <div 
-                  style={{ 
-                    padding: '12px 16px',
-                    background: '#f5f5f5',
-                    color: '#333',
-                    borderRadius: '18px',
-                    borderBottomLeftRadius: '4px',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <Spin size="small" /> AI正在思考中...
-                </div>
-                <div 
-                  style={{ 
-                    fontSize: '12px',
-                    color: '#999',
-                    marginTop: '4px',
-                    textAlign: 'left'
-                  }}
-                >
-                  AI助手
-                </div>
-              </div>
+                发送
+              </Button>
             </div>
-          )}
-        </div>
-        <div style={{ padding: '16px', borderTop: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            <TextArea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="与AI助手对话，获取写作建议..."
-              rows={3}
-              disabled={isLoading}
-              style={{ 
-                resize: 'none',
-                flex: 1,
-                minHeight: '76px'
-              }}
-            />
-            <Button 
-              type="primary"
-              onClick={handleSend}
-              disabled={isLoading || input.trim() === ''}
-              loading={isLoading}
-              style={{ 
-                height: '76px',
-                width: '80px',
-                alignSelf: 'flex-end'
-              }}
-            >
-              发送
-            </Button>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </Sider>
   );
 
@@ -879,45 +1085,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
   );
 
   return (
-    <div className="ai-writing-interface" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '8px', background: '#f5f5f5', borderBottom: '1px solid #d9d9d9' }}>
-        <Space wrap>
-          <Button 
-            icon={<FaMagic />} 
-            onClick={() => handleAIAction('outline')}
-            disabled={isLoading}
-            size="small"
-          >
-            大纲
-          </Button>
-          <Button 
-            icon={<FaLightbulb />} 
-            onClick={() => handleAIAction('suggestions')}
-            disabled={isLoading}
-            size="small"
-          >
-            建议
-          </Button>
-          <Button 
-            icon={<FaSpinner />} 
-            onClick={() => handleAIAction('optimize')}
-            disabled={isLoading}
-            size="small"
-          >
-            优化
-          </Button>
-          <Button 
-            icon={<FaUsers />} 
-            onClick={() => handleAIAction('ideas')}
-            disabled={isLoading}
-            size="small"
-          >
-            创意
-          </Button>
-        </Space>
-      </div>
-      
-      <Layout style={{ flex: 1, background: 'transparent', margin: '8px' }}>
+    <div className="ai-writing-interface" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, maxHeight: 'calc(100vh - 200px)' }}>
+      <Layout style={{ flex: 1, background: 'transparent', margin: '8px', minHeight: 0 }}>
         {layoutMode === 'left' ? chatSider : contentArea}
         <Divider type="vertical" style={{ margin: '0 4px' }} />
         {layoutMode === 'left' ? contentArea : chatSider}

@@ -10,6 +10,7 @@
   flex: 1;
   overflow: hidden;
   padding: 0;
+  min-height: 0; /* 允许flex子项收缩 */
 }
 
 .editor-footer {
@@ -19,6 +20,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* 防止footer被压缩 */
+  min-height: 60px; /* 设置最小高度确保footer始终可见 */
+  max-height: 120px; /* 设置最大高度防止footer过高 */
+  overflow-y: auto; /* 如果内容过多，允许滚动 */
 }
 
 .footer-left {
@@ -26,6 +31,46 @@
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+/* 美化滚动条 */
+.ai-writing-interface ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ai-writing-interface ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.ai-writing-interface ::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.ai-writing-interface ::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.ai-writing-interface ::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+/* 消息容器样式 */
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+/* 确保聊天区域有合适的最小高度 */
+.ai-chat-container {
+  min-height: 200px;
+}
+
+/* 输入框区域样式 */
+.chat-input-area {
+  background-color: #fff;
+  border-top: 1px solid #f0f0f0;
 }
 
 .footer-right {
@@ -318,6 +363,7 @@
   height: 100%;
   padding: 0;
   overflow: hidden;
+  min-height: 0; /* 允许flex子项收缩 */
 }
 
 .ai-toolbar {
@@ -545,6 +591,10 @@
     flex-direction: column;
     gap: 0.5rem;
     align-items: stretch;
+    flex-shrink: 0; /* 防止footer被压缩 */
+    min-height: 80px; /* 移动端设置稍高的最小高度 */
+    max-height: 150px; /* 移动端设置最大高度 */
+    overflow-y: auto; /* 如果内容过多，允许滚动 */
   }
   
   .footer-left {
@@ -646,6 +696,10 @@
 .dark-theme .editor-footer {
   background-color: #3d3d3d;
   border-top: 1px solid #4d4d4d;
+  flex-shrink: 0; /* 防止footer被压缩 */
+  min-height: 60px; /* 设置最小高度确保footer始终可见 */
+  max-height: 120px; /* 设置最大高度防止footer过高 */
+  overflow-y: auto; /* 如果内容过多，允许滚动 */
 }
 
 .dark-theme .chapter-selector label {
@@ -813,6 +867,10 @@
   
   .dark-theme .editor-footer {
     align-items: stretch;
+    flex-shrink: 0; /* 防止footer被压缩 */
+    min-height: 80px; /* 移动端设置稍高的最小高度 */
+    max-height: 150px; /* 移动端设置最大高度 */
+    overflow-y: auto; /* 如果内容过多，允许滚动 */
   }
   
   .dark-theme .ai-mode-selector {
