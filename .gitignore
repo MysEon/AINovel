@@ -226,6 +226,7 @@ coverage.xml
 .mypy_cache/
 .pytest_cache/
 .hypothesis/
+ainovel-poc/python_modules
 
 # Node.js specific
 node_modules/

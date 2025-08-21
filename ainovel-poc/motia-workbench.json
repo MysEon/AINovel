@@ -1,0 +1,29 @@
+[
+  {
+    "id": "default",
+    "config": {
+      "steps/00_noop_step.py": {
+        "x": -507,
+        "y": 111,
+        "sourceHandlePosition": "right"
+      },
+      "steps/01_api_step.py": {
+        "x": -281,
+        "y": 94,
+        "sourceHandlePosition": "right",
+        "targetHandlePosition": "left"
+      },
+      "steps/02_test_state_step.py": {
+        "x": 60,
+        "y": 36,
+        "sourceHandlePosition": "bottom",
+        "targetHandlePosition": "left"
+      },
+      "steps/03_check_state_change_step.py": {
+        "x": 78,
+        "y": 199,
+        "targetHandlePosition": "top"
+      }
+    }
+  }
+]
