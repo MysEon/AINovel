@@ -259,6 +259,13 @@
   background-color: #0069d9;
 }
 
+.layout-toggle-button {
+  border-radius: 20px !important;
+  font-size: 0.8rem !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+}
+
 .rich-text-editor {
   position: relative;
   height: 100%;
@@ -322,6 +329,15 @@
   flex-wrap: wrap;
 }
 
+.ai-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  gap: 1rem;
+  padding: 1rem;
+}
+
 .ai-writing-interface .chat-container {
   flex: 1;
   display: flex;
@@ -330,7 +346,7 @@
   border-radius: 12px;
   background-color: #f8f9fa;
   min-height: 0;
-  border-top: 1px solid #e9ecef;
+  max-width: 45%;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -486,34 +502,41 @@
   background-color: #ffffff;
   overflow: hidden;
   position: relative;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .content-editor .content-textarea {
   flex: 1;
-  border-left: 1px solid #e9ecef;
+  border: none;
   overflow: auto;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .ai-writing-interface {
-    flex-direction: column;
-    overflow: hidden;
+  .ai-writing-interface .ant-layout {
+    flex-direction: column !important;
   }
   
-  .chat-container {
-    border-right: none;
-    border-bottom: 1px solid #e9ecef;
-    overflow: hidden;
+  .ai-writing-interface .ant-layout-sider {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100%;
+    height: 50%;
   }
   
-  .content-editor {
-    overflow: hidden;
+  .ai-writing-interface .ant-layout-content {
+    flex: 1;
+    height: 50%;
+  }
+  
+  .ai-writing-interface .ant-divider-vertical {
+    display: none;
   }
   
   .content-editor .content-textarea {
-    border-left: none;
-    border-top: 1px solid #e9ecef;
+    border: none;
     overflow: auto;
   }
   
@@ -781,13 +804,11 @@
 
 @media (max-width: 768px) {
   .dark-theme .chat-container {
-    border-right: none;
-    border-bottom: 1px solid #4d4d4d;
+    border: 2px solid #4d4d4d;
   }
   
   .dark-theme .content-editor .content-textarea {
-    border-left: none;
-    border-top: 1px solid #4d4d4d;
+    border: none;
   }
   
   .dark-theme .editor-footer {
@@ -828,11 +849,12 @@
   background-color: #2d2d2d;
   overflow: hidden;
   position: relative;
+  border: 2px solid #4d4d4d;
 }
 
 .dark-theme .content-editor .content-textarea {
   background-color: #2d2d2d;
-  border-left: 1px solid #4d4d4d;
+  border: none;
   overflow: auto;
 }
 

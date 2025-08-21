@@ -598,3 +598,193 @@ class LangGraphService:
 # 全局服务实例
 langchain_service = LangChainService()
 langgraph_service = LangGraphService()
+
+# 添加缺少的方法到LangChainService
+async def chat_with_ai(
+    self,
+    project_id: int,
+    message: str,
+    history: List[dict],
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> str:
+    """与AI助手对话"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self._initialize_model(model_config)
+        
+        # 准备对话历史
+        messages = []
+        
+        # 添加系统提示
+        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+        
+        messages.append(SystemMessage(content=system_prompt))
+        
+        # 添加历史消息
+        for hist_msg in history:
+            if hist_msg['role'] == 'user':
+                messages.append(HumanMessage(content=hist_msg['content']))
+            elif hist_msg['role'] == 'assistant':
+                messages.append(AIMessage(content=hist_msg['content']))
+        
+        # 添加当前消息
+        messages.append(HumanMessage(content=message))
+        
+        # 生成回复
+        response = await model.ainvoke(messages)
+        
+        return response.content
+        
+    except Exception as e:
+        print(f"AI对话失败: {str(e)}")
+        return f"抱歉，AI服务暂时不可用: {str(e)}"
+
+async def optimize_content(
+    self,
+    project_id: int,
+    content: str,
+    optimization_type: str,
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> str:
+    """优化内容"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self._initialize_model(model_config)
+        
+        # 准备优化提示
+        optimization_prompt = f"""请优化以下小说内容：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+优化类型：{optimization_type}
+
+原内容：
+{content}
+
+请提供优化后的内容，要求：
+1. 保持原意和核心情节
+2. 改进语言表达和文字流畅度
+3. 增强文学性和可读性
+4. 符合项目的整体风格和设定"""
+        
+        messages = [
+            SystemMessage(content="你是一个专业的小说编辑和内容优化专家。"),
+            HumanMessage(content=optimization_prompt)
+        ]
+        
+        # 生成优化内容
+        response = await model.ainvoke(messages)
+        
+        return response.content
+        
+    except Exception as e:
+        print(f"内容优化失败: {str(e)}")
+        return f"内容优化失败: {str(e)}"
+
+async def generate_creative_ideas(
+    self,
+    project_id: int,
+    prompt: str,
+    category: str,
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> dict:
+    """生成创意想法"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self._initialize_model(model_config)
+        
+        # 准备创意生成提示
+        creative_prompt = f"""请为以下小说项目生成创意想法：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+用户需求：{prompt}
+
+创意类别：{category}
+
+请提供有创意、有深度的想法，要求：
+1. 符合项目的整体设定和风格
+2. 具有创新性和独特性
+3. 能够推动故事发展或丰富角色塑造
+4. 具有可实施性
+
+请以JSON格式返回，包含以下字段：
+- ideas: 创意想法列表
+- category: 类别
+- difficulty: 实施难度（1-5）
+- impact: 对故事的影响（1-5）"""
+        
+        messages = [
+            SystemMessage(content="你是一个富有创造力的小说写作专家，擅长提供独特的创意想法。"),
+            HumanMessage(content=creative_prompt)
+        ]
+        
+        # 生成创意想法
+        response = await model.ainvoke(messages)
+        
+        # 尝试解析JSON响应
+        try:
+            ideas_json = json.loads(response.content)
+            return ideas_json
+        except json.JSONDecodeError:
+            # 如果不是JSON格式，返回原始内容
+            return {
+                "ideas": [response.content],
+                "category": category,
+                "difficulty": 3,
+                "impact": 3
+            }
+        
+    except Exception as e:
+        print(f"创意想法生成失败: {str(e)}")
+        return {
+            "ideas": [f"创意想法生成失败: {str(e)}"],
+            "category": category,
+            "difficulty": 1,
+            "impact": 1
+        }
+
+# 将方法添加到LangChainService类
+LangChainService.chat_with_ai = chat_with_ai
+LangChainService.optimize_content = optimize_content
+LangChainService.generate_creative_ideas = generate_creative_ideas

@@ -417,3 +417,39 @@ class LangGraphAgentResponse(BaseModel):
     messages: List[dict]
     thread_id: str
     generated_at: datetime
+
+class ChatRequest(BaseModel):
+    project_id: int
+    message: str
+    history: List[dict] = []
+    model_config_id: int
+
+class ChatResponse(BaseModel):
+    success: bool
+    response: str
+    message: str
+    generated_at: datetime
+
+class OptimizeContentRequest(BaseModel):
+    project_id: int
+    content: str
+    optimization_type: str = "general"
+    model_config_id: int
+
+class OptimizeContentResponse(BaseModel):
+    success: bool
+    optimized_content: str
+    message: str
+    generated_at: datetime
+
+class CreativeIdeasRequest(BaseModel):
+    project_id: int
+    prompt: str
+    category: str = "general"
+    model_config_id: int
+
+class CreativeIdeasResponse(BaseModel):
+    success: bool
+    ideas: dict
+    message: str
+    generated_at: datetime

@@ -10,6 +10,26 @@ const getAuthHeaders = () => {
   };
 };
 
+// 获取用户的默认模型配置
+const getDefaultModelConfig = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/model-configs`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      throw new Error('获取模型配置失败');
+    }
+    
+    const configs = await response.json();
+    // 返回第一个可用的配置，或者null
+    return configs.length > 0 ? configs[0] : null;
+  } catch (error) {
+    console.error('获取默认模型配置失败:', error);
+    return null;
+  }
+};
+
 class AIService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/ai`;
@@ -31,83 +51,138 @@ class AIService {
 
   // 章节大纲生成
   async generateChapterOutline(projectId, chapterData) {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/chapter-outline', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        title: chapterData.title,
-        current_content: chapterData.current_content || '',
-        chapter_number: chapterData.chapter_number || 1
+        chapter_number: chapterData.chapter_number || 1,
+        user_requirements: chapterData.user_requirements || chapterData.current_content || '',
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 章节草稿生成
   async generateChapterDraft(projectId, outline) {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/chapter-draft', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        outline: outline
+        chapter_outline: outline,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 角色对话生成
   async generateCharacterDialogue(projectId, characters, context) {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/character-dialogue', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        characters: characters,
-        context: context
+        character_names: characters,
+        situation: context,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 情节发展建议
   async getPlotSuggestions(projectId, currentChapter) {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/plot-suggestions', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        current_chapter: currentChapter
+        current_chapter_content: currentChapter.content || currentChapter || '',
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // AI智能体对话
   async chatWithAI(projectId, message, history = []) {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/chat', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         message: message,
-        history: history
+        history: history,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 内容优化
   async optimizeContent(projectId, content, optimizationType = 'general') {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/optimize-content', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         content: content,
-        optimization_type: optimizationType
+        optimization_type: optimizationType,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 创意生成
   async generateCreativeIdeas(projectId, prompt, category = 'general') {
+    // 获取默认模型配置
+    const modelConfig = await getDefaultModelConfig();
+    
+    if (!modelConfig) {
+      throw new Error('请先配置AI模型');
+    }
+    
     return this.request('/creative-ideas', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         prompt: prompt,
-        category: category
+        category: category,
+        model_config_id: modelConfig.id
       })
     });
   }

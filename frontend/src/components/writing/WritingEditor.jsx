@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
 import { aiService } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
+import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar } from 'antd';
 import './WritingEditorSimple.css';
+
+const { Sider, Content } = Layout;
+const { TextArea } = Input;
+const { Option } = Select;
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
   const [aiAssisted, setAiAssisted] = useState(false);
   const [aiMode, setAiMode] = useState('optimize'); // 'optimize' or 'takeover'
+  const [layoutMode, setLayoutMode] = useState('left'); // 'left' or 'right' - chat on left or right
   const [content, setContent] = useState('');
   const [currentChapter, setCurrentChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -206,6 +212,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
   const handleAiModeChange = (mode) => {
     setAiMode(mode);
+  };
+
+  const toggleLayout = () => {
+    setLayoutMode(layoutMode === 'left' ? 'right' : 'left');
   };
 
   const handleChapterChange = async (e) => {
@@ -407,6 +417,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             readOnly={isEditorLocked}
             projectId={projectId}
             currentChapter={currentChapter}
+            layoutMode={layoutMode}
           />
         ) : (
           <RichTextEditor 
@@ -482,23 +493,36 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         </div>
         <div className="footer-right">
           {aiAssisted && (
-            <div className="ai-mode-selector">
-              <span className="ai-mode-label">AI模式:</span>
-              <div className="ai-mode-buttons">
-                <button
-                  className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('optimize')}
-                >
-                  辅助优化型
-                </button>
-                <button
-                  className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('takeover')}
-                >
-                  全面接管型
-                </button>
+            <>
+              <div className="ai-mode-selector">
+                <span className="ai-mode-label">AI模式:</span>
+                <div className="ai-mode-buttons">
+                  <button
+                    className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
+                    onClick={() => handleAiModeChange('optimize')}
+                  >
+                    辅助优化型
+                  </button>
+                  <button
+                    className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
+                    onClick={() => handleAiModeChange('takeover')}
+                  >
+                    全面接管型
+                  </button>
+                </div>
               </div>
-            </div>
+              <Tooltip title={layoutMode === 'left' ? '切换到右侧聊天' : '切换到左侧聊天'}>
+                <Button
+                  type="default"
+                  icon={<FaExchangeAlt />}
+                  onClick={toggleLayout}
+                  size="small"
+                  className="layout-toggle-button"
+                >
+                  布局
+                </Button>
+              </Tooltip>
+            </>
           )}
           <button 
             className="save-button"
@@ -559,7 +583,7 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode }) => {
   const [messages, setMessages] = useState([
     { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
   ]);
@@ -614,14 +638,12 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
       switch (action) {
         case 'outline':
           response = await aiService.generateChapterOutline(projectId, {
-            title: currentChapter.title,
-            current_content: content,
-            chapter_number: currentChapter.chapter_number
+            chapter_number: currentChapter.chapter_number,
+            user_requirements: `章节标题: ${currentChapter.title}\n当前内容: ${content}`
           });
           break;
         case 'suggestions':
           response = await aiService.getPlotSuggestions(projectId, {
-            title: currentChapter.title,
             content: content
           });
           break;
@@ -656,89 +678,250 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
     }
   };
 
-  return (
-    <div className="ai-writing-interface">
-      <div className="ai-toolbar">
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('outline')}
-          disabled={isLoading}
-          title="生成章节大纲"
-        >
-          <FaMagic /> 大纲
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('suggestions')}
-          disabled={isLoading}
-          title="获取情节建议"
-        >
-          <FaLightbulb /> 建议
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('optimize')}
-          disabled={isLoading}
-          title="优化当前内容"
-        >
-          <FaSpinner /> 优化
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('ideas')}
-          disabled={isLoading}
-          title="生成创意想法"
-        >
-          <FaUsers /> 创意
-        </button>
-      </div>
-      
-      <div className="chat-container">
-        <div className="chat-messages">
+  const chatSider = (
+    <Sider width="45%" style={{ background: 'transparent', padding: '0 8px' }}>
+      <Card 
+        title="AI写作助手" 
+        style={{ height: '100%', borderRadius: '8px' }}
+        bodyStyle={{ padding: 0, height: 'calc(100% - 57px)', display: 'flex', flexDirection: 'column' }}
+      >
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              <div className="message-content">
-                {message.content}
+            <div 
+              key={message.id} 
+              style={{ 
+                marginBottom: '16px',
+                display: 'flex',
+                justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                alignItems: 'flex-start'
+              }}
+            >
+              {message.role === 'assistant' && (
+                <Avatar 
+                  icon={<FaRobot />} 
+                  style={{ 
+                    backgroundColor: '#1890ff',
+                    marginRight: '8px',
+                    flexShrink: 0
+                  }}
+                />
+              )}
+              <div 
+                style={{ 
+                  maxWidth: '70%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: message.role === 'user' ? 'flex-end' : 'flex-start'
+                }}
+              >
+                <div 
+                  style={{ 
+                    padding: '12px 16px',
+                    background: message.role === 'user' ? '#1890ff' : '#f5f5f5',
+                    color: message.role === 'user' ? 'white' : '#333',
+                    borderRadius: '18px',
+                    borderBottomLeftRadius: message.role === 'assistant' ? '4px' : '18px',
+                    borderBottomRightRadius: message.role === 'user' ? '4px' : '18px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  {message.content}
+                </div>
+                <div 
+                  style={{ 
+                    fontSize: '12px',
+                    color: '#999',
+                    marginTop: '4px',
+                    textAlign: message.role === 'user' ? 'right' : 'left'
+                  }}
+                >
+                  {message.role === 'user' ? '用户' : 'AI助手'}
+                </div>
               </div>
+              {message.role === 'user' && (
+                <Avatar 
+                  icon={<FaUser />} 
+                  style={{ 
+                    backgroundColor: '#52c41a',
+                    marginLeft: '8px',
+                    flexShrink: 0
+                  }}
+                />
+              )}
             </div>
           ))}
           {isLoading && (
-            <div className="message assistant loading">
-              <div className="message-content">
-                <FaSpinner className="spinner" /> AI正在思考中...
+            <div style={{ 
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'flex-start'
+            }}>
+              <Avatar 
+                icon={<FaRobot />} 
+                style={{ 
+                  backgroundColor: '#1890ff',
+                  marginRight: '8px',
+                  flexShrink: 0
+                }}
+              />
+              <div 
+                style={{ 
+                  maxWidth: '70%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <div 
+                  style={{ 
+                    padding: '12px 16px',
+                    background: '#f5f5f5',
+                    color: '#333',
+                    borderRadius: '18px',
+                    borderBottomLeftRadius: '4px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <Spin size="small" /> AI正在思考中...
+                </div>
+                <div 
+                  style={{ 
+                    fontSize: '12px',
+                    color: '#999',
+                    marginTop: '4px',
+                    textAlign: 'left'
+                  }}
+                >
+                  AI助手
+                </div>
               </div>
             </div>
           )}
         </div>
-        <div className="chat-input-container">
-          <textarea
-            className="chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="与AI助手对话，获取写作建议..."
-            rows="3"
-            disabled={isLoading}
-          />
-          <button 
-            className="send-button" 
-            onClick={handleSend}
-            disabled={isLoading || input.trim() === ''}
-          >
-            {isLoading ? <FaSpinner className="spinner" /> : '发送'}
-          </button>
+        <div style={{ padding: '16px', borderTop: '1px solid #f0f0f0' }}>
+          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+            <TextArea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="与AI助手对话，获取写作建议..."
+              rows={3}
+              disabled={isLoading}
+              style={{ 
+                resize: 'none',
+                flex: 1,
+                minHeight: '76px'
+              }}
+            />
+            <Button 
+              type="primary"
+              onClick={handleSend}
+              disabled={isLoading || input.trim() === ''}
+              loading={isLoading}
+              style={{ 
+                height: '76px',
+                width: '80px',
+                alignSelf: 'flex-end'
+              }}
+            >
+              发送
+            </Button>
+          </div>
         </div>
-      </div>
-      <div className="content-editor">
-        {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
-        <textarea
-          className={`content-textarea ${readOnly ? 'locked' : ''}`}
+      </Card>
+    </Sider>
+  );
+
+  const contentArea = (
+    <Content style={{ padding: '0 8px' }}>
+      <Card 
+        title="内容编辑器" 
+        style={{ height: '100%', borderRadius: '8px' }}
+        bodyStyle={{ padding: 0, height: 'calc(100% - 57px)' }}
+      >
+        {readOnly && (
+          <div style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(0, 0, 0, 0.5)', 
+            color: 'white', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 10,
+            borderRadius: '8px'
+          }}>
+            编辑区已锁定
+          </div>
+        )}
+        <TextArea
           value={content}
           onChange={handleContentChange}
           placeholder="在这里创作你的小说内容..."
           readOnly={readOnly}
+          style={{ 
+            height: '100%', 
+            border: 'none', 
+            resize: 'none',
+            borderRadius: '0 0 8px 8px'
+          }}
         />
+      </Card>
+    </Content>
+  );
+
+  return (
+    <div className="ai-writing-interface" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '8px', background: '#f5f5f5', borderBottom: '1px solid #d9d9d9' }}>
+        <Space wrap>
+          <Button 
+            icon={<FaMagic />} 
+            onClick={() => handleAIAction('outline')}
+            disabled={isLoading}
+            size="small"
+          >
+            大纲
+          </Button>
+          <Button 
+            icon={<FaLightbulb />} 
+            onClick={() => handleAIAction('suggestions')}
+            disabled={isLoading}
+            size="small"
+          >
+            建议
+          </Button>
+          <Button 
+            icon={<FaSpinner />} 
+            onClick={() => handleAIAction('optimize')}
+            disabled={isLoading}
+            size="small"
+          >
+            优化
+          </Button>
+          <Button 
+            icon={<FaUsers />} 
+            onClick={() => handleAIAction('ideas')}
+            disabled={isLoading}
+            size="small"
+          >
+            创意
+          </Button>
+        </Space>
       </div>
+      
+      <Layout style={{ flex: 1, background: 'transparent', margin: '8px' }}>
+        {layoutMode === 'left' ? chatSider : contentArea}
+        <Divider type="vertical" style={{ margin: '0 4px' }} />
+        {layoutMode === 'left' ? contentArea : chatSider}
+      </Layout>
     </div>
   );
 };
