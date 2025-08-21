@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useState } from 'react';
-import { Modal, message } from 'antd';
+import { App, Modal, message } from 'antd';
 import { 
   ExclamationCircleOutlined, 
   CheckCircleOutlined, 
@@ -23,7 +23,7 @@ const notificationReducer = (state, action) => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, dispatch] = useReducer(notificationReducer, []);
-  const [confirmDialog, setConfirmDialog] = useState(null);
+  const { message: messageApi, modal: modalApi } = App.useApp();
 
   const addNotification = (notification) => {
     dispatch({
@@ -119,7 +119,12 @@ export const NotificationProvider = ({ children }) => {
     
     const updateOkButton = (value) => {
       if (modalInstance && modalInstance.update) {
-        const isMatch = value.trim() === expectedValue.trim();
+        // 如果设置了 expectedValue，需要匹配确认（用于危险操作）
+        // 如果没有设置 expectedValue，只需要输入不为空（用于章节创建等）
+        const isMatch = expectedValue.trim() 
+          ? value.trim() === expectedValue.trim() 
+          : value.trim().length > 0;
+        
         modalInstance.update({
           okButtonProps: {
             disabled: showInput && required && !isMatch,
@@ -129,7 +134,7 @@ export const NotificationProvider = ({ children }) => {
       }
     };
     
-    modalInstance = Modal.confirm({
+    modalInstance = modalApi.confirm({
       title,
       content: <ConfirmInput onValueChange={(value) => { 
         modalValue = value;
@@ -139,7 +144,7 @@ export const NotificationProvider = ({ children }) => {
       okText: confirmText,
       cancelText: cancelText,
       okButtonProps: {
-        disabled: showInput && required,
+        disabled: showInput && required && !inputValue.trim(),
         danger: type === 'error'
       },
       onOk: async () => {
@@ -147,32 +152,30 @@ export const NotificationProvider = ({ children }) => {
           if (onConfirm) await onConfirm(modalValue);
           
           if (showResultNotification) {
-            message.success(successMessage);
+            messageApi.success(successMessage);
           }
-          setConfirmDialog(null);
+          // Modal 会自动关闭，不需要手动处理
         } catch (error) {
           if (showResultNotification) {
-            message.error(errorMessage);
+            messageApi.error(errorMessage);
           }
-          throw error;
+          console.error('An error occurred in onConfirm:', error);
         }
       },
       onCancel: () => {
         if (onCancel) onCancel();
-        setConfirmDialog(null);
+        // Modal 会自动关闭，不需要手动处理
       },
       className: `confirm-dialog-${type} ${className}`,
       width: showInput ? 480 : 420,
-      afterClose: () => {
-        setConfirmDialog(null);
-      }
     });
-
-    setConfirmDialog(modalInstance);
   };
 
   const hideConfirmDialog = () => {
-    setConfirmDialog(null);
+    // This function is now a no-op, but we'll keep it for API consistency
+    // in case other components are calling it.
+    // A better long-term solution would be to remove it entirely and
+    // update all call sites.
   };
 
   const removeNotification = (id) => {

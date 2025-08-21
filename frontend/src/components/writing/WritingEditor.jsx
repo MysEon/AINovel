@@ -266,7 +266,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
   // 开启新章
   const handleStartNewChapter = async (title) => {
-    if (!title.trim() || !projectId) return;
+    if (!title.trim() || !projectId) {
+      throw new Error('章节标题不能为空或项目ID无效');
+    }
     
     const newChapterData = {
       title: title,
@@ -275,14 +277,19 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       status: 'draft'
     };
     
-    const newChapter = await createChapter(projectId, newChapterData);
-    
-    setChapters(prev => [...prev, newChapter].sort((a, b) => a.chapter_number - b.chapter_number));
-    setCurrentChapter(newChapter);
-    setNewChapterTitle('');
+    try {
+      const newChapter = await createChapter(projectId, newChapterData);
+      
+      setChapters(prev => [...prev, newChapter].sort((a, b) => a.chapter_number - b.chapter_number));
+      setCurrentChapter(newChapter);
+      setNewChapterTitle('');
 
-    if (onProjectsChange) {
-      onProjectsChange();
+      if (onProjectsChange) {
+        onProjectsChange();
+      }
+    } catch (error) {
+      console.error('创建章节失败:', error);
+      throw error; // 重新抛出错误，让NotificationManager处理
     }
   };
 

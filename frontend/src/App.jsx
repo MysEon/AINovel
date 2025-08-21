@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { App as AntdApp } from 'antd';
 import AuthPage from './components/AuthPage';
 import ProjectDashboard from './components/ProjectDashboard';
 import ProjectEditor from './components/ProjectEditor';
@@ -172,9 +173,11 @@ function AppContent() {
 
 function App() {
   return (
-    <NotificationProvider>
-      <AppContent />
-    </NotificationProvider>
+    <AntdApp>
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
+    </AntdApp>
   );
 }
 
