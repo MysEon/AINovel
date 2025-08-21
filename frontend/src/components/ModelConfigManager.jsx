@@ -393,9 +393,22 @@ const ModelConfigManager = () => {
                 name="api_key"
                 label="API密钥"
                 rules={[{ required: !editingConfig, message: '请输入API密钥' }]}
-                extra={editingConfig ? `当前: ${editingConfig.api_key_masked}。留空则保持不变。` : ''}
+                extra={editingConfig ? (
+                  <div>
+                    <div style={{ marginBottom: '4px' }}>
+                      <span style={{ color: '#666', fontSize: '12px' }}>
+                        当前密钥: {editingConfig.api_key_masked}
+                      </span>
+                    </div>
+                    <div style={{ color: '#999', fontSize: '11px' }}>
+                      💡 留空保持原密钥，输入新密钥则替换
+                    </div>
+                  </div>
+                ) : ''}
               >
-                <Input.Password placeholder="输入API密钥" />
+                <Input.Password 
+                  placeholder={editingConfig ? "输入新密钥（可选）" : "输入API密钥"} 
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
