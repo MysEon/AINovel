@@ -3,7 +3,6 @@ AI模型配置相关的API路由
 """
 import base64
 import json
-import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -16,6 +15,13 @@ from schemas import (
     TestConnectionRequest, TestConnectionResponse
 )
 from .auth import get_current_user_dependency
+
+# 尝试导入LangChain服务（如果可用）
+try:
+    from langchain_service import LangChainService
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
 
 router = APIRouter(
     prefix="/api/model-configs",
@@ -173,160 +179,52 @@ async def test_model_connection(
     current_user: User = Depends(get_current_user_dependency)
 ):
     """测试模型配置连接"""
+    if not LANGCHAIN_AVAILABLE:
+        return TestConnectionResponse(
+            success=False,
+            message="LangChain服务不可用，请安装相关依赖"
+        )
+    
     try:
-        # 根据模型类型选择测试方法
-        if test_data.model_type.lower() == "openai":
-            return await test_openai_connection(test_data)
-        elif test_data.model_type.lower() == "claude":
-            return await test_claude_connection(test_data)
-        elif test_data.model_type.lower() == "custom":
-            return await test_custom_connection(test_data)
+        # 使用LangChain服务统一管理模型连接测试
+        langchain_service = LangChainService()
+        
+        # 创建临时配置对象进行测试
+        class TempConfig:
+            def __init__(self, test_data):
+                self.model_type = test_data.model_type
+                self.model_name = test_data.model_name
+                self.api_key = test_data.api_key
+                self.api_url = test_data.api_url
+                self.temperature = test_data.temperature or 0.7
+                self.max_tokens = test_data.max_tokens or 100
+                self.id = "test"
+        
+        temp_config = TempConfig(test_data)
+        
+        # 尝试初始化模型
+        model = langchain_service._get_model(temp_config)
+        
+        if model:
+            return TestConnectionResponse(
+                success=True,
+                message=f"{test_data.model_type} 模型连接测试成功",
+                details={
+                    "model": test_data.model_name or "default",
+                    "provider": test_data.model_type
+                }
+            )
         else:
             return TestConnectionResponse(
                 success=False,
-                message=f"不支持的模型类型: {test_data.model_type}"
+                message=f"无法初始化 {test_data.model_type} 模型"
             )
+            
     except Exception as e:
         return TestConnectionResponse(
             success=False,
             message=f"连接测试失败: {str(e)}"
         )
 
-async def test_openai_connection(test_data: TestConnectionRequest) -> TestConnectionResponse:
-    """测试OpenAI连接"""
-    api_url = test_data.api_url or "https://api.openai.com/v1/chat/completions"
-    
-    headers = {
-        "Authorization": f"Bearer {test_data.api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "model": test_data.model_name or "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": "Hello, this is a test message."}],
-        "max_tokens": 10,
-        "temperature": 0.7
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(api_url, headers=headers, json=payload, timeout=10) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return TestConnectionResponse(
-                        success=True,
-                        message="OpenAI连接测试成功",
-                        details={
-                            "model": result.get("model", "unknown"),
-                            "usage": result.get("usage", {})
-                        }
-                    )
-                else:
-                    error_text = await response.text()
-                    return TestConnectionResponse(
-                        success=False,
-                        message=f"OpenAI API错误 (状态码: {response.status})",
-                        details={"error": error_text}
-                    )
-    except Exception as e:
-        return TestConnectionResponse(
-            success=False,
-            message=f"OpenAI连接异常: {str(e)}"
-        )
-
-async def test_claude_connection(test_data: TestConnectionRequest) -> TestConnectionResponse:
-    """测试Claude连接"""
-    api_url = test_data.api_url or "https://api.anthropic.com/v1/messages"
-    
-    headers = {
-        "x-api-key": test_data.api_key,
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01"
-    }
-    
-    payload = {
-        "model": test_data.model_name or "claude-3-sonnet-20240229",
-        "max_tokens": 10,
-        "messages": [{"role": "user", "content": "Hello, this is a test message."}]
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(api_url, headers=headers, json=payload, timeout=10) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return TestConnectionResponse(
-                        success=True,
-                        message="Claude连接测试成功",
-                        details={
-                            "model": result.get("model", "unknown"),
-                            "usage": result.get("usage", {})
-                        }
-                    )
-                else:
-                    error_text = await response.text()
-                    return TestConnectionResponse(
-                        success=False,
-                        message=f"Claude API错误 (状态码: {response.status})",
-                        details={"error": error_text}
-                    )
-    except Exception as e:
-        return TestConnectionResponse(
-            success=False,
-            message=f"Claude连接异常: {str(e)}"
-        )
-
-async def test_custom_connection(test_data: TestConnectionRequest) -> TestConnectionResponse:
-    """测试自定义模型连接"""
-    # 自定义模型必须提供API URL
-    if not test_data.api_url:
-        return TestConnectionResponse(
-            success=False,
-            message="自定义模型必须提供API URL"
-        )
-    
-    # 自定义模型必须提供模型名称
-    if not test_data.model_name:
-        return TestConnectionResponse(
-            success=False,
-            message="自定义模型必须提供模型名称"
-        )
-    
-    # 使用OpenAI兼容的API格式
-    headers = {
-        "Authorization": f"Bearer {test_data.api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "model": test_data.model_name,
-        "messages": [{"role": "user", "content": "Hello, this is a test message."}],
-        "max_tokens": 10,
-        "temperature": 0.7
-    }
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(test_data.api_url, headers=headers, json=payload, timeout=10) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    return TestConnectionResponse(
-                        success=True,
-                        message="自定义模型连接测试成功",
-                        details={
-                            "model": result.get("model", test_data.model_name),
-                            "usage": result.get("usage", {})
-                        }
-                    )
-                else:
-                    error_text = await response.text()
-                    return TestConnectionResponse(
-                        success=False,
-                        message=f"自定义模型API错误 (状态码: {response.status})",
-                        details={"error": error_text}
-                    )
-    except Exception as e:
-        return TestConnectionResponse(
-            success=False,
-            message=f"自定义模型连接异常: {str(e)}"
-        )
+# 注意：所有直接的HTTP连接测试已移除，现在统一使用LangChain服务管理
+# 这样确保所有AI功能都通过LangChain/LangGraph框架统一管理

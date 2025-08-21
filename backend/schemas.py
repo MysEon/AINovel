@@ -328,3 +328,78 @@ class PromptTemplateResponse(PromptTemplateBase):
     
     class Config:
         from_attributes = True
+
+
+# LangChain/LangGraph 相关模型
+class ChapterOutlineRequest(BaseModel):
+    project_id: int
+    chapter_number: int
+    user_requirements: str = Field(..., description="用户对章节的要求和想法")
+    model_config_id: int
+
+class ChapterOutlineResponse(BaseModel):
+    success: bool
+    outline: dict
+    message: str
+    generated_at: datetime
+
+class ChapterDraftRequest(BaseModel):
+    project_id: int
+    chapter_outline: dict
+    model_config_id: int
+
+class ChapterDraftResponse(BaseModel):
+    success: bool
+    content: str
+    message: str
+    word_count: int
+    generated_at: datetime
+
+class CharacterDialogueRequest(BaseModel):
+    project_id: int
+    character_names: List[str] = Field(..., min_items=1, description="参与对话的角色名称列表")
+    situation: str = Field(..., description="对话场景和情境描述")
+    model_config_id: int
+
+class CharacterDialogueResponse(BaseModel):
+    success: bool
+    dialogue: str
+    message: str
+    generated_at: datetime
+
+class PlotSuggestionRequest(BaseModel):
+    project_id: int
+    current_chapter_content: str
+    model_config_id: int
+
+class PlotSuggestionResponse(BaseModel):
+    success: bool
+    suggestions: dict
+    message: str
+    generated_at: datetime
+
+class WritingWorkflowRequest(BaseModel):
+    project_id: int
+    task: str = Field(..., description="写作任务描述")
+    model_config_id: int
+    workflow_type: str = Field(default="outline_to_draft", description="工作流类型: outline_to_draft, dialogue_generation, plot_planning")
+
+class WritingWorkflowResponse(BaseModel):
+    success: bool
+    result: dict
+    workflow_type: str
+    message: str
+    generated_at: datetime
+
+class LangGraphAgentRequest(BaseModel):
+    project_id: int
+    message: str
+    model_config_id: int
+    thread_id: Optional[str] = None
+
+class LangGraphAgentResponse(BaseModel):
+    success: bool
+    response: str
+    messages: List[dict]
+    thread_id: str
+    generated_at: datetime

@@ -3,7 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from database import create_tables
-from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates
+from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
+
+# 尝试导入LangChain路由（如果依赖已安装）
+try:
+    from routers import langchain_ai
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    LANGCHAIN_AVAILABLE = False
+    print("Warning: LangChain dependencies not installed. AI features will not be available.")
 
 # 应用启动时创建数据库表
 create_tables()
@@ -13,9 +21,6 @@ app = FastAPI(
     description="智能小说创作助手后端API",
     version="0.1.0"
 )
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
 
 # 配置CORS中间件，允许前端访问
 app.add_middleware(
@@ -46,8 +51,17 @@ app.include_router(drafts.router)
 app.include_router(model_configs.router)
 # 挂载提示词模板路由
 app.include_router(prompt_templates.router)
+# 挂载知识库路由
+app.include_router(knowledge.router)
+
+# 如果LangChain可用，挂载AI路由
+if LANGCHAIN_AVAILABLE:
+    app.include_router(langchain_ai.router)
 
 @app.get("/", tags=["Root"])
 def read_root():
     """根路径，返回欢迎信息"""
     return {"message": "Welcome to AINovel Backend API"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8080)

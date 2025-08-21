@@ -1,63 +1,15 @@
 import React, { useState } from 'react';
-import { FaUser, FaLock, FaEnvelope, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { Form, Input, Button, Card, message } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useNotification } from './NotificationManager';
 
 const RegisterPage = ({ onNavigate }) => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [form] = Form.useForm();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [usernameError, setUsernameError] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  
   const { addNotification } = useNotification();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // 提交前验证所有字段
-    let hasError = false;
-    
-    // 验证用户名
-    if (username.length < 3) {
-      setUsernameError('用户名至少需要3个字符');
-      hasError = true;
-    } else if (username.length > 50) {
-      setUsernameError('用户名不能超过50个字符');
-      hasError = true;
-    }
-    
-    // 验证邮箱
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email.length > 0 && !emailRegex.test(email)) {
-      setEmailError('请输入有效的邮箱地址');
-      hasError = true;
-    }
-    
-    // 验证密码
-    if (password.length < 6) {
-      setPasswordError('密码至少需要6个字符');
-      hasError = true;
-    } else if (password.length > 50) {
-      setPasswordError('密码不能超过50个字符');
-      hasError = true;
-    }
-    
-    // 如果有验证错误，不提交表单
-    if (hasError) {
-      return;
-    }
-    
+  const onFinish = async (values) => {
     setIsLoading(true);
-    setError('');
-    setSuccess('');
-    setUsernameError('');
-    setEmailError('');
-    setPasswordError('');
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -65,18 +17,13 @@ const RegisterPage = ({ onNavigate }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify(values),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // 显示全局成功通知
-        addNotification({
-          message: '注册成功！请登录您的账户。',
-          type: 'success',
-          duration: 3000
-        });
+        message.success('注册成功！请登录您的账户。');
         
         // 延迟一段时间后自动跳转到登录页
         setTimeout(() => {
@@ -96,10 +43,10 @@ const RegisterPage = ({ onNavigate }) => {
             errorMessage = data.detail.msg || JSON.stringify(data.detail);
           }
         }
-        setError(errorMessage);
+        message.error(errorMessage);
       }
     } catch (error) {
-      setError('网络错误，请稍后重试');
+      message.error('网络错误，请稍后重试');
     } finally {
       setIsLoading(false);
     }
@@ -107,113 +54,86 @@ const RegisterPage = ({ onNavigate }) => {
 
   return (
     <div className="login-page">
-      <div className="login-container">
-        <div className="login-header">
-          <h1>创建账户</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <div className="input-wrapper">
-              <FaUser className="input-icon" />
-              <input
-                type="text"
-                placeholder="用户名"
-                value={username}
-                onChange={(e) => {
-                  const newUsername = e.target.value;
-                  setUsername(newUsername);
-                  // 实时验证用户名长度
-                  if (newUsername.length > 0 && newUsername.length < 3) {
-                    setUsernameError('用户名至少需要3个字符');
-                  } else if (newUsername.length > 50) {
-                    setUsernameError('用户名不能超过50个字符');
-                  } else {
-                    setUsernameError('');
-                  }
-                }}
-                disabled={isLoading}
-                required
-              />
-            </div>
-            {usernameError && <div className="error-message">{usernameError}</div>}
-          </div>
-
-          <div className="form-group">
-            <div className="input-wrapper">
-              <FaEnvelope className="input-icon" />
-              <input
-                type="email"
-                placeholder="电子邮箱"
-                value={email}
-                onChange={(e) => {
-                  const newEmail = e.target.value;
-                  setEmail(newEmail);
-                  // 简单的邮箱格式验证
-                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                  if (newEmail.length > 0 && !emailRegex.test(newEmail)) {
-                    setEmailError('请输入有效的邮箱地址');
-                  } else {
-                    setEmailError('');
-                  }
-                }}
-                disabled={isLoading}
-                required
-              />
-            </div>
-            {emailError && <div className="error-message">{emailError}</div>}
-          </div>
-
-          <div className="form-group">
-            <div className="input-wrapper">
-              <FaLock className="input-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="密码"
-                value={password}
-                onChange={(e) => {
-                  const newPassword = e.target.value;
-                  setPassword(newPassword);
-                  // 实时验证密码长度
-                  if (newPassword.length > 0 && newPassword.length < 6) {
-                    setPasswordError('密码至少需要6个字符');
-                  } else {
-                    setPasswordError('');
-                  }
-                }}
-                disabled={isLoading}
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-            {passwordError && <div className="error-message">{passwordError}</div>}
-          </div>
-
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
-
-          <button 
-            type="submit" 
-            className="login-btn"
-            disabled={isLoading}
-          >
-            {isLoading ? '注册中...' : '注册'}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>已有账号？<a href="#login" onClick={() => onNavigate('login')}>返回登录</a></p>
-        </div>
-      </div>
-
       <div className="login-background">
         <div className="background-pattern"></div>
+      </div>
+      
+      <div className="login-container">
+        <Card className="login-card">
+          <div className="login-header">
+            <h1>创建账户</h1>
+            <p>加入AINovel，开始您的创作之旅</p>
+          </div>
+
+          <Form
+            form={form}
+            name="register"
+            onFinish={onFinish}
+            autoComplete="off"
+            size="large"
+          >
+            <Form.Item
+              name="username"
+              rules={[
+                { required: true, message: '请输入用户名' },
+                { min: 3, message: '用户名至少需要3个字符' },
+                { max: 50, message: '用户名不能超过50个字符' }
+              ]}
+            >
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="用户名"
+                disabled={isLoading}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: '请输入电子邮箱' },
+                { type: 'email', message: '请输入有效的邮箱地址' }
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined />}
+                placeholder="电子邮箱"
+                disabled={isLoading}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[
+                { required: true, message: '请输入密码' },
+                { min: 6, message: '密码至少需要6个字符' },
+                { max: 50, message: '密码不能超过50个字符' }
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="密码"
+                disabled={isLoading}
+                iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isLoading}
+                block
+                size="large"
+              >
+                注册
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="login-footer">
+            <p>已有账号？<a href="#login" onClick={() => onNavigate('login')}>返回登录</a></p>
+          </div>
+        </Card>
       </div>
     </div>
   );
