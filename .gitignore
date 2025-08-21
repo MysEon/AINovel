@@ -182,6 +182,7 @@ local_settings.ini
 !README.md
 !LANGCHAIN_INTEGRATION.md
 !AI_UNIFIED_MANAGEMENT.md
+!WORK_PLAN.md
 TODO.md
 check_db.py
 test_db_insert.py
