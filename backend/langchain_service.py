@@ -130,6 +130,10 @@ class LangChainService:
                 if api_key:
                     os.environ["ANTHROPIC_API_KEY"] = api_key
                 model = init_chat_model(f"anthropic:{config.model_name}")
+            elif config.model_type.lower() == "gemini":
+                if api_key:
+                    os.environ["GOOGLE_API_KEY"] = api_key
+                model = init_chat_model(f"google:{config.model_name}")
             elif config.model_type.lower() == "custom":
                 # 自定义模型配置
                 model = init_chat_model(

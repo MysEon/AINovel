@@ -417,7 +417,17 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           <Form.Item
             name="name"
             label="项目名称"
-            rules={[{ required: true, message: '请输入项目名称' }]}
+            rules={[
+              { required: true, message: '请输入项目名称' },
+              {
+                validator: (_, value) => {
+                  if (projects.find(p => p.name === value)) {
+                    return Promise.reject(new Error('项目名称已存在'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
             <Input 
               placeholder="输入项目名称" 

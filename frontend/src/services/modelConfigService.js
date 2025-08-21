@@ -74,6 +74,7 @@ class ModelConfigService {
     return [
       { value: 'openai', label: 'OpenAI' },
       { value: 'claude', label: 'Claude' },
+      { value: 'gemini', label: 'Gemini' },
       { value: 'custom', label: '自定义' },
     ];
   }
@@ -97,6 +98,15 @@ class ModelConfigService {
       { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
       { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
       { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+    ];
+  }
+
+  // 获取Gemini模型列表
+  getGeminiModels() {
+    return [
+      { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro' },
+      { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash' },
+      { value: 'gemini-1.0-pro', label: 'Gemini 1.0 Pro' },
     ];
   }
 
