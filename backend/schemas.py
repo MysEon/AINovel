@@ -312,6 +312,7 @@ class TestConnectionResponse(BaseModel):
 class ListModelsRequest(BaseModel):
     api_key: str = Field(..., description="API Key")
     model_type: str = Field(..., description="Model type e.g. openai, gemini")
+    proxy_url: Optional[str] = Field(None, description="Proxy URL")
 
 class ModelInfo(BaseModel):
     value: str

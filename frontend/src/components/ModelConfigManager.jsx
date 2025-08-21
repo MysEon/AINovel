@@ -24,6 +24,7 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  CopyOutlined,
   SaveOutlined,
   CloseOutlined,
   ApiOutlined,
@@ -45,6 +46,7 @@ const ModelConfigManager = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [form] = Form.useForm();
   const modelType = Form.useWatch('model_type', form);
+  const enableProxy = Form.useWatch('enable_proxy', form);
   const [modelList, setModelList] = useState([]);
   const [fetchingModels, setFetchingModels] = useState(false);
 
@@ -77,7 +79,12 @@ const ModelConfigManager = () => {
         stop_sequences: config.stop_sequences ? config.stop_sequences.join(', ') : '',
       });
     } else {
-      form.setFieldsValue(modelConfigService.getDefaultConfig());
+      const defaultConfig = modelConfigService.getDefaultConfig();
+      // 确保stop_sequences是字符串格式
+      if (Array.isArray(defaultConfig.stop_sequences)) {
+        defaultConfig.stop_sequences = defaultConfig.stop_sequences.join(', ');
+      }
+      form.setFieldsValue(defaultConfig);
     }
     setIsModalVisible(true);
   };
@@ -90,7 +97,21 @@ const ModelConfigManager = () => {
 
   const handleSubmit = async (values) => {
     try {
-      const stop_sequences = values.stop_sequences ? values.stop_sequences.split(',').map(s => s.trim()).filter(s => s) : [];
+      // 处理stop_sequences字段：如果是字符串则分割，如果是数组则直接使用
+      let stop_sequences = [];
+      if (values.stop_sequences) {
+        if (typeof values.stop_sequences === 'string') {
+          stop_sequences = values.stop_sequences.split(',').map(s => s.trim()).filter(s => s);
+        } else if (Array.isArray(values.stop_sequences)) {
+          stop_sequences = values.stop_sequences;
+        }
+      }
+      
+      // 如果未启用代理，清空proxy_url字段
+      if (!values.enable_proxy) {
+        values.proxy_url = '';
+      }
+      
       const submitData = { ...values, stop_sequences };
 
       if (editingConfig && !submitData.api_key) {
@@ -128,6 +149,29 @@ const ModelConfigManager = () => {
     }
   };
 
+  const handleCopyConfig = (config) => {
+    // 创建配置的副本，去掉id和用户相关字段
+    const { id, user_id, created_at, updated_at, api_key_masked, ...configCopy } = config;
+    
+    // 为复制的配置添加后缀
+    configCopy.name = `${config.name} (副本)`;
+    // 出于安全考虑，API密钥需要用户重新输入
+    
+    setEditingConfig(null);
+    setModelList([]);
+    form.setFieldsValue({
+      ...configCopy,
+      api_key: '', // 清空API密钥，需要用户重新输入
+      stop_sequences: configCopy.stop_sequences ? configCopy.stop_sequences.join(', ') : '',
+    });
+    setIsModalVisible(true);
+    
+    notification.info({ 
+      message: '配置已复制', 
+      description: '所有参数已复制，但出于安全考虑需要重新输入API密钥' 
+    });
+  };
+
   const handleTestConnection = async () => {
     try {
       const values = await form.validateFields(['model_type', 'api_url', 'model_name']);
@@ -137,13 +181,18 @@ const ModelConfigManager = () => {
 
       if (editingConfig && !apiKey) {
         // 编辑模式，且没有输入新密钥，则测试已保存的密钥
+        const proxyStatus = editingConfig.enable_proxy ? ' (使用代理)' : ' (直连)';
         notification.info({
-          message: '正在使用已保存的密钥进行测试...'
+          message: `正在使用已保存的密钥进行测试${proxyStatus}...`
         });
         result = await modelConfigService.testExistingConnection(editingConfig.id);
       } else if (apiKey) {
         // 新建模式，或编辑模式下输入了新密钥
         const proxyUrl = values.enable_proxy ? values.proxy_url : null;
+        const proxyStatus = values.enable_proxy ? ' (使用代理)' : ' (直连)';
+        notification.info({
+          message: `正在测试连接${proxyStatus}...`
+        });
         result = await modelConfigService.testConnection({
           api_key: apiKey,
           api_url: values.api_url,
@@ -158,9 +207,16 @@ const ModelConfigManager = () => {
       }
 
       if (result.success) {
-        notification.success({ message: '连接测试成功!' });
+        const proxyStatus = (values.enable_proxy || (editingConfig && editingConfig.enable_proxy)) ? ' (使用代理)' : ' (直连)';
+        notification.success({ 
+          message: `连接测试成功${proxyStatus}!`,
+          description: result.message 
+        });
       } else {
-        notification.error({ message: '连接测试失败', description: result.message });
+        notification.error({ 
+          message: '连接测试失败', 
+          description: result.message 
+        });
       }
     } catch (error) {
         if (error.errorFields) {
@@ -230,13 +286,35 @@ const ModelConfigManager = () => {
       {configs.length === 0 ? (
         <Empty description="暂无配置，点击'新建配置'开始创建" />
       ) : (
-        <Row gutter={[16, 16]}>
+        <Row gutter={[12, 12]}>
           {configs.map(config => (
-            <Col xs={24} sm={12} md={8} key={config.id}>
+            <Col xs={24} sm={12} md={8} lg={6} xl={4} key={config.id}>
               <Card
-                title={config.name}
+                size="small"
+                title={
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {config.name}
+                  </div>
+                }
                 actions={[
-                  <EditOutlined key="edit" onClick={() => showModal(config)} />,
+                  <CopyOutlined 
+                    key="copy" 
+                    style={{ fontSize: '14px' }} 
+                    onClick={() => handleCopyConfig(config)}
+                    title="复制配置"
+                  />,
+                  <EditOutlined 
+                    key="edit" 
+                    style={{ fontSize: '14px' }} 
+                    onClick={() => showModal(config)} 
+                    title="编辑配置"
+                  />,
                   <Popconfirm
                     title="确定要删除这个配置吗？"
                     onConfirm={() => handleDelete(config.id)}
@@ -244,14 +322,32 @@ const ModelConfigManager = () => {
                     cancelText="取消"
                     icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
                   >
-                    <DeleteOutlined key="delete" />
+                    <DeleteOutlined 
+                      key="delete" 
+                      style={{ fontSize: '14px' }} 
+                      title="删除配置"
+                    />
                   </Popconfirm>,
                 ]}
+                bodyStyle={{ padding: '12px' }}
               >
-                <p><Tag color="blue">{config.model_type}</Tag></p>
-                <p><strong>模型名称:</strong> {config.model_name || '默认'}</p>
-                <p><strong>温度:</strong> {config.temperature}</p>
-                <p><strong>最大令牌:</strong> {config.max_tokens}</p>
+                <div style={{ marginBottom: '8px' }}>
+                  <Tag color="blue" style={{ fontSize: '11px' }}>{config.model_type}</Tag>
+                  {config.enable_proxy && (
+                    <Tag color="green" style={{ fontSize: '11px', marginLeft: '4px' }}>代理</Tag>
+                  )}
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666' }}>
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>模型:</strong> {config.model_name || '默认'}
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>温度:</strong> {config.temperature}
+                  </div>
+                  <div>
+                    <strong>令牌:</strong> {config.max_tokens}
+                  </div>
+                </div>
               </Card>
             </Col>
           ))}
@@ -326,7 +422,16 @@ const ModelConfigManager = () => {
                     )}
                   </Form.Item>
                   {modelType !== 'custom' && (
-                    <Button icon={<SyncOutlined />} onClick={handleFetchModels} loading={fetchingModels} />
+                    <Button 
+                      icon={<SyncOutlined />} 
+                      onClick={handleFetchModels} 
+                      loading={fetchingModels}
+                      style={{ 
+                        height: '32px',
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0
+                      }}
+                    />
                   )}
                 </Space.Compact>
               </Form.Item>
@@ -353,26 +458,20 @@ const ModelConfigManager = () => {
                 <Switch />
               </Form.Item>
             </Col>
-            <Col span={24}>
-              <Form.Item
-                name="proxy_url"
-                label="代理URL"
-                extra="如果需要，请输入代理服务器的URL"
-                dependencies={['enable_proxy']}
-                rules={[
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (getFieldValue('enable_proxy') && !value) {
-                        return Promise.reject(new Error('启用代理时必须填写代理URL'));
-                      }
-                      return Promise.resolve();
-                    },
-                  }),
-                ]}
-              >
-                <Input placeholder="http://127.0.0.1:7890" disabled={!form.getFieldValue('enable_proxy')} />
-              </Form.Item>
-            </Col>
+            {enableProxy && (
+              <Col span={24}>
+                <Form.Item
+                  name="proxy_url"
+                  label="代理URL"
+                  extra="请输入代理服务器的URL"
+                  rules={[
+                    { required: true, message: '启用代理时必须填写代理URL' }
+                  ]}
+                >
+                  <Input placeholder="http://127.0.0.1:7890" />
+                </Form.Item>
+              </Col>
+            )}
             <Col span={12}>
               <Form.Item label="温度 (0-2)">
                 <Row>

@@ -122,6 +122,15 @@ class LangChainService:
             # 解密API密钥
             api_key = self._decrypt_api_key(config.api_key) if config.api_key else None
             
+            # 设置代理环境变量（如果配置了代理）
+            if config.proxy_url:
+                os.environ["HTTP_PROXY"] = config.proxy_url
+                os.environ["HTTPS_PROXY"] = config.proxy_url
+            else:
+                # 清除代理环境变量
+                os.environ.pop("HTTP_PROXY", None)
+                os.environ.pop("HTTPS_PROXY", None)
+            
             if config.model_type.lower() == "openai":
                 if api_key:
                     os.environ["OPENAI_API_KEY"] = api_key
@@ -182,6 +191,7 @@ class LangChainService:
                 # 使用服务中的加密方法
                 self.api_key = service._encrypt_api_key(data.api_key) if data.api_key else None
                 self.api_url = data.api_url
+                self.proxy_url = getattr(data, 'proxy_url', None)
                 # 对于连接测试，使用固定的默认值
                 self.temperature = 0.7
                 self.max_tokens = 100
@@ -204,9 +214,17 @@ class LangChainService:
     async def list_available_models(self, model_type: str, api_key: str, proxy_url: Optional[str] = None) -> List[Dict[str, str]]:
         """根据API密钥和模型类型获取可用的模型列表"""
         try:
+            # 设置代理环境变量
+            if proxy_url:
+                os.environ["HTTP_PROXY"] = proxy_url
+                os.environ["HTTPS_PROXY"] = proxy_url
+            else:
+                os.environ.pop("HTTP_PROXY", None)
+                os.environ.pop("HTTPS_PROXY", None)
+            
             if model_type == "openai":
                 from openai import OpenAI
-                client = OpenAI(api_key=api_key, base_url=proxy_url)
+                client = OpenAI(api_key=api_key)
                 models = client.models.list()
                 return [{"value": model.id, "label": model.id} for model in models]
             
@@ -228,19 +246,9 @@ class LangChainService:
                     # google-auth 库会自动使用这个环境变量
                     os.environ["GOOGLE_API_ENDPOINT"] = api_base
 
-                # 检查并设置代理
-                effective_proxy = proxy_url or os.environ.get("GEMINI_API_PROXY")
-                client_options = None
-                if effective_proxy:
-                    client_options = {"api_endpoint": api_base} if api_base else {}
-                    genai.configure(
-                        api_key=api_key,
-                        transport="rest",
-                        client_options=client_options,
-                        http_client=genai.HttpProxyClient(effective_proxy)
-                    )
-                else:
-                    genai.configure(api_key=api_key)
+                # 代理已经通过环境变量HTTP_PROXY和HTTPS_PROXY设置了
+                # 这里直接配置API密钥即可
+                genai.configure(api_key=api_key)
 
                 models = genai.list_models()
                 return [{"value": m.name, "label": m.display_name} for m in models if 'generateContent' in m.supported_generation_methods]
