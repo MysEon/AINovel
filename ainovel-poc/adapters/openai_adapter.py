@@ -6,7 +6,7 @@ OpenAI AI服务适配器
 import openai
 import json
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import os
 from dotenv import load_dotenv
 

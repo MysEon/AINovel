@@ -82,7 +82,7 @@ class SQLiteAdapter:
     async def save_project(self, project_data: Dict[str, Any]) -> bool:
         """保存项目信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 conn.execute('''
                     INSERT OR REPLACE INTO projects 
                     (id, name, description, user_id, word_count, chapter_count, created_at, updated_at)
@@ -106,7 +106,7 @@ class SQLiteAdapter:
     async def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
         """获取项目信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 row = conn.execute(
                     'SELECT * FROM projects WHERE id = ?',
                     (project_id,)
@@ -122,7 +122,7 @@ class SQLiteAdapter:
     async def get_projects_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         """获取用户的所有项目"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 rows = conn.execute(
                     'SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC',
                     (user_id,)
@@ -136,7 +136,7 @@ class SQLiteAdapter:
     async def save_ai_task(self, task_data: Dict[str, Any]) -> bool:
         """保存AI任务信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 conn.execute('''
                     INSERT OR REPLACE INTO ai_tasks 
                     (id, type, status, progress, project_id, result, error, created_at, completed_at)
@@ -161,7 +161,7 @@ class SQLiteAdapter:
     async def get_ai_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """获取AI任务信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 row = conn.execute(
                     'SELECT * FROM ai_tasks WHERE id = ?',
                     (task_id,)
@@ -180,7 +180,7 @@ class SQLiteAdapter:
     async def update_ai_task(self, task_id: str, updates: Dict[str, Any]) -> bool:
         """更新AI任务信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 set_clause = ", ".join([f"{key} = ?" for key in updates.keys()])
                 values = list(updates.values())
                 values.append(task_id)
@@ -199,7 +199,7 @@ class SQLiteAdapter:
     async def save_chapter(self, chapter_data: Dict[str, Any]) -> bool:
         """保存章节信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 conn.execute('''
                     INSERT OR REPLACE INTO chapters 
                     (id, title, content, outline, chapter_number, order_index, word_count, status, project_id, created_at, updated_at)
@@ -226,7 +226,7 @@ class SQLiteAdapter:
     async def get_chapters_by_project(self, project_id: str) -> List[Dict[str, Any]]:
         """获取项目的所有章节"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 rows = conn.execute(
                     'SELECT * FROM chapters WHERE project_id = ? ORDER BY order_index',
                     (project_id,)
@@ -240,7 +240,7 @@ class SQLiteAdapter:
     async def update_project_stats(self, project_id: str) -> bool:
         """更新项目统计信息"""
         try:
-            with self.get_connection() as conn:
+            async with self.get_connection() as conn:
                 # 计算总字数和章节数
                 result = conn.execute('''
                     SELECT COUNT(*) as chapter_count, SUM(word_count) as total_words
