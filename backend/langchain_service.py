@@ -133,7 +133,17 @@ class LangChainService:
             elif config.model_type.lower() == "gemini":
                 if api_key:
                     os.environ["GOOGLE_API_KEY"] = api_key
-                model = init_chat_model(f"google:{config.model_name}")
+                
+                # 允许通过环境变量设置代理/自定义端点
+                api_base = os.environ.get("GEMINI_API_BASE")
+                if api_base:
+                    os.environ["GOOGLE_API_ENDPOINT"] = api_base
+                
+                model_kwargs = {}
+                if config.proxy_url:
+                    model_kwargs["proxy"] = config.proxy_url
+
+                model = init_chat_model(config.model_name, model_provider="google_genai", model_kwargs=model_kwargs)
             elif config.model_type.lower() == "custom":
                 # 自定义模型配置
                 model = init_chat_model(
@@ -158,6 +168,88 @@ class LangChainService:
         """解密API密钥"""
         import base64
         return base64.b64decode(encrypted_key.encode()).decode()
+
+    async def test_model_connection(self, test_data: Any) -> bool:
+        """
+        通过尝试初始化模型来测试连接。
+        如果成功，返回 True。如果失败，则会引发异常。
+        """
+        # 创建一个临时的、符合ModelConfig结构的对象用于测试
+        class TempConfig:
+            def __init__(self, data, service):
+                self.model_type = data.model_type
+                self.model_name = data.model_name
+                # 使用服务中的加密方法
+                self.api_key = service._encrypt_api_key(data.api_key) if data.api_key else None
+                self.api_url = data.api_url
+                # 对于连接测试，使用固定的默认值
+                self.temperature = 0.7
+                self.max_tokens = 100
+                self.id = "test_connection" # 唯一的缓存键
+
+        temp_config = TempConfig(test_data, self)
+        
+        # get_model会处理所有的初始化和认证逻辑
+        # 如果这里出现问题，它会抛出异常，这正是我们想要的
+        await self.get_model(temp_config)
+        
+        # 如果没有异常，说明连接成功
+        return True
+
+    def _encrypt_api_key(self, key: str) -> str:
+        """加密API密钥"""
+        import base64
+        return base64.b64encode(key.encode()).decode()
+
+    async def list_available_models(self, model_type: str, api_key: str, proxy_url: Optional[str] = None) -> List[Dict[str, str]]:
+        """根据API密钥和模型类型获取可用的模型列表"""
+        try:
+            if model_type == "openai":
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key, base_url=proxy_url)
+                models = client.models.list()
+                return [{"value": model.id, "label": model.id} for model in models]
+            
+            elif model_type == "anthropic":
+                return [
+                    {"value": "claude-3-5-sonnet-20241022", "label": "Claude 3.5 Sonnet"},
+                    {"value": "claude-3-5-haiku-20241022", "label": "Claude 3.5 Haiku"},
+                    {"value": "claude-3-opus-20240229", "label": "Claude 3 Opus"},
+                    {"value": "claude-3-sonnet-20240229", "label": "Claude 3 Sonnet"},
+                    {"value": "claude-3-haiku-20240307", "label": "Claude 3 Haiku"},
+                ]
+
+            elif model_type == "gemini":
+                import google.generativeai as genai
+                
+                # 允许通过环境变量设置代理/自定义端点
+                api_base = os.environ.get("GEMINI_API_BASE")
+                if api_base:
+                    # google-auth 库会自动使用这个环境变量
+                    os.environ["GOOGLE_API_ENDPOINT"] = api_base
+
+                # 检查并设置代理
+                effective_proxy = proxy_url or os.environ.get("GEMINI_API_PROXY")
+                client_options = None
+                if effective_proxy:
+                    client_options = {"api_endpoint": api_base} if api_base else {}
+                    genai.configure(
+                        api_key=api_key,
+                        transport="rest",
+                        client_options=client_options,
+                        http_client=genai.HttpProxyClient(effective_proxy)
+                    )
+                else:
+                    genai.configure(api_key=api_key)
+
+                models = genai.list_models()
+                return [{"value": m.name, "label": m.display_name} for m in models if 'generateContent' in m.supported_generation_methods]
+
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+
+        except Exception as e:
+            raise ValueError(f"Failed to fetch models for {model_type}: {str(e)}")
     
     async def generate_chapter_outline(
         self, 

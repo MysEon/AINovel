@@ -248,6 +248,7 @@ class ModelConfigBase(BaseModel):
     stream: Optional[bool] = Field(False, description="流式输出")
     logprobs: Optional[bool] = Field(False, description="对数概率")
     top_logprobs: Optional[int] = Field(0, ge=0, le=20, description="顶部对数概率数量")
+    proxy_url: Optional[str] = Field(None, max_length=500, description="代理URL")
 
 class ModelConfigCreate(ModelConfigBase):
     api_key: Optional[str] = Field(None, min_length=1, max_length=500, description="API密钥将加密存储")
@@ -270,6 +271,7 @@ class ModelConfigUpdate(BaseModel):
     stream: Optional[bool] = Field(None)
     logprobs: Optional[bool] = Field(None)
     top_logprobs: Optional[int] = Field(None, ge=0, le=20)
+    proxy_url: Optional[str] = Field(None, max_length=500)
 
 class ModelConfigResponse(ModelConfigBase):
     id: int
@@ -303,6 +305,15 @@ class TestConnectionResponse(BaseModel):
     success: bool
     message: str
     details: Optional[dict] = None
+
+# 获取模型列表的模型
+class ListModelsRequest(BaseModel):
+    api_key: str = Field(..., description="API Key")
+    model_type: str = Field(..., description="Model type e.g. openai, gemini")
+
+class ModelInfo(BaseModel):
+    value: str
+    label: str
 
 # 提示词模板相关模型
 class PromptTemplateBase(BaseModel):

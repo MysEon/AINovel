@@ -17,7 +17,8 @@ import {
   Empty,
   notification,
   Popconfirm,
-  Tag
+  Tag,
+  Space
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,7 +28,8 @@ import {
   CloseOutlined,
   ApiOutlined,
   LoadingOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  SyncOutlined
 } from '@ant-design/icons';
 import modelConfigService from '../services/modelConfigService';
 import './ModelConfigManager.css';
@@ -43,6 +45,8 @@ const ModelConfigManager = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [form] = Form.useForm();
   const modelType = Form.useWatch('model_type', form);
+  const [modelList, setModelList] = useState([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   useEffect(() => {
     loadConfigs();
@@ -65,6 +69,7 @@ const ModelConfigManager = () => {
 
   const showModal = (config = null) => {
     setEditingConfig(config);
+    setModelList([]);
     if (config) {
       form.setFieldsValue({
         ...config,
@@ -125,14 +130,31 @@ const ModelConfigManager = () => {
 
   const handleTestConnection = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields(['model_type', 'api_url', 'model_name']);
+      let apiKey = form.getFieldValue('api_key');
       setTestingConnection(true);
-      const result = await modelConfigService.testConnection({
-        api_key: values.api_key,
-        api_url: values.api_url,
-        model_type: values.model_type,
-        model_name: values.model_name
-      });
+      let result;
+
+      if (editingConfig && !apiKey) {
+        // 编辑模式，且没有输入新密钥，则测试已保存的密钥
+        notification.info({
+          message: '正在使用已保存的密钥进行测试...'
+        });
+        result = await modelConfigService.testExistingConnection(editingConfig.id);
+      } else if (apiKey) {
+        // 新建模式，或编辑模式下输入了新密钥
+        result = await modelConfigService.testConnection({
+          api_key: apiKey,
+          api_url: values.api_url,
+          model_type: values.model_type,
+          model_name: values.model_name
+        });
+      } else {
+        notification.error({ message: '请输入API密钥以进行测试' });
+        setTestingConnection(false);
+        return;
+      }
+
       if (result.success) {
         notification.success({ message: '连接测试成功!' });
       } else {
@@ -140,7 +162,7 @@ const ModelConfigManager = () => {
       }
     } catch (error) {
         if (error.errorFields) {
-            notification.error({ message: '请先填写必填项' });
+            notification.error({ message: '请先填写模型类型等必填项' });
         } else {
             notification.error({ message: '连接测试失败', description: error.message });
         }
@@ -149,16 +171,39 @@ const ModelConfigManager = () => {
     }
   };
 
-  const getModelOptions = () => {
-    switch (modelType) {
-      case 'openai':
-        return modelConfigService.getOpenAIModels();
-      case 'claude':
-        return modelConfigService.getClaudeModels();
-      case 'gemini':
-        return modelConfigService.getGeminiModels();
-      default:
-        return [];
+  const handleFetchModels = async () => {
+    try {
+      const modelType = form.getFieldValue('model_type');
+      if (!modelType) {
+        notification.error({ message: '请先选择模型类型' });
+        return;
+      }
+
+      let apiKey = form.getFieldValue('api_key');
+      setFetchingModels(true);
+      let models;
+
+      if (editingConfig && !apiKey) {
+        // 编辑模式，且没有输入新密钥，则使用已保存的密钥获取
+        notification.info({ message: '正在使用已保存的密钥获取模型列表...' });
+        models = await modelConfigService.listAvailableModelsById(editingConfig.id);
+      } else if (apiKey) {
+        // 新建模式，或编辑模式下输入了新密钥
+        const proxyUrl = form.getFieldValue('proxy_url');
+        models = await modelConfigService.listAvailableModels(apiKey, modelType, proxyUrl);
+      } else {
+        notification.error({ message: '请输入API密钥以获取模型列表' });
+        setFetchingModels(false);
+        return;
+      }
+
+      setModelList(models);
+      notification.success({ message: '模型列表获取成功' });
+    } catch (error) {
+      notification.error({ message: '获取模型列表失败', description: error.message });
+      setModelList([]);
+    } finally {
+      setFetchingModels(false);
     }
   };
 
@@ -235,7 +280,7 @@ const ModelConfigManager = () => {
                 label="模型类型"
                 rules={[{ required: true, message: '请选择模型类型' }]}
               >
-                <Select placeholder="选择模型类型">
+                <Select placeholder="选择模型类型" onChange={() => setModelList([])}>
                   {modelConfigService.getModelTypes().map(type => (
                     <Option key={type.value} value={type.value}>
                       {type.label}
@@ -246,30 +291,41 @@ const ModelConfigManager = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="model_name"
-                label="模型名称"
-              >
-                {modelType === 'custom' ? (
-                  <Input placeholder="输入自定义模型名称" />
-                ) : (
-                  <Select placeholder="选择模型" allowClear>
-                    {getModelOptions().map(model => (
-                      <Option key={model.value} value={model.value}>
-                        {model.label}
-                      </Option>
-                    ))}
-                  </Select>
-                )}
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="api_key"
                 label="API密钥"
                 rules={[{ required: !editingConfig, message: '请输入API密钥' }]}
                 extra={editingConfig ? `当前: ${editingConfig.api_key_masked}。留空则保持不变。` : ''}
               >
                 <Input.Password placeholder="输入API密钥" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="模型名称"
+                extra={modelType !== 'custom' && "点击右侧按钮获取模型列表"}
+              >
+                <Space.Compact style={{ width: '100%' }}>
+                  <Form.Item
+                    name="model_name"
+                    noStyle
+                    rules={[{ required: modelType === 'custom', message: '请输入自定义模型名称' }]}
+                  >
+                    {modelType === 'custom' ? (
+                      <Input placeholder="输入自定义模型名称" />
+                    ) : (
+                      <Select placeholder="选择模型" allowClear loading={fetchingModels}>
+                        {modelList.map(model => (
+                          <Option key={model.value} value={model.value}>
+                            {model.label}
+                          </Option>
+                        ))}
+                      </Select>
+                    )}
+                  </Form.Item>
+                  {modelType !== 'custom' && (
+                    <Button icon={<SyncOutlined />} onClick={handleFetchModels} loading={fetchingModels} />
+                  )}
+                </Space.Compact>
               </Form.Item>
             </Col>
             {modelType === 'custom' && (
@@ -284,6 +340,15 @@ const ModelConfigManager = () => {
                 </Form.Item>
               </Col>
             )}
+            <Col span={24}>
+              <Form.Item
+                name="proxy_url"
+                label="代理URL"
+                extra="如果需要，请输入代理服务器的URL"
+              >
+                <Input placeholder="http://127.0.0.1:7890" />
+              </Form.Item>
+            </Col>
             <Col span={12}>
               <Form.Item label="温度 (0-2)">
                 <Row>

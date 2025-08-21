@@ -16,6 +16,9 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
+import sys
+import os
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 from models import Base
 target_metadata = Base.metadata
 
@@ -50,8 +53,7 @@ def run_migrations_offline() -> None:
 
 
 import asyncio
-from sqlalchemy.ext.asyncio import async_engine_from_config
-# ... (其他导入)
+from sqlalchemy.ext.asyncio import create_async_engine
 
 def do_run_migrations(connection):
     context.configure(connection=connection, target_metadata=target_metadata)
@@ -60,16 +62,12 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 async def run_async_migrations():
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
+    """In this scenario we need to create an Engine
     and associate a connection with the context.
 
     """
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+    connectable = create_async_engine(
+        config.get_main_option("sqlalchemy.url"), future=True
     )
 
     async with connectable.connect() as connection:
@@ -77,8 +75,8 @@ async def run_async_migrations():
 
     await connectable.dispose()
 
-
 def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
     asyncio.run(run_async_migrations())
 
 
