@@ -13,10 +13,14 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   
   const { addNotification, showConfirmDialog } = useNotification();
 
   const fetchCurrentUser = async (token) => {
+    if (isInitializing) return;
+    setIsInitializing(true);
+    
     try {
       const response = await fetch('/api/auth/me', {
         headers: {
@@ -36,6 +40,8 @@ function AppContent() {
     } catch (error) {
       console.error('Failed to fetch user', error);
       handleLogout();
+    } finally {
+      setIsInitializing(false);
     }
   };
 

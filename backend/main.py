@@ -2,11 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
+from uvicorn.logging import DefaultFormatter
 
 # 配置日志记录器
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+def setup_logging():
+    # 禁用 SQLAlchemy 的日志记录器
+    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
 
+    # 配置 uvicorn 的访问日志
+    access_logger = logging.getLogger('uvicorn.access')
+    access_logger.handlers.clear()
+    handler = logging.StreamHandler()
+    handler.setFormatter(DefaultFormatter("%(levelprefix)s %(client_addr)s - \"%(request_line)s\" %(status_code)s"))
+    access_logger.addHandler(handler)
+
+setup_logging()
 
 from database import create_tables
 from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
