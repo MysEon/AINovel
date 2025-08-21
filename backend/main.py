@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import logging
+
+# 配置日志记录器
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 
 from database import create_tables
 from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
