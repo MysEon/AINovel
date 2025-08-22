@@ -12,7 +12,8 @@ from database import get_db
 from models import User, ModelConfig
 from schemas import (
     ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse, MessageResponse,
-    TestConnectionRequest, TestConnectionResponse
+    TestConnectionRequest, TestConnectionResponse,
+    ListModelsRequest, ModelInfo
 )
 from .auth import get_current_user_dependency
 
@@ -180,51 +181,95 @@ async def test_model_connection(
 ):
     """测试模型配置连接"""
     if not LANGCHAIN_AVAILABLE:
-        return TestConnectionResponse(
-            success=False,
-            message="LangChain服务不可用，请安装相关依赖"
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangChain服务不可用"
         )
     
     try:
-        # 使用LangChain服务统一管理模型连接测试
         langchain_service = LangChainService()
-        
-        # 创建临时配置对象进行测试
-        class TempConfig:
-            def __init__(self, test_data):
-                self.model_type = test_data.model_type
-                self.model_name = test_data.model_name
-                self.api_key = test_data.api_key
-                self.api_url = test_data.api_url
-                self.temperature = test_data.temperature or 0.7
-                self.max_tokens = test_data.max_tokens or 100
-                self.id = "test"
-        
-        temp_config = TempConfig(test_data)
-        
-        # 尝试初始化模型
-        model = langchain_service._get_model(temp_config)
-        
-        if model:
-            return TestConnectionResponse(
-                success=True,
-                message=f"{test_data.model_type} 模型连接测试成功",
-                details={
-                    "model": test_data.model_name or "default",
-                    "provider": test_data.model_type
-                }
-            )
-        else:
-            return TestConnectionResponse(
-                success=False,
-                message=f"无法初始化 {test_data.model_type} 模型"
-            )
-            
+        await langchain_service.test_model_connection(test_data)
+        return TestConnectionResponse(
+            success=True,
+            message=f"{test_data.model_type} 模型连接测试成功",
+            details={
+                "model": test_data.model_name or "default",
+                "provider": test_data.model_type
+            }
+        )
     except Exception as e:
         return TestConnectionResponse(
             success=False,
             message=f"连接测试失败: {str(e)}"
         )
+
+@router.post("/{config_id}/test", response_model=TestConnectionResponse)
+async def test_existing_model_connection(
+    config_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """测试已保存的模型配置连接"""
+    config = await get_model_config(config_id, db, current_user)
+    if not config.api_key:
+        raise HTTPException(status_code=400, detail="该配置没有保存API密钥")
+
+    decrypted_key = pseudo_decrypt(config.api_key)
+    
+    test_data = TestConnectionRequest(
+        api_key=decrypted_key,
+        model_type=config.model_type,
+        model_name=config.model_name,
+        api_url=config.api_url,
+        proxy_url=config.proxy_url if config.enable_proxy else None
+    )
+    
+    return await test_model_connection(test_data, current_user)
+
+@router.post("/{config_id}/list-models", response_model=List[ModelInfo])
+async def list_available_models_by_id(
+    config_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """使用已保存的配置获取模型列表"""
+    config = await get_model_config(config_id, db, current_user)
+    if not config.api_key:
+        raise HTTPException(status_code=400, detail="该配置没有保存API密钥")
+
+    decrypted_key = pseudo_decrypt(config.api_key)
+    
+    request = ListModelsRequest(
+        api_key=decrypted_key,
+        model_type=config.model_type,
+        proxy_url=config.proxy_url if config.enable_proxy else None
+    )
+    return await list_available_models(request, current_user)
+
+@router.post("/list-models", response_model=List[ModelInfo])
+async def list_available_models(
+    request: ListModelsRequest,
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """根据API密钥和模型类型获取可用的模型列表"""
+    if not LANGCHAIN_AVAILABLE:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LangChain服务不可用"
+        )
+    
+    try:
+        langchain_service = LangChainService()
+        models = await langchain_service.list_available_models(
+            request.model_type,
+            request.api_key,
+            request.proxy_url
+        )
+        return models
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取模型列表时发生未知错误: {str(e)}")
 
 # 注意：所有直接的HTTP连接测试已移除，现在统一使用LangChain服务管理
 # 这样确保所有AI功能都通过LangChain/LangGraph框架统一管理

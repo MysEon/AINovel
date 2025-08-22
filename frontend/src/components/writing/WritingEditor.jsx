@@ -1,16 +1,114 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
-import { aiService } from '../../services/aiService';
+import { aiService, getAvailableModelConfigs } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
+import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css'; // 代码高亮样式
 import './WritingEditorSimple.css';
+import useWritingPersistentState from '../../hooks/useWritingPersistentState';
+import { useAIModelConfig } from '../../hooks/useAIModelConfig';
+
+const { Sider, Content } = Layout;
+const { TextArea } = Input;
+const { Option } = Select;
+
+// 智能分段处理函数：识别Markdown语法并添加换行
+const formatAIResponse = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  
+  let formatted = text;
+  
+  // 1. 处理特殊标记（如"---### "），提取纯标题
+  // 清理标题前的装饰符号，只保留标题标记
+  formatted = formatted.replace(/[-*=_]{1,}\s*(#{1,6}\s+)/g, '$1');
+  
+  // 2. 在标题块前后添加换行 (##、### 等)
+  // 修复：确保标题完整匹配，避免分割
+  formatted = formatted.replace(/(^|[^#\n])(#{1,6}\s+[^\n]+)/gm, '$1\n\n$2\n\n');
+  // 处理开头就是标题的情况
+  formatted = formatted.replace(/^(#{1,6}\s+[^\n]+)/gm, '\n\n$1\n\n');
+  
+  // 3. 在加粗文本前后添加适当换行 (**文本** 格式)
+  formatted = formatted.replace(/([^*\n])(\*\*[^*]+\*\*)([^*\n])/g, '$1\n\n$2\n\n$3');
+  
+  // 4. 处理列表项（包括·、-、*、+等符号），确保不在符号和内容间分行
+  // 在句子结束后遇到列表项时添加换行，但保持列表项完整性
+  formatted = formatted.replace(/([.!?。！？])\s*([\-*+·•]\s+[^\n]+)/g, '$1\n\n$2');
+  // 在普通文字后遇到列表项时添加换行
+  formatted = formatted.replace(/(^|\n)([^\-*+·•\n][^\n]*[^\-*+·•:\s\n])\s*([\-*+·•]\s+)/gm, '$1$2\n\n$3');
+  
+  // 5. 处理数字列表，确保"1."和内容保持在同一行
+  // 在句子结束后遇到数字列表时添加换行
+  formatted = formatted.replace(/([.!?。！？])\s*(\d+\.\s+[^\n]+)/g, '$1\n\n$2');
+  // 在普通文字后遇到数字列表时添加换行，但不分割数字列表本身
+  formatted = formatted.replace(/(^|\n)([^\d\n][^\n]*[^\d:\s\n])\s*(\d+\.\s+)/gm, '$1$2\n\n$3');
+  
+  // 6. 在重要标记前添加换行（如"核心思路："、"第一步："等）
+  formatted = formatted.replace(/([.!?。！？])\s*([^:\n]*[：:])/g, '$1\n\n$2');
+  formatted = formatted.replace(/(^|\n)([^:\n]*[：:]\s*$)/gm, '\n\n$2\n');
+  
+  // 7. 在代码块前后添加换行
+  formatted = formatted.replace(/(```[^`]*```)/g, '\n\n$1\n\n');
+  
+  // 8. 在引用块前添加换行
+  formatted = formatted.replace(/(^|\n)(\s*)(>\s+)/gm, '\n\n$2$3');
+  
+  // 9. 在感叹句后添加换行（针对"太棒了！短发飒爽..."这种情况）
+  formatted = formatted.replace(/([!！])\s*([^\s!！\n][^:\n]{10,})/g, '$1\n\n$2');
+  
+  // 10. 在句号后如果紧跟非空格的大写字母、中文或特殊标记，添加换行
+  formatted = formatted.replace(/([.。])\s*([A-Z\u4e00-\u9fff\*][^:\n]{10,})/g, '$1\n\n$2');
+  
+  // 11. 清理多余的连续换行（超过3个换行符的压缩为2个）
+  formatted = formatted.replace(/\n{4,}/g, '\n\n\n');
+  
+  // 12. 去掉开头和结尾的多余换行
+  formatted = formatted.trim();
+  
+  console.log('🔧 [Format Debug] AI回复格式化:', {
+    originalLength: text.length,
+    formattedLength: formatted.length,
+    originalPreview: text.substring(0, 150),
+    formattedPreview: formatted.substring(0, 150),
+    hasNewlines: formatted.includes('\n'),
+    newlineCount: (formatted.match(/\n/g) || []).length,
+    // 显示标题和列表识别情况
+    hasHeaders: /#{1,6}\s+/.test(formatted),
+    headerMatches: formatted.match(/#{1,6}\s+[^\n]+/g) || [],
+    listItems: formatted.match(/[\-*+·•]\s+[^\n]+/g) || [],
+    numberedItems: formatted.match(/\d+\.\s+[^\n]+/g) || []
+  });
+  
+  return formatted;
+};
+const safeConcatChineseText = (existingText, newText) => {
+  // 如果现有文本为空，直接返回新文本
+  if (!existingText) return newText;
+  
+  // 检查现有文本末尾是否有可能被截断的中文字符
+  // UTF-8中文字符通常占用3个字节，检查最后一个字符是否完整
+  const lastChar = existingText.slice(-1);
+  
+  // 如果最后一个字符是中文（Unicode范围），检查是否完整
+  if (/[\u4e00-\u9fff]/.test(lastChar)) {
+    return existingText + newText;
+  }
+  
+  // 如果现有文本以不完整的字节序列结尾，可能会影响拼接
+  // 这里采用保守的方法，直接拼接
+  return existingText + newText;
+};
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
-  const [aiAssisted, setAiAssisted] = useState(false);
-  const [aiMode, setAiMode] = useState('optimize'); // 'optimize' or 'takeover'
-  const [content, setContent] = useState('');
+  // 先声明基本状态
   const [currentChapter, setCurrentChapter] = useState(null);
+  const [content, setContent] = useState('');
   const [chapters, setChapters] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -18,7 +116,30 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [newChapterTitle, setNewChapterTitle] = useState('');
   const [showBatchPublish, setShowBatchPublish] = useState(false);
   const [publishButtonPosition, setPublishButtonPosition] = useState(null);
+  const [modelConfigs, setModelConfigs] = useState([]);
+  const [selectedModelConfig, setSelectedModelConfig] = useState(null);
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
   const { addNotification, showConfirmDialog } = useNotification();
+
+  // 使用全局AI模型配置持久化
+  const { selectedModelConfigId: globalSelectedConfigId, setSelectedModelConfigId: setGlobalSelectedConfigId, isLoaded: configLoaded } = useAIModelConfig();
+
+  // 使用增强型持久化状态管理（现在 currentChapter 已经声明了）
+  const {
+    writingState,
+    setWritingState,
+    aiChatState,
+    setAiChatState,
+    draftState,
+    setDraftState,
+    isRestoring,
+    restorationProgress
+  } = useWritingPersistentState(projectId, currentChapter?.id);
+
+  // 从持久化状态中获取写作相关状态，提供默认值以防状态未恢复
+  const aiAssisted = writingState?.aiAssisted ?? false;
+  const aiMode = writingState?.aiMode ?? 'optimize';
+  const layoutMode = writingState?.layoutMode ?? 'left';
 
   // 当 currentChapter 改变时，也更新 content 和锁定状态
   useEffect(() => {
@@ -31,12 +152,79 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     }
   }, [currentChapter]);
 
-  // 获取项目章节数据
+  // 获取项目章节数据和模型配置
   useEffect(() => {
     if (projectId) {
       fetchChapters();
+      if (configLoaded) {
+        fetchModelConfigs();
+      }
     }
-  }, [projectId]);
+  }, [projectId, configLoaded]);
+
+  // 处理模型配置选择
+  const handleModelConfigChange = (configId) => {
+    const config = modelConfigs.find(c => c.id === configId);
+    if (config) {
+      setSelectedModelConfig(config);
+      aiService.setSelectedModelConfigId(configId);
+      
+      // 使用全局持久化
+      setGlobalSelectedConfigId(configId);
+      
+      addNotification({
+        message: `已切换到 ${config.name} 模型`,
+        type: 'success',
+        duration: 2000
+      });
+    }
+  };
+
+  const fetchModelConfigs = async () => {
+    setIsLoadingConfigs(true);
+    try {
+      console.log('WritingEditor: 开始获取模型配置...');
+      const configs = await getAvailableModelConfigs();
+      console.log('WritingEditor: 获取到的模型配置:', configs);
+      setModelConfigs(configs);
+      
+      // 如果有配置，优先使用全局持久化的配置
+      if (configs.length > 0 && configLoaded) {
+        let configToSelect = null;
+        
+        if (globalSelectedConfigId) {
+          configToSelect = configs.find(c => c.id === globalSelectedConfigId);
+        }
+        
+        if (!configToSelect) {
+          configToSelect = configs[0];
+        }
+        
+        if (configToSelect) {
+          console.log('WritingEditor: 选择模型配置:', configToSelect);
+          setSelectedModelConfig(configToSelect);
+          aiService.setSelectedModelConfigId(configToSelect.id);
+          
+          // 如果全局没有保存这个配置，则保存它
+          if (globalSelectedConfigId !== configToSelect.id) {
+            setGlobalSelectedConfigId(configToSelect.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('WritingEditor: Error fetching model configs:', error);
+      // 只在非401错误时显示通知
+      if (error.message && !error.message.includes('401')) {
+        addNotification({
+          message: '获取AI模型配置失败: ' + error.message,
+          type: 'error',
+          duration: 3000
+        });
+      }
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  };
 
   const fetchChapters = async () => {
     try {
@@ -201,11 +389,26 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   };
 
   const toggleAiAssisted = () => {
-    setAiAssisted(!aiAssisted);
+    const newValue = !aiAssisted;
+    setWritingState(prevState => ({
+      ...prevState,
+      aiAssisted: newValue
+    }));
   };
 
   const handleAiModeChange = (mode) => {
-    setAiMode(mode);
+    setWritingState(prevState => ({
+      ...prevState,
+      aiMode: mode
+    }));
+  };
+
+  const toggleLayout = () => {
+    const newLayoutMode = layoutMode === 'left' ? 'right' : 'left';
+    setWritingState(prevState => ({
+      ...prevState,
+      layoutMode: newLayoutMode
+    }));
   };
 
   const handleChapterChange = async (e) => {
@@ -266,7 +469,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
   // 开启新章
   const handleStartNewChapter = async (title) => {
-    if (!title.trim() || !projectId) return;
+    if (!title.trim() || !projectId) {
+      throw new Error('章节标题不能为空或项目ID无效');
+    }
     
     const newChapterData = {
       title: title,
@@ -275,14 +480,19 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       status: 'draft'
     };
     
-    const newChapter = await createChapter(projectId, newChapterData);
-    
-    setChapters(prev => [...prev, newChapter].sort((a, b) => a.chapter_number - b.chapter_number));
-    setCurrentChapter(newChapter);
-    setNewChapterTitle('');
+    try {
+      const newChapter = await createChapter(projectId, newChapterData);
+      
+      setChapters(prev => [...prev, newChapter].sort((a, b) => a.chapter_number - b.chapter_number));
+      setCurrentChapter(newChapter);
+      setNewChapterTitle('');
 
-    if (onProjectsChange) {
-      onProjectsChange();
+      if (onProjectsChange) {
+        onProjectsChange();
+      }
+    } catch (error) {
+      console.error('创建章节失败:', error);
+      throw error; // 重新抛出错误，让NotificationManager处理
     }
   };
 
@@ -367,6 +577,39 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     );
   }
 
+  // 状态恢复加载界面
+  if (isRestoring && restorationProgress < 100) {
+    return (
+      <div className="writing-editor">
+        <div className="state-restoration-overlay">
+          <div className="restoration-content">
+            <div className="loading-spinner">
+              <Spin size="large" />
+            </div>
+            <div className="restoration-text">
+              正在恢复写作状态...
+            </div>
+            <div className="restoration-progress">
+              <div 
+                className="progress-bar" 
+                style={{ 
+                  width: `${restorationProgress}%`,
+                  height: '4px',
+                  backgroundColor: '#1890ff',
+                  borderRadius: '2px',
+                  transition: 'width 0.3s ease'
+                }} 
+              />
+            </div>
+            <div className="restoration-details" style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+              恢复AI设置、聊天记录和编辑器状态
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="writing-editor">
       <div className="editor-content">
@@ -394,12 +637,18 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             </button>
             </div>
         ) : aiAssisted ? (
-          <AiWritingInterface 
-            content={content} 
-            onContentChange={handleContentChange} 
+          <AiWritingInterface
+            content={content}
+            onContentChange={handleContentChange}
             readOnly={isEditorLocked}
             projectId={projectId}
             currentChapter={currentChapter}
+            layoutMode={layoutMode}
+            modelConfigs={modelConfigs}
+            selectedModelConfig={selectedModelConfig}
+            handleModelConfigChange={handleModelConfigChange}
+            aiChatState={aiChatState}
+            setAiChatState={setAiChatState}
           />
         ) : (
           <RichTextEditor 
@@ -475,23 +724,36 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         </div>
         <div className="footer-right">
           {aiAssisted && (
-            <div className="ai-mode-selector">
-              <span className="ai-mode-label">AI模式:</span>
-              <div className="ai-mode-buttons">
-                <button
-                  className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('optimize')}
-                >
-                  辅助优化型
-                </button>
-                <button
-                  className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
-                  onClick={() => handleAiModeChange('takeover')}
-                >
-                  全面接管型
-                </button>
+            <>
+              <div className="ai-mode-selector">
+                <span className="ai-mode-label">AI模式:</span>
+                <div className="ai-mode-buttons">
+                  <button
+                    className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
+                    onClick={() => handleAiModeChange('optimize')}
+                  >
+                    辅助优化型
+                  </button>
+                  <button
+                    className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
+                    onClick={() => handleAiModeChange('takeover')}
+                  >
+                    全面接管型
+                  </button>
+                </div>
               </div>
-            </div>
+              <Tooltip title={layoutMode === 'left' ? '切换到右侧聊天' : '切换到左侧聊天'}>
+                <Button
+                  type="default"
+                  icon={<FaExchangeAlt />}
+                  onClick={toggleLayout}
+                  size="small"
+                  className="layout-toggle-button"
+                >
+                  布局
+                </Button>
+              </Tooltip>
+            </>
           )}
           <button 
             className="save-button"
@@ -552,41 +814,214 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
-  ]);
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, handleModelConfigChange, aiChatState, setAiChatState }) => {
+  // 从持久化状态恢复聊天记录，如果没有则使用默认消息
+  const [messages, setMessages] = useState(() => {
+    if (aiChatState?.messages && aiChatState.messages.length > 0) {
+      return aiChatState.messages;
+    }
+    return [
+      { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+    ];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const messagesContainerRef = useRef(null);
+  
+  // 用于防止循环更新的标记
+  const isUpdatingFromState = useRef(false);
+  const isUpdatingToState = useRef(false);
+
+  // 当章节变化或aiChatState变化时，更新聊天记录
+  useEffect(() => {
+    if (currentChapter?.id && aiChatState?.messages && !isUpdatingFromState.current) {
+      isUpdatingFromState.current = true;
+      // 如果有持久化的消息记录，使用它
+      if (aiChatState.messages.length > 0) {
+        setMessages(aiChatState.messages);
+      } else {
+        // 如果没有，重置为默认消息
+        const defaultMessages = [
+          { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+        ];
+        setMessages(defaultMessages);
+        // 持久化默认消息
+        if (setAiChatState && !isUpdatingToState.current) {
+          isUpdatingToState.current = true;
+          setAiChatState({ messages: defaultMessages });
+          setTimeout(() => { isUpdatingToState.current = false; }, 0);
+        }
+      }
+      setTimeout(() => { isUpdatingFromState.current = false; }, 0);
+    }
+  }, [currentChapter?.id, aiChatState, setAiChatState]);
+
+  // 消息变化时持久化到存储（只在非初始化更新时）
+  useEffect(() => {
+    if (currentChapter?.id && messages.length > 1 && setAiChatState && !isUpdatingFromState.current && !isUpdatingToState.current) {
+      isUpdatingToState.current = true;
+      setAiChatState({ messages });
+      setTimeout(() => { isUpdatingToState.current = false; }, 0);
+    }
+  }, [messages, currentChapter?.id, setAiChatState]);
+
+  // 开启新对话功能
+  const handleNewChat = () => {
+    const newChatMessages = [
+      { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+    ];
+    setMessages(newChatMessages);
+    // 清空输入框
+    setInput('');
+    // 重置加载状态
+    setIsLoading(false);
+    // 持久化新的聊天记录
+    if (setAiChatState && !isUpdatingToState.current) {
+      isUpdatingToState.current = true;
+      setAiChatState({ messages: newChatMessages });
+      setTimeout(() => { isUpdatingToState.current = false; }, 0);
+    }
+  };
 
   const handleContentChange = (e) => {
     onContentChange(e.target.value);
   };
 
+  // 自动滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, []);
+
+  // 当消息变化时自动滚动到底部
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading, scrollToBottom]);
+
   const handleSend = async () => {
     if (input.trim() === '' || isLoading) return;
 
-    const userMessage = { id: messages.length + 1, role: 'user', content: input };
-    setMessages([...messages, userMessage]);
+    // 检查是否有可用的模型配置
+    if (modelConfigs.length === 0) {
+      const errorMessage = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: '未找到可用的AI模型配置。请先在设置中添加您的AI服务配置（如OpenAI、Claude、Gemini等）。'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    // 保存用户输入的内容
+    const userInputContent = input;
+    const userMessage = { id: messages.length + 1, role: 'user', content: userInputContent };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
+    // 检查是否支持流式输出
+    const supportsStream = selectedModelConfig && selectedModelConfig.stream;
+    
+    // 立即创建AI消息显示"正在思考中"
+    const aiResponseId = messages.length + 2;
+    const aiResponse = {
+      id: aiResponseId,
+      role: 'assistant',
+      content: 'AI正在思考中...',
+      isThinking: true  // 统一标记为思考状态
+    };
+    const messagesWithThinking = [...newMessages, aiResponse];
+    setMessages(messagesWithThinking);
+    
     try {
-      const response = await aiService.chatWithAI(projectId, input, messages);
-      const aiResponse = { 
-        id: messages.length + 2, 
-        role: 'assistant', 
-        content: response.content || response.response || '抱歉，我暂时无法回复。'
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      if (supportsStream) {
+        // 使用流式输出
+        let isFirstChunk = true;
+        // 使用ref来跟踪当前消息内容，避免状态竞争
+        const currentContentRef = { current: '' };
+        
+        await aiService.chatWithAIStream(
+          projectId,
+          userInputContent,  // 传入用户当前输入的内容
+          newMessages,  // 传入包含用户新消息的聊天历史
+          (chunk) => {
+            // 调试信息：显示前端接收到的chunk数据
+            console.log('🎯 [Frontend Debug] 前端接收chunk:', {
+              rawChunk: chunk,
+              chunkType: typeof chunk,
+              chunkLength: chunk?.length || 0,
+              containsNewline: chunk?.includes('\n') || false,
+              containsCarriageReturn: chunk?.includes('\r') || false,
+              hasWhitespace: chunk ? /\s/.test(chunk) : false,
+              isNull: chunk === null,
+              isUndefined: chunk === undefined,
+              isEmpty: chunk === '',
+              charCodes: chunk ? [...chunk].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
+            });
+            
+            // 只过滤null和undefined，保留所有有效内容包括空字符串和换行符
+            // 这对于正确显示AI回复中的段落分隔很重要
+            if (chunk !== null && chunk !== undefined) {
+              // 更新消息内容 - 使用ref避免状态竞争
+              if (isFirstChunk) {
+                currentContentRef.current = chunk;
+                console.log('✅ [Frontend Debug] 设置第一个chunk:', chunk);
+              } else {
+                const oldContent = currentContentRef.current;
+                currentContentRef.current = safeConcatChineseText(currentContentRef.current, chunk);
+                console.log('📝 [Frontend Debug] 拼接chunk:', {
+                  oldContent: oldContent,
+                  newChunk: chunk,
+                  resultContent: currentContentRef.current
+                });
+              }
+              
+              setMessages(prev => prev.map(msg => 
+                msg.id === aiResponseId 
+                  ? { 
+                      ...msg, 
+                      content: formatAIResponse(currentContentRef.current), // 应用智能分段格式化
+                      isThinking: false  // 收到内容后取消思考状态
+                    }
+                  : msg
+              ));
+              if (isFirstChunk) isFirstChunk = false;
+            } else {
+              console.log('⚠️ [Frontend Debug] 跳过chunk (null或undefined):', chunk);
+            }
+          },
+          () => {
+            setIsLoading(false);
+          }
+        );
+      } else {
+        // 使用普通输出
+        const response = await aiService.chatWithAI(projectId, userInputContent, newMessages);  // 传入用户输入内容和包含新消息的历史消息
+        // 更新思考中的消息为实际回复
+        setMessages(prev => prev.map(msg => 
+          msg.id === aiResponseId 
+            ? { 
+                ...msg, 
+                content: formatAIResponse(response.content || response.response || '抱歉，我暂时无法回复。'), // 应用智能分段格式化
+                isThinking: false
+              }
+            : msg
+        ));
+        setIsLoading(false);
+      }
     } catch (error) {
-      const errorMessage = { 
-        id: messages.length + 2, 
-        role: 'assistant', 
-        content: `抱歉，AI服务暂时不可用: ${error.message}`
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
+      // 更新现有消息显示错误信息
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: formatAIResponse(`抱歉，AI服务暂时不可用: ${error.message}`), // 应用智能分段格式化
+              isThinking: false
+            }
+          : msg
+      ));
       setIsLoading(false);
     }
   };
@@ -601,20 +1036,41 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
   const handleAIAction = async (action) => {
     if (!currentChapter || isLoading) return;
 
+    // 检查是否有可用的模型配置
+    if (modelConfigs.length === 0) {
+      const errorMessage = {
+        id: messages.length + 1,
+        role: 'assistant',
+        content: '未找到可用的AI模型配置。请先在设置中添加您的AI服务配置（如OpenAI、Claude、Gemini等）。'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
     setIsLoading(true);
+    
+    // 立即创建AI消息显示"正在思考中"
+    const aiResponseId = messages.length + 1;
+    const aiResponse = {
+      id: aiResponseId,
+      role: 'assistant',
+      content: 'AI正在思考中...',
+      isThinking: true
+    };
+    const messagesWithThinking = [...messages, aiResponse];
+    setMessages(messagesWithThinking);
+    
     try {
       let response;
       switch (action) {
         case 'outline':
           response = await aiService.generateChapterOutline(projectId, {
-            title: currentChapter.title,
-            current_content: content,
-            chapter_number: currentChapter.chapter_number
+            chapter_number: currentChapter.chapter_number,
+            user_requirements: `章节标题: ${currentChapter.title}\n当前内容: ${content}`
           });
           break;
         case 'suggestions':
           response = await aiService.getPlotSuggestions(projectId, {
-            title: currentChapter.title,
             content: content
           });
           break;
@@ -631,107 +1087,393 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           return;
       }
 
-      const aiResponse = { 
-        id: messages.length + 1, 
-        role: 'assistant', 
-        content: response.content || response.suggestions || response.optimized_content || '操作完成'
-      };
-      setMessages(prev => [...prev, aiResponse]);
+      // 更新现有消息显示结果
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: formatAIResponse(response.content || response.suggestions || response.optimized_content || '操作完成'), // 应用智能分段格式化
+              isThinking: false
+            }
+          : msg
+      ));
     } catch (error) {
-      const errorMessage = { 
-        id: messages.length + 1, 
-        role: 'assistant', 
-        content: `${action} 操作失败: ${error.message}`
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // 更新现有消息显示错误
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiResponseId 
+          ? { 
+              ...msg, 
+              content: formatAIResponse(`${action} 操作失败: ${error.message}`), // 应用智能分段格式化
+              isThinking: false
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="ai-writing-interface">
-      <div className="ai-toolbar">
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('outline')}
-          disabled={isLoading}
-          title="生成章节大纲"
-        >
-          <FaMagic /> 大纲
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('suggestions')}
-          disabled={isLoading}
-          title="获取情节建议"
-        >
-          <FaLightbulb /> 建议
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('optimize')}
-          disabled={isLoading}
-          title="优化当前内容"
-        >
-          <FaSpinner /> 优化
-        </button>
-        <button 
-          className="ai-toolbar-btn" 
-          onClick={() => handleAIAction('ideas')}
-          disabled={isLoading}
-          title="生成创意想法"
-        >
-          <FaUsers /> 创意
-        </button>
-      </div>
-      
-      <div className="chat-container">
-        <div className="chat-messages">
-          {messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              <div className="message-content">
-                {message.content}
+  const chatSider = (
+    <Sider width="45%" style={{ background: 'transparent', padding: '0 8px', height: '100%', overflow: 'hidden' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* AI快捷操作按钮 - 固定在顶部 */}
+        <Card
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>AI写作助手</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<FaPlus />}
+                  onClick={handleNewChat}
+                  title="开启新对话"
+                  disabled={isLoading}
+                  style={{ color: '#1890ff' }}
+                >
+                  新对话
+                </Button>
+                {selectedModelConfig && (
+                  <Tag color="blue" style={{ marginRight: 8 }}>
+                    {selectedModelConfig.name}
+                  </Tag>
+                )}
+                <Dropdown
+                  overlay={
+                    <Menu onClick={(e) => handleModelConfigChange(parseInt(e.key))}>
+                      {modelConfigs.map(config => (
+                        <Menu.Item key={config.id}>
+                          {config.name} ({config.model_type})
+                        </Menu.Item>
+                      ))}
+                      {modelConfigs.length === 0 && (
+                        <Menu.Item disabled>
+                          <span style={{ color: '#999' }}>暂无可用模型配置</span>
+                        </Menu.Item>
+                      )}
+                    </Menu>
+                  }
+                  trigger={['click']}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<FaCog />}
+                    title="选择AI模型"
+                    loading={false}
+                  />
+                </Dropdown>
               </div>
             </div>
-          ))}
-          {isLoading && (
-            <div className="message assistant loading">
-              <div className="message-content">
-                <FaSpinner className="spinner" /> AI正在思考中...
-              </div>
+          }
+          style={{
+            borderRadius: '8px 8px 0 0',
+            flexShrink: 0
+          }}
+          bodyStyle={{ padding: '12px 16px' }}
+        >
+          <Space wrap>
+            <Button
+              icon={<FaMagic />}
+              onClick={() => handleAIAction('outline')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              大纲
+            </Button>
+            <Button
+              icon={<FaLightbulb />}
+              onClick={() => handleAIAction('suggestions')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              建议
+            </Button>
+            <Button
+              icon={<FaSpinner />}
+              onClick={() => handleAIAction('optimize')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              优化
+            </Button>
+            <Button
+              icon={<FaUsers />}
+              onClick={() => handleAIAction('ideas')}
+              disabled={isLoading || modelConfigs.length === 0}
+              size="small"
+            >
+              创意
+            </Button>
+          </Space>
+          {modelConfigs.length === 0 && (
+            <div style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
+              请先在设置中配置AI模型
             </div>
           )}
-        </div>
-        <div className="chat-input-container">
-          <textarea
-            className="chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="与AI助手对话，获取写作建议..."
-            rows="3"
-            disabled={isLoading}
-          />
-          <button 
-            className="send-button" 
-            onClick={handleSend}
-            disabled={isLoading || input.trim() === ''}
+        </Card>
+
+        {/* 聊天消息区域 - 固定高度，可滚动 */}
+        <Card 
+          style={{ 
+            flex: 1, 
+            borderRadius: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0, // 关键：允许flex子项收缩
+            overflow: 'hidden' // 关键：防止内容溢出
+          }}
+          bodyStyle={{ 
+            padding: 0, 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden' // 关键：防止内容溢出
+          }}
+        >
+          <div
+            ref={messagesContainerRef}
+            className="messages-container ai-chat-container"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '16px',
+              minHeight: 0, // 关键：允许flex子项收缩
+              maxHeight: 'calc(100vh - 350px)' // 限制最大高度，为footer和其他UI元素预留空间
+            }}
           >
-            {isLoading ? <FaSpinner className="spinner" /> : '发送'}
-          </button>
-        </div>
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                style={{ 
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  alignItems: 'flex-start'
+                }}
+              >
+                {message.role === 'assistant' && (
+                  <Avatar 
+                    icon={<FaRobot />} 
+                    style={{ 
+                      backgroundColor: '#1890ff',
+                      marginRight: '8px',
+                      flexShrink: 0
+                    }}
+                  />
+                )}
+                <div 
+                  style={{ 
+                    maxWidth: '70%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: message.role === 'user' ? 'flex-end' : 'flex-start'
+                  }}
+                >
+                  <div 
+                    style={{ 
+                      padding: '12px 16px',
+                      background: message.role === 'user' ? '#1890ff' : '#f5f5f5',
+                      color: message.role === 'user' ? 'white' : '#333',
+                      borderRadius: '18px',
+                      borderBottomLeftRadius: message.role === 'assistant' ? '4px' : '18px',
+                      borderBottomRightRadius: message.role === 'user' ? '4px' : '18px',
+                      wordBreak: 'break-word',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {message.role === 'assistant' && message.isThinking ? (
+                      <>
+                        <Spin size="small" /> AI正在思考中...
+                      </>
+                    ) : message.role === 'assistant' ? (
+                      <div className="ai-chat-markdown">
+                        {/* 调试信息：显示最终要渲染的消息内容 */}
+                        {console.log('🎨 [Render Debug] 渲染AI消息:', {
+                          messageId: message.id,
+                          messageContent: message.content,
+                          contentLength: message.content?.length || 0,
+                          containsNewline: message.content?.includes('\n') || false,
+                          contentPreview: message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : ''),
+                          charCodes: message.content ? [...message.content.substring(0, 50)].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
+                        })}
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            // 自定义组件样式以适配聊天气泡，确保换行符正确显示
+                            p: ({ children }) => <p style={{ margin: '0.5em 0', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{children}</p>,
+                            h1: ({ children }) => <h1 style={{ fontSize: '1.2em', margin: '0.5em 0', fontWeight: 'bold' }}>{children}</h1>,
+                            h2: ({ children }) => <h2 style={{ fontSize: '1.1em', margin: '0.4em 0', fontWeight: 'bold' }}>{children}</h2>,
+                            h3: ({ children }) => <h3 style={{ fontSize: '1.05em', margin: '0.3em 0', fontWeight: 'bold' }}>{children}</h3>,
+                            ul: ({ children }) => <ul style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ul>,
+                            ol: ({ children }) => <ol style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ol>,
+                            li: ({ children }) => <li style={{ margin: '0.2em 0' }}>{children}</li>,
+                            code: ({ inline, children }) => inline ? 
+                              <code style={{ 
+                                backgroundColor: 'rgba(0,0,0,0.05)', 
+                                padding: '2px 4px', 
+                                borderRadius: '3px',
+                                fontSize: '0.9em',
+                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+                              }}>{children}</code> : 
+                              <code style={{ fontSize: '0.9em' }}>{children}</code>,
+                            pre: ({ children }) => (
+                              <pre style={{ 
+                                backgroundColor: 'rgba(0,0,0,0.05)', 
+                                padding: '12px', 
+                                borderRadius: '6px',
+                                margin: '0.5em 0',
+                                overflow: 'auto',
+                                fontSize: '0.9em',
+                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+                              }}>
+                                {children}
+                              </pre>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote style={{
+                                borderLeft: '4px solid #1890ff',
+                                paddingLeft: '12px',
+                                margin: '0.5em 0',
+                                fontStyle: 'italic',
+                                opacity: 0.8
+                              }}>
+                                {children}
+                              </blockquote>
+                            ),
+                            strong: ({ children }) => <strong style={{ fontWeight: 'bold' }}>{children}</strong>,
+                            em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', textDecoration: 'underline' }}>
+                                {children}
+                              </a>
+                            )
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
+                    )}
+                  </div>
+                  <div 
+                    style={{ 
+                      fontSize: '12px',
+                      color: '#999',
+                      marginTop: '4px',
+                      textAlign: message.role === 'user' ? 'right' : 'left'
+                    }}
+                  >
+                    {message.role === 'user' ? '用户' : 'AI助手'}
+                  </div>
+                </div>
+                {message.role === 'user' && (
+                  <Avatar 
+                    icon={<FaUser />} 
+                    style={{ 
+                      backgroundColor: '#52c41a',
+                      marginLeft: '8px',
+                      flexShrink: 0
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 输入框区域 - 固定在底部 */}
+          <div 
+            className="chat-input-area"
+            style={{ 
+              padding: '16px', 
+              borderTop: '1px solid #f0f0f0',
+              flexShrink: 0,
+              backgroundColor: '#fff'
+            }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <TextArea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="与AI助手对话，获取写作建议..."
+                rows={3}
+                disabled={isLoading}
+                style={{ 
+                  resize: 'none',
+                  flex: 1,
+                  minHeight: '76px'
+                }}
+              />
+              <Button 
+                type="primary"
+                onClick={handleSend}
+                disabled={isLoading || input.trim() === ''}
+                loading={isLoading}
+                style={{ 
+                  height: '76px',
+                  width: '80px',
+                  alignSelf: 'flex-end'
+                }}
+              >
+                发送
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
-      <div className="content-editor">
-        {readOnly && <div className="editor-lock-overlay">编辑区已锁定</div>}
-        <textarea
-          className={`content-textarea ${readOnly ? 'locked' : ''}`}
+    </Sider>
+  );
+
+  const contentArea = (
+    <Content style={{ padding: '0 8px' }}>
+      <Card 
+        title="内容编辑器" 
+        style={{ height: '100%', borderRadius: '8px' }}
+        bodyStyle={{ padding: 0, height: 'calc(100% - 57px)' }}
+      >
+        {readOnly && (
+          <div style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(0, 0, 0, 0.5)', 
+            color: 'white', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 10,
+            borderRadius: '8px'
+          }}>
+            编辑区已锁定
+          </div>
+        )}
+        <TextArea
           value={content}
           onChange={handleContentChange}
           placeholder="在这里创作你的小说内容..."
           readOnly={readOnly}
+          style={{ 
+            height: '100%', 
+            border: 'none', 
+            resize: 'none',
+            borderRadius: '0 0 8px 8px'
+          }}
         />
-      </div>
+      </Card>
+    </Content>
+  );
+
+  return (
+    <div className="ai-writing-interface" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, maxHeight: 'calc(100vh - 200px)' }}>
+      <Layout style={{ flex: 1, background: 'transparent', margin: '8px', minHeight: 0 }}>
+        {layoutMode === 'left' ? chatSider : contentArea}
+        <Divider type="vertical" style={{ margin: '0 4px' }} />
+        {layoutMode === 'left' ? contentArea : chatSider}
+      </Layout>
     </div>
   );
 };

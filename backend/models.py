@@ -176,6 +176,8 @@ class ModelConfig(Base):
     stream = Column(Boolean, default=False)  # 流式输出
     logprobs = Column(Boolean, default=False)  # 对数概率
     top_logprobs = Column(Integer, default=0)  # 顶部对数概率数量
+    proxy_url = Column(String(500), nullable=True) # 新增代理URL字段
+    enable_proxy = Column(Boolean, default=False) # 代理开关
     
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())

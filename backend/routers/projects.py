@@ -29,6 +29,17 @@ async def create_project(
     """
     创建一个新项目
     """
+    # 检查项目名称是否重复
+    result = await db.execute(
+        select(Project).where(Project.name == project_data.name, Project.user_id == current_user.id)
+    )
+    existing_project = result.scalar_one_or_none()
+    if existing_project:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="项目名称已存在，请使用其他名称"
+        )
+
     new_project = Project(
         name=project_data.name,
         description=project_data.description,

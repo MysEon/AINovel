@@ -40,6 +40,43 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   const { showConfirmDialog } = useNotification();
   const { isDarkMode, toggleTheme } = useTheme();
 
+  // 如果是临时用户（网络错误情况），显示提示信息
+  if (user?.is_temp) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '60vh',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{ 
+          fontSize: '64px', 
+          marginBottom: '20px',
+          opacity: 0.3
+        }}>
+          🌐
+        </div>
+        <Title level={2} style={{ marginBottom: '16px' }}>
+          网络连接问题
+        </Title>
+        <Paragraph style={{ marginBottom: '24px', color: '#666' }}>
+          无法连接到服务器，但您的登录状态已保存。请检查网络连接后刷新页面。
+        </Paragraph>
+        <Space>
+          <Button type="primary" onClick={() => window.location.reload()}>
+            刷新页面
+          </Button>
+          <Button onClick={onLogout}>
+            重新登录
+          </Button>
+        </Space>
+      </div>
+    );
+  }
+
   const handleCreateProject = async (values) => {
     setLoading(true);
     try {
@@ -417,7 +454,17 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           <Form.Item
             name="name"
             label="项目名称"
-            rules={[{ required: true, message: '请输入项目名称' }]}
+            rules={[
+              { required: true, message: '请输入项目名称' },
+              {
+                validator: (_, value) => {
+                  if (projects.find(p => p.name === value)) {
+                    return Promise.reject(new Error('项目名称已存在'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
             <Input 
               placeholder="输入项目名称" 

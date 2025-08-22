@@ -248,6 +248,8 @@ class ModelConfigBase(BaseModel):
     stream: Optional[bool] = Field(False, description="流式输出")
     logprobs: Optional[bool] = Field(False, description="对数概率")
     top_logprobs: Optional[int] = Field(0, ge=0, le=20, description="顶部对数概率数量")
+    proxy_url: Optional[str] = Field(None, max_length=500, description="代理URL")
+    enable_proxy: Optional[bool] = Field(False, description="是否启用代理")
 
 class ModelConfigCreate(ModelConfigBase):
     api_key: Optional[str] = Field(None, min_length=1, max_length=500, description="API密钥将加密存储")
@@ -270,6 +272,8 @@ class ModelConfigUpdate(BaseModel):
     stream: Optional[bool] = Field(None)
     logprobs: Optional[bool] = Field(None)
     top_logprobs: Optional[int] = Field(None, ge=0, le=20)
+    proxy_url: Optional[str] = Field(None, max_length=500)
+    enable_proxy: Optional[bool] = Field(None)
 
 class ModelConfigResponse(ModelConfigBase):
     id: int
@@ -303,6 +307,16 @@ class TestConnectionResponse(BaseModel):
     success: bool
     message: str
     details: Optional[dict] = None
+
+# 获取模型列表的模型
+class ListModelsRequest(BaseModel):
+    api_key: str = Field(..., description="API Key")
+    model_type: str = Field(..., description="Model type e.g. openai, gemini")
+    proxy_url: Optional[str] = Field(None, description="Proxy URL")
+
+class ModelInfo(BaseModel):
+    value: str
+    label: str
 
 # 提示词模板相关模型
 class PromptTemplateBase(BaseModel):
@@ -402,4 +416,40 @@ class LangGraphAgentResponse(BaseModel):
     response: str
     messages: List[dict]
     thread_id: str
+    generated_at: datetime
+
+class ChatRequest(BaseModel):
+    project_id: int
+    message: str
+    history: List[dict] = []
+    model_config_id: int
+
+class ChatResponse(BaseModel):
+    success: bool
+    response: str
+    message: str
+    generated_at: datetime
+
+class OptimizeContentRequest(BaseModel):
+    project_id: int
+    content: str
+    optimization_type: str = "general"
+    model_config_id: int
+
+class OptimizeContentResponse(BaseModel):
+    success: bool
+    optimized_content: str
+    message: str
+    generated_at: datetime
+
+class CreativeIdeasRequest(BaseModel):
+    project_id: int
+    prompt: str
+    category: str = "general"
+    model_config_id: int
+
+class CreativeIdeasResponse(BaseModel):
+    success: bool
+    ideas: dict
+    message: str
     generated_at: datetime

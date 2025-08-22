@@ -3,16 +3,92 @@ const API_BASE_URL = '/api';
 
 // 获取认证头
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('ainovel_token');
+  let token = localStorage.getItem('ainovel_token');
+  
+  // 清理token中可能存在的引号包装
+  if (token && typeof token === 'string') {
+    token = token.replace(/^"|"$/g, '');
+  }
+  
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
 };
 
+// 获取用户的默认模型配置
+const getDefaultModelConfig = async () => {
+  try {
+    console.log('正在获取默认模型配置...');
+    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
+      headers: getAuthHeaders()
+    });
+    
+    console.log('默认模型配置API响应状态:', response.status);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('用户未登录或token已过期，无法获取模型配置');
+        return null;
+      }
+      throw new Error('获取模型配置失败');
+    }
+    
+    const configs = await response.json();
+    console.log('获取到的默认模型配置:', configs);
+    // 返回第一个可用的配置，或者null
+    return configs.length > 0 ? configs[0] : null;
+  } catch (error) {
+    console.error('获取默认模型配置失败:', error);
+    return null;
+  }
+};
+
+// 获取所有可用的模型配置
+const getAvailableModelConfigs = async () => {
+  try {
+    console.log('正在获取模型配置...');
+    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
+      headers: getAuthHeaders()
+    });
+    
+    console.log('模型配置API响应状态:', response.status);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('用户未登录或token已过期，无法获取模型配置');
+        return [];
+      }
+      const errorText = await response.text();
+      console.error('模型配置API错误响应:', errorText);
+      throw new Error(`获取模型配置失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('获取到的模型配置:', data);
+    return data;
+  } catch (error) {
+    console.error('获取可用模型配置失败:', error);
+    return [];
+  }
+};
+
+// 检查是否有可用的模型配置
+const hasAvailableModelConfigs = async () => {
+  try {
+    const configs = await getAvailableModelConfigs();
+    return configs.length > 0;
+  } catch (error) {
+    console.error('检查模型配置可用性失败:', error);
+    return false;
+  }
+};
+
 class AIService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/ai`;
+    this.selectedModelConfigId = null; // 存储用户选择的模型配置ID
+    this.loadSelectedModelConfig(); // 启动时加载持久化的配置
   }
 
   async request(endpoint, options = {}) {
@@ -29,85 +105,285 @@ class AIService {
     return response.json();
   }
 
+  // 设置当前使用的模型配置ID
+  setSelectedModelConfigId(configId) {
+    this.selectedModelConfigId = configId;
+    // 持久化到localStorage
+    this.saveSelectedModelConfig(configId);
+  }
+
+  // 从localStorage加载保存的模型配置ID
+  loadSelectedModelConfig() {
+    try {
+      const savedConfigId = localStorage.getItem('ainovel_selected_model_config');
+      if (savedConfigId) {
+        const configId = parseInt(savedConfigId, 10);
+        if (!isNaN(configId)) {
+          this.selectedModelConfigId = configId;
+        }
+      }
+    } catch (error) {
+      console.warn('加载AI模型配置失败:', error);
+    }
+  }
+
+  // 保存选中的模型配置ID到localStorage
+  saveSelectedModelConfig(configId) {
+    try {
+      if (configId && typeof configId === 'number') {
+        localStorage.setItem('ainovel_selected_model_config', configId.toString());
+      } else if (configId === null || configId === undefined) {
+        localStorage.removeItem('ainovel_selected_model_config');
+      }
+    } catch (error) {
+      console.error('保存AI模型配置失败:', error);
+    }
+  }
+
+  // 清除保存的模型配置
+  clearSelectedModelConfig() {
+    this.selectedModelConfigId = null;
+    try {
+      localStorage.removeItem('ainovel_selected_model_config');
+    } catch (error) {
+      console.error('清除AI模型配置失败:', error);
+    }
+  }
+
+  // 获取当前选择的模型配置
+  async getSelectedModelConfig() {
+    try {
+      // 如果有选择的配置ID，优先使用
+      if (this.selectedModelConfigId) {
+        const configs = await getAvailableModelConfigs();
+        const selectedConfig = configs.find(config => config.id === this.selectedModelConfigId);
+        if (selectedConfig) {
+          return selectedConfig;
+        }
+      }
+      
+      // 否则使用默认配置
+      return await getDefaultModelConfig();
+    } catch (error) {
+      console.error('获取选择的模型配置失败:', error);
+      return null;
+    }
+  }
+
+  // 检查是否有可用的模型配置，如果没有则提供详细的错误信息
+  async checkModelConfigAvailability() {
+    const hasConfigs = await hasAvailableModelConfigs();
+    if (!hasConfigs) {
+      throw new Error(
+        '未找到可用的AI模型配置。请前往"设置"或"模型配置"页面添加您的AI服务配置（如OpenAI、Claude、Gemini等）。'
+      );
+    }
+    return true;
+  }
+
   // 章节大纲生成
   async generateChapterOutline(projectId, chapterData) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/chapter-outline', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        title: chapterData.title,
-        current_content: chapterData.current_content || '',
-        chapter_number: chapterData.chapter_number || 1
+        chapter_number: chapterData.chapter_number || 1,
+        user_requirements: chapterData.user_requirements || chapterData.current_content || '',
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 章节草稿生成
   async generateChapterDraft(projectId, outline) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/chapter-draft', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        outline: outline
+        chapter_outline: outline,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 角色对话生成
   async generateCharacterDialogue(projectId, characters, context) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/character-dialogue', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        characters: characters,
-        context: context
+        character_names: characters,
+        situation: context,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 情节发展建议
   async getPlotSuggestions(projectId, currentChapter) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/plot-suggestions', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
-        current_chapter: currentChapter
+        current_chapter_content: currentChapter.content || currentChapter || '',
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // AI智能体对话
   async chatWithAI(projectId, message, history = []) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/chat', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         message: message,
-        history: history
+        history: history,
+        model_config_id: modelConfig.id
       })
     });
   }
 
+  // AI智能体对话 - 流式输出
+  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete) {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
+    const response = await fetch(`${this.baseURL}/chat-stream`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        project_id: projectId,
+        message: message,
+        history: history,
+        model_config_id: modelConfig.id
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.message || 'AI服务请求失败');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // 解码新的数据块，确保UTF-8编码正确处理
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // 安全地按行分割，确保不会在多字节字符中间分割
+        const lines = this.safeSplitLines(buffer);
+        buffer = lines.pop() || ''; // 保留最后一个不完整的行
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              if (onComplete) onComplete();
+              return;
+            }
+            // 调试信息：显示接收到的原始chunk数据
+            console.log('🔍 [AI Stream Debug] 接收到chunk:', {
+              rawData: data,
+              dataLength: data.length,
+              containsNewline: data.includes('\n'),
+              containsCarriageReturn: data.includes('\r'),
+              hasWhitespace: /\s/.test(data),
+              isEmptyString: data === '',
+              charCodes: [...data].map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
+            });
+            
+            // 过滤错误消息，但保留所有有效内容包括换行符
+            // 只过滤null、undefined和错误消息，保留所有其他内容（包括空白字符、换行符等）
+            if (data !== null && data !== undefined && !data.startsWith('错误:')) {
+              if (onChunk) onChunk(data);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('流式输出错误:', error);
+      throw error;
+    }
+  }
+
   // 内容优化
   async optimizeContent(projectId, content, optimizationType = 'general') {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/optimize-content', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         content: content,
-        optimization_type: optimizationType
+        optimization_type: optimizationType,
+        model_config_id: modelConfig.id
       })
     });
   }
 
   // 创意生成
   async generateCreativeIdeas(projectId, prompt, category = 'general') {
+    // 检查模型配置可用性
+    await this.checkModelConfigAvailability();
+    
+    // 获取选择的模型配置
+    const modelConfig = await this.getSelectedModelConfig();
+    
     return this.request('/creative-ideas', {
       method: 'POST',
       body: JSON.stringify({
         project_id: projectId,
         prompt: prompt,
-        category: category
+        category: category,
+        model_config_id: modelConfig.id
       })
     });
   }
@@ -235,7 +511,28 @@ class AIService {
   async getUsageStats(projectId) {
     return this.request(`/usage-stats/${projectId}`);
   }
+
+  // 安全地按行分割文本，确保不会在多字节字符中间分割
+  safeSplitLines(text) {
+    const lines = [];
+    let start = 0;
+    
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '\n') {
+        lines.push(text.slice(start, i));
+        start = i + 1;
+      }
+    }
+    
+    // 添加最后一行（如果没有以换行符结尾）
+    if (start < text.length) {
+      lines.push(text.slice(start));
+    }
+    
+    return lines;
+  }
 }
 
 export const aiService = new AIService();
+export { getAvailableModelConfigs, hasAvailableModelConfigs, getDefaultModelConfig };
 export default aiService;

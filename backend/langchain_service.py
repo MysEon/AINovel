@@ -122,6 +122,15 @@ class LangChainService:
             # 解密API密钥
             api_key = self._decrypt_api_key(config.api_key) if config.api_key else None
             
+            # 设置代理环境变量（如果配置了代理）
+            if config.proxy_url:
+                os.environ["HTTP_PROXY"] = config.proxy_url
+                os.environ["HTTPS_PROXY"] = config.proxy_url
+            else:
+                # 清除代理环境变量
+                os.environ.pop("HTTP_PROXY", None)
+                os.environ.pop("HTTPS_PROXY", None)
+            
             if config.model_type.lower() == "openai":
                 if api_key:
                     os.environ["OPENAI_API_KEY"] = api_key
@@ -130,6 +139,20 @@ class LangChainService:
                 if api_key:
                     os.environ["ANTHROPIC_API_KEY"] = api_key
                 model = init_chat_model(f"anthropic:{config.model_name}")
+            elif config.model_type.lower() == "gemini":
+                if api_key:
+                    os.environ["GOOGLE_API_KEY"] = api_key
+                
+                # 允许通过环境变量设置代理/自定义端点
+                api_base = os.environ.get("GEMINI_API_BASE")
+                if api_base:
+                    os.environ["GOOGLE_API_ENDPOINT"] = api_base
+                
+                model_kwargs = {}
+                if config.proxy_url:
+                    model_kwargs["proxy"] = config.proxy_url
+
+                model = init_chat_model(config.model_name, model_provider="google_genai", model_kwargs=model_kwargs)
             elif config.model_type.lower() == "custom":
                 # 自定义模型配置
                 model = init_chat_model(
@@ -154,6 +177,87 @@ class LangChainService:
         """解密API密钥"""
         import base64
         return base64.b64decode(encrypted_key.encode()).decode()
+
+    async def test_model_connection(self, test_data: Any) -> bool:
+        """
+        通过尝试初始化模型来测试连接。
+        如果成功，返回 True。如果失败，则会引发异常。
+        """
+        # 创建一个临时的、符合ModelConfig结构的对象用于测试
+        class TempConfig:
+            def __init__(self, data, service):
+                self.model_type = data.model_type
+                self.model_name = data.model_name
+                # 使用服务中的加密方法
+                self.api_key = service._encrypt_api_key(data.api_key) if data.api_key else None
+                self.api_url = data.api_url
+                self.proxy_url = getattr(data, 'proxy_url', None)
+                # 对于连接测试，使用固定的默认值
+                self.temperature = 0.7
+                self.max_tokens = 100
+                self.id = "test_connection" # 唯一的缓存键
+
+        temp_config = TempConfig(test_data, self)
+        
+        # get_model会处理所有的初始化和认证逻辑
+        # 如果这里出现问题，它会抛出异常，这正是我们想要的
+        await self.get_model(temp_config)
+        
+        # 如果没有异常，说明连接成功
+        return True
+
+    def _encrypt_api_key(self, key: str) -> str:
+        """加密API密钥"""
+        import base64
+        return base64.b64encode(key.encode()).decode()
+
+    async def list_available_models(self, model_type: str, api_key: str, proxy_url: Optional[str] = None) -> List[Dict[str, str]]:
+        """根据API密钥和模型类型获取可用的模型列表"""
+        try:
+            # 设置代理环境变量
+            if proxy_url:
+                os.environ["HTTP_PROXY"] = proxy_url
+                os.environ["HTTPS_PROXY"] = proxy_url
+            else:
+                os.environ.pop("HTTP_PROXY", None)
+                os.environ.pop("HTTPS_PROXY", None)
+            
+            if model_type == "openai":
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key)
+                models = client.models.list()
+                return [{"value": model.id, "label": model.id} for model in models]
+            
+            elif model_type == "anthropic":
+                return [
+                    {"value": "claude-3-5-sonnet-20241022", "label": "Claude 3.5 Sonnet"},
+                    {"value": "claude-3-5-haiku-20241022", "label": "Claude 3.5 Haiku"},
+                    {"value": "claude-3-opus-20240229", "label": "Claude 3 Opus"},
+                    {"value": "claude-3-sonnet-20240229", "label": "Claude 3 Sonnet"},
+                    {"value": "claude-3-haiku-20240307", "label": "Claude 3 Haiku"},
+                ]
+
+            elif model_type == "gemini":
+                import google.generativeai as genai
+                
+                # 允许通过环境变量设置代理/自定义端点
+                api_base = os.environ.get("GEMINI_API_BASE")
+                if api_base:
+                    # google-auth 库会自动使用这个环境变量
+                    os.environ["GOOGLE_API_ENDPOINT"] = api_base
+
+                # 代理已经通过环境变量HTTP_PROXY和HTTPS_PROXY设置了
+                # 这里直接配置API密钥即可
+                genai.configure(api_key=api_key)
+
+                models = genai.list_models()
+                return [{"value": m.name, "label": m.display_name} for m in models if 'generateContent' in m.supported_generation_methods]
+
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+
+        except Exception as e:
+            raise ValueError(f"Failed to fetch models for {model_type}: {str(e)}")
     
     async def generate_chapter_outline(
         self, 
@@ -364,6 +468,110 @@ class LangChainService:
         
         return context
     
+    async def chat_with_ai_stream_with_context(
+        self,
+        project_context: dict,
+        message: str,
+        history: List[dict],
+        model_config: ModelConfig
+    ):
+        """与AI助手对话 - 流式输出（使用预先获取的上下文数据）"""
+        try:
+            # 初始化模型
+            model = await self.get_model(model_config)
+            
+            # 准备对话历史
+            messages = []
+            
+            # 添加系统提示
+            system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+            
+            messages.append(SystemMessage(content=system_prompt))
+            
+            # 添加历史消息
+            for hist_msg in history:
+                if hist_msg['role'] == 'user':
+                    messages.append(HumanMessage(content=hist_msg['content']))
+                elif hist_msg['role'] == 'assistant':
+                    messages.append(AIMessage(content=hist_msg['content']))
+            
+            # 添加当前消息
+            messages.append(HumanMessage(content=message))
+            
+            # 检查是否支持流式输出
+            if hasattr(model, 'astream'):
+                print(f"使用流式输出，模型类型: {type(model)}")
+                try:
+                    # 使用流式输出
+                    chunk_count = 0
+                    valid_chunk_count = 0
+                    async for chunk in model.astream(messages):
+                        chunk_count += 1
+                        
+                        # 调试：打印前几个chunk的详细信息
+                        if chunk_count <= 5:
+                            print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
+                        
+                        # 检查chunk是否有content属性且内容不为空
+                        if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
+                            valid_chunk_count += 1
+                            yield chunk.content
+                        # 如果chunk本身就是字符串且不为空，直接yield
+                        elif isinstance(chunk, str) and chunk.strip():
+                            valid_chunk_count += 1
+                            yield chunk
+                        # 不处理没有实际content的chunk对象
+                        # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
+                    
+                    print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                    
+                    # 如果没有有效chunks，回退到非流式
+                    if valid_chunk_count == 0:
+                        print("没有接收到有效chunks，回退到非流式输出")
+                        response = await model.ainvoke(messages)
+                        if hasattr(response, 'content') and response.content:
+                            yield response.content
+                        else:
+                            yield str(response)
+                            
+                except Exception as stream_error:
+                    print(f"流式输出失败，回退到非流式: {str(stream_error)}")
+                    # 流式输出失败，回退到非流式
+                    response = await model.ainvoke(messages)
+                    if hasattr(response, 'content') and response.content:
+                        yield response.content
+                    else:
+                        yield str(response)
+            else:
+                # 不支持流式输出，返回完整响应
+                print("模型不支持流式输出，使用非流式")
+                response = await model.ainvoke(messages)
+                if hasattr(response, 'content') and response.content:
+                    yield response.content
+                else:
+                    yield str(response)
+            
+        except Exception as e:
+            print(f"AI对话失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            yield f"抱歉，AI服务暂时不可用: {str(e)}"
+    
     async def _get_characters_info(
         self, 
         project_id: int, 
@@ -494,3 +702,302 @@ class LangGraphService:
 # 全局服务实例
 langchain_service = LangChainService()
 langgraph_service = LangGraphService()
+
+# 添加缺少的方法到LangChainService
+async def chat_with_ai(
+    self,
+    project_id: int,
+    message: str,
+    history: List[dict],
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> str:
+    """与AI助手对话"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self.get_model(model_config)
+        
+        # 准备对话历史
+        messages = []
+        
+        # 添加系统提示
+        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+        
+        messages.append(SystemMessage(content=system_prompt))
+        
+        # 添加历史消息
+        for hist_msg in history:
+            if hist_msg['role'] == 'user':
+                messages.append(HumanMessage(content=hist_msg['content']))
+            elif hist_msg['role'] == 'assistant':
+                messages.append(AIMessage(content=hist_msg['content']))
+        
+        # 添加当前消息
+        messages.append(HumanMessage(content=message))
+        
+        # 生成回复
+        response = await model.ainvoke(messages)
+        
+        return response.content
+        
+    except Exception as e:
+        print(f"AI对话失败: {str(e)}")
+        return f"抱歉，AI服务暂时不可用: {str(e)}"
+
+async def optimize_content(
+    self,
+    project_id: int,
+    content: str,
+    optimization_type: str,
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> str:
+    """优化内容"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self.get_model(model_config)
+        
+        # 准备优化提示
+        optimization_prompt = f"""请优化以下小说内容：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+优化类型：{optimization_type}
+
+原内容：
+{content}
+
+请提供优化后的内容，要求：
+1. 保持原意和核心情节
+2. 改进语言表达和文字流畅度
+3. 增强文学性和可读性
+4. 符合项目的整体风格和设定"""
+        
+        messages = [
+            SystemMessage(content="你是一个专业的小说编辑和内容优化专家。"),
+            HumanMessage(content=optimization_prompt)
+        ]
+        
+        # 生成优化内容
+        response = await model.ainvoke(messages)
+        
+        return response.content
+        
+    except Exception as e:
+        print(f"内容优化失败: {str(e)}")
+        return f"内容优化失败: {str(e)}"
+
+async def generate_creative_ideas(
+    self,
+    project_id: int,
+    prompt: str,
+    category: str,
+    model_config: ModelConfig,
+    db: AsyncSession
+) -> dict:
+    """生成创意想法"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self.get_model(model_config)
+        
+        # 准备创意生成提示
+        creative_prompt = f"""请为以下小说项目生成创意想法：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+用户需求：{prompt}
+
+创意类别：{category}
+
+请提供有创意、有深度的想法，要求：
+1. 符合项目的整体设定和风格
+2. 具有创新性和独特性
+3. 能够推动故事发展或丰富角色塑造
+4. 具有可实施性
+
+请以JSON格式返回，包含以下字段：
+- ideas: 创意想法列表
+- category: 类别
+- difficulty: 实施难度（1-5）
+- impact: 对故事的影响（1-5）"""
+        
+        messages = [
+            SystemMessage(content="你是一个富有创造力的小说写作专家，擅长提供独特的创意想法。"),
+            HumanMessage(content=creative_prompt)
+        ]
+        
+        # 生成创意想法
+        response = await model.ainvoke(messages)
+        
+        # 尝试解析JSON响应
+        try:
+            ideas_json = json.loads(response.content)
+            return ideas_json
+        except json.JSONDecodeError:
+            # 如果不是JSON格式，返回原始内容
+            return {
+                "ideas": [response.content],
+                "category": category,
+                "difficulty": 3,
+                "impact": 3
+            }
+        
+    except Exception as e:
+        print(f"创意想法生成失败: {str(e)}")
+        return {
+            "ideas": [f"创意想法生成失败: {str(e)}"],
+            "category": category,
+            "difficulty": 1,
+            "impact": 1
+        }
+
+async def chat_with_ai_stream(
+    self,
+    project_id: int,
+    message: str,
+    history: List[dict],
+    model_config: ModelConfig,
+    db: AsyncSession
+):
+    """与AI助手对话 - 流式输出"""
+    try:
+        # 获取项目上下文
+        project_context = await self._get_project_context(project_id, db)
+        
+        # 初始化模型
+        model = await self.get_model(model_config)
+        
+        # 准备对话历史
+        messages = []
+        
+        # 添加系统提示
+        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+        
+        messages.append(SystemMessage(content=system_prompt))
+        
+        # 添加历史消息
+        for hist_msg in history:
+            if hist_msg['role'] == 'user':
+                messages.append(HumanMessage(content=hist_msg['content']))
+            elif hist_msg['role'] == 'assistant':
+                messages.append(AIMessage(content=hist_msg['content']))
+        
+        # 添加当前消息
+        messages.append(HumanMessage(content=message))
+        
+        # 检查是否支持流式输出
+        if hasattr(model, 'astream'):
+            print(f"使用流式输出，模型类型: {type(model)}")
+            try:
+                # 使用流式输出
+                chunk_count = 0
+                valid_chunk_count = 0
+                async for chunk in model.astream(messages):
+                    chunk_count += 1
+                    
+                    # 调试：打印前几个chunk的详细信息
+                    if chunk_count <= 5:
+                        print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
+                    
+                    # 检查chunk是否有content属性且内容不为空
+                    if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
+                        valid_chunk_count += 1
+                        yield chunk.content
+                    # 如果chunk本身就是字符串且不为空，直接yield
+                    elif isinstance(chunk, str) and chunk.strip():
+                        valid_chunk_count += 1
+                        yield chunk
+                    # 不处理没有实际content的chunk对象
+                    # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
+                
+                print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                
+                # 如果没有有效chunks，回退到非流式
+                if valid_chunk_count == 0:
+                    print("没有接收到有效chunks，回退到非流式输出")
+                    response = await model.ainvoke(messages)
+                    if hasattr(response, 'content') and response.content:
+                        yield response.content
+                    else:
+                        yield str(response)
+                        
+            except Exception as stream_error:
+                print(f"流式输出失败，回退到非流式: {str(stream_error)}")
+                # 流式输出失败，回退到非流式
+                response = await model.ainvoke(messages)
+                if hasattr(response, 'content') and response.content:
+                    yield response.content
+                else:
+                    yield str(response)
+        else:
+            # 不支持流式输出，返回完整响应
+            print("模型不支持流式输出，使用非流式")
+            response = await model.ainvoke(messages)
+            if hasattr(response, 'content') and response.content:
+                yield response.content
+            else:
+                yield str(response)
+        
+    except Exception as e:
+        print(f"AI对话失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        yield f"抱歉，AI服务暂时不可用: {str(e)}"
+
+# 将方法添加到LangChainService类
+LangChainService.chat_with_ai = chat_with_ai
+LangChainService.optimize_content = optimize_content
+LangChainService.generate_creative_ideas = generate_creative_ideas
+LangChainService.chat_with_ai_stream = chat_with_ai_stream

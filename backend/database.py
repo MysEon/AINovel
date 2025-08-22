@@ -16,14 +16,17 @@ SYNC_DATABASE_URL = "sqlite:///./ainovel.db"
 # 创建异步引擎
 async_engine = create_async_engine(
     DATABASE_URL,
-    echo=True,  # 开发环境下显示SQL语句
-    future=True
+    echo=False,  # 关闭SQL语句输出
+    future=True,
+    pool_pre_ping=True,  # 验证连接可用性
+    pool_recycle=3600,   # 1小时后回收连接
+    connect_args={"check_same_thread": False}  # SQLite特定参数
 )
 
 # 创建同步引擎（用于数据库初始化）
 sync_engine = create_engine(
     SYNC_DATABASE_URL,
-    echo=True,
+    echo=False,  # 关闭SQL语句输出
     future=True
 )
 

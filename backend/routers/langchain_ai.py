@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List, Optional
 from datetime import datetime
+from fastapi.responses import StreamingResponse
 
 from database import get_db
 from models import User, Project, ModelConfig
@@ -18,6 +19,9 @@ from schemas import (
     PlotSuggestionRequest, PlotSuggestionResponse,
     WritingWorkflowRequest, WritingWorkflowResponse,
     LangGraphAgentRequest, LangGraphAgentResponse,
+    ChatRequest, ChatResponse,
+    OptimizeContentRequest, OptimizeContentResponse,
+    CreativeIdeasRequest, CreativeIdeasResponse,
     MessageResponse
 )
 from .auth import get_current_user_dependency
@@ -368,4 +372,179 @@ async def get_project_ai_context(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取项目上下文失败: {str(e)}"
+        )
+
+
+@router.post("/chat", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
+async def chat_with_ai(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """与AI助手对话"""
+    try:
+        # 验证项目权限
+        await get_project_for_user(request.project_id, current_user.id, db)
+        
+        # 获取模型配置
+        model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
+        
+        # 使用LangChain服务进行对话
+        response = await langchain_service.chat_with_ai(
+            request.project_id,
+            request.message,
+            request.history,
+            model_config,
+            db
+        )
+        
+        return ChatResponse(
+            success=True,
+            response=response,
+            message="AI对话成功",
+            generated_at=datetime.now()
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI对话失败: {str(e)}"
+        )
+
+
+@router.post("/chat-stream")
+async def chat_with_ai_stream(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """与AI助手对话 - 流式输出"""
+    try:
+        # 验证项目权限
+        await get_project_for_user(request.project_id, current_user.id, db)
+        
+        # 获取模型配置
+        model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
+        
+        # 预先获取项目上下文数据，避免在流式输出中使用数据库连接
+        project_context = await langchain_service._get_project_context(request.project_id, db)
+        
+        # 直接使用流式生成器
+        async def generate_response():
+            try:
+                # 使用预先获取的项目上下文，不传递数据库连接
+                stream_generator = langchain_service.chat_with_ai_stream_with_context(
+                    project_context,
+                    request.message,
+                    request.history,
+                    model_config
+                )
+                async for chunk in stream_generator:
+                    if chunk:  # 确保chunk不为空
+                        yield f"data: {chunk}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                print(f"流式响应生成错误: {str(e)}")
+                yield f"data: 抱歉，AI服务暂时不可用: {str(e)}\n\n"
+                yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+        
+    except Exception as e:
+        async def generate_error():
+            yield f"data: 错误: {str(e)}\n\n"
+            yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_error(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
+
+
+@router.post("/optimize-content", response_model=OptimizeContentResponse, status_code=status.HTTP_201_CREATED)
+async def optimize_content(
+    request: OptimizeContentRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """优化内容"""
+    try:
+        # 验证项目权限
+        await get_project_for_user(request.project_id, current_user.id, db)
+        
+        # 获取模型配置
+        model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
+        
+        # 优化内容
+        optimized_content = await langchain_service.optimize_content(
+            request.project_id,
+            request.content,
+            request.optimization_type,
+            model_config,
+            db
+        )
+        
+        return OptimizeContentResponse(
+            success=True,
+            optimized_content=optimized_content,
+            message="内容优化成功",
+            generated_at=datetime.now()
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"内容优化失败: {str(e)}"
+        )
+
+
+@router.post("/creative-ideas", response_model=CreativeIdeasResponse, status_code=status.HTTP_201_CREATED)
+async def generate_creative_ideas(
+    request: CreativeIdeasRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """生成创意想法"""
+    try:
+        # 验证项目权限
+        await get_project_for_user(request.project_id, current_user.id, db)
+        
+        # 获取模型配置
+        model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
+        
+        # 生成创意想法
+        ideas = await langchain_service.generate_creative_ideas(
+            request.project_id,
+            request.prompt,
+            request.category,
+            model_config,
+            db
+        )
+        
+        return CreativeIdeasResponse(
+            success=True,
+            ideas=ideas,
+            message="创意想法生成成功",
+            generated_at=datetime.now()
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创意想法生成失败: {str(e)}"
         )

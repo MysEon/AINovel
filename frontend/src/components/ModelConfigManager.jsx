@@ -1,22 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaFlask, FaCheck, FaSpinner } from 'react-icons/fa';
+import {
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Layout,
+  Modal,
+  Row,
+  Select,
+  Slider,
+  Switch,
+  Typography,
+  Spin,
+  Empty,
+  notification,
+  Popconfirm,
+  Tag,
+  Space
+} from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+  SaveOutlined,
+  CloseOutlined,
+  ApiOutlined,
+  LoadingOutlined,
+  QuestionCircleOutlined,
+  SyncOutlined
+} from '@ant-design/icons';
 import modelConfigService from '../services/modelConfigService';
-import Notification from './Notification';
-import UniversalDialog from './UniversalDialog';
 import './ModelConfigManager.css';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const ModelConfigManager = () => {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [notification, setNotification] = useState(null);
   const [testingConnection, setTestingConnection] = useState(false);
-  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null);
-
-  // 表单状态
-  const [formData, setFormData] = useState(modelConfigService.getDefaultConfig());
-  const [errors, setErrors] = useState([]);
+  const [form] = Form.useForm();
+  const modelType = Form.useWatch('model_type', form);
+  const enableProxy = Form.useWatch('enable_proxy', form);
+  const [modelList, setModelList] = useState([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   useEffect(() => {
     loadConfigs();
@@ -28,508 +60,559 @@ const ModelConfigManager = () => {
       const data = await modelConfigService.getModelConfigs();
       setConfigs(data);
     } catch (error) {
-      showNotification('加载配置失败: ' + error.message, 'error');
+      notification.error({
+        message: '加载配置失败',
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const showNotification = (message, type = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // 清除相关错误
-    if (errors.length > 0) {
-      const newErrors = errors.filter(error => !error.includes(field));
-      setErrors(newErrors);
+  const showModal = (config = null) => {
+    setEditingConfig(config);
+    setModelList([]);
+    if (config) {
+      form.setFieldsValue({
+        ...config,
+        api_key: '',
+        stop_sequences: config.stop_sequences ? config.stop_sequences.join(', ') : '',
+      });
+    } else {
+      const defaultConfig = modelConfigService.getDefaultConfig();
+      // 确保stop_sequences是字符串格式
+      if (Array.isArray(defaultConfig.stop_sequences)) {
+        defaultConfig.stop_sequences = defaultConfig.stop_sequences.join(', ');
+      }
+      form.setFieldsValue(defaultConfig);
     }
+    setIsModalVisible(true);
   };
 
-  const handleStopSequencesChange = (value) => {
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    form.resetFields();
+    setEditingConfig(null);
+  };
+
+  const handleSubmit = async (values) => {
     try {
-      const sequences = value.split(',').map(s => s.trim()).filter(s => s);
-      handleInputChange('stop_sequences', sequences);
-    } catch (error) {
-      handleInputChange('stop_sequences', []);
-    }
-  };
-
-  const validateForm = () => {
-    const validationData = { 
-      ...formData,
-      api_key_masked: editingConfig && editingConfig.api_key_masked
-    };
-    const validationErrors = modelConfigService.validateConfig(validationData);
-    setErrors(validationErrors);
-    return validationErrors.length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      let submitData = { ...formData };
+      // 处理stop_sequences字段：如果是字符串则分割，如果是数组则直接使用
+      let stop_sequences = [];
+      if (values.stop_sequences) {
+        if (typeof values.stop_sequences === 'string') {
+          stop_sequences = values.stop_sequences.split(',').map(s => s.trim()).filter(s => s);
+        } else if (Array.isArray(values.stop_sequences)) {
+          stop_sequences = values.stop_sequences;
+        }
+      }
       
-      // 如果是编辑模式且API密钥为空，则从表单数据中移除api_key字段
-      // 这样后端就不会更新API密钥
-      if (editingConfig && editingConfig.api_key_masked && !submitData.api_key) {
+      // 如果未启用代理，清空proxy_url字段
+      if (!values.enable_proxy) {
+        values.proxy_url = '';
+      }
+      
+      const submitData = { ...values, stop_sequences };
+
+      if (editingConfig && !submitData.api_key) {
         delete submitData.api_key;
       }
-      
-      if (isCreating) {
-        await modelConfigService.createModelConfig(submitData);
-        showNotification('配置创建成功', 'success');
-        setIsCreating(false);
-      } else {
+
+      if (editingConfig) {
         await modelConfigService.updateModelConfig(editingConfig.id, submitData);
-        showNotification('配置更新成功', 'success');
-        setEditingConfig(null);
+        notification.success({ message: '配置更新成功' });
+      } else {
+        await modelConfigService.createModelConfig(submitData);
+        notification.success({ message: '配置创建成功' });
       }
       
-      setFormData(modelConfigService.getDefaultConfig());
+      handleCancel();
       loadConfigs();
     } catch (error) {
-      showNotification('保存失败: ' + error.message, 'error');
-    }
-  };
-
-  const handleEdit = (config) => {
-    setEditingConfig(config);
-    setFormData({
-      ...config,
-      api_key: '',  // 清空API密钥字段，显示遮蔽版本
-      stop_sequences: config.stop_sequences || []
-    });
-    
-    // 显示遮蔽的API密钥提示
-    if (config.api_key_masked) {
-      showNotification(`当前API密钥: ${config.api_key_masked}`, 'info');
+      notification.error({
+        message: '保存失败',
+        description: error.message,
+      });
     }
   };
 
   const handleDelete = async (id) => {
-    const config = configs.find(c => c.id === id);
-    if (config) {
-      setDeleteConfirmDialog({
-        id: id,
-        name: config.name
+    try {
+      await modelConfigService.deleteModelConfig(id);
+      notification.success({ message: '配置删除成功' });
+      loadConfigs();
+    } catch (error) {
+      notification.error({
+        message: '删除失败',
+        description: error.message,
       });
     }
   };
 
-  const confirmDelete = async (id) => {
-    try {
-      await modelConfigService.deleteModelConfig(id);
-      showNotification('配置删除成功', 'success');
-      loadConfigs();
-    } catch (error) {
-      showNotification('删除失败: ' + error.message, 'error');
-    } finally {
-      // 确保在删除操作完成后关闭确认对话框
-      setDeleteConfirmDialog(null);
-    }
-  };
-
-  const cancelDelete = () => {
-    setDeleteConfirmDialog(null);
+  const handleCopyConfig = (config) => {
+    // 创建配置的副本，去掉id和用户相关字段
+    const { id, user_id, created_at, updated_at, api_key_masked, ...configCopy } = config;
+    
+    // 为复制的配置添加后缀
+    configCopy.name = `${config.name} (副本)`;
+    // 出于安全考虑，API密钥需要用户重新输入
+    
+    setEditingConfig(null);
+    setModelList([]);
+    form.setFieldsValue({
+      ...configCopy,
+      api_key: '', // 清空API密钥，需要用户重新输入
+      stop_sequences: configCopy.stop_sequences ? configCopy.stop_sequences.join(', ') : '',
+    });
+    setIsModalVisible(true);
+    
+    notification.info({ 
+      message: '配置已复制', 
+      description: '所有参数已复制，但出于安全考虑需要重新输入API密钥' 
+    });
   };
 
   const handleTestConnection = async () => {
-    if (!formData.api_key || !formData.model_type) {
-      showNotification('请先填写API密钥和模型类型', 'error');
-      return;
-    }
-
-    // 自定义模型需要额外的验证
-    if (formData.model_type === 'custom') {
-      if (!formData.api_url) {
-        showNotification('自定义模型必须提供API URL', 'error');
-        return;
-      }
-      if (!formData.model_name) {
-        showNotification('自定义模型必须提供模型名称', 'error');
-        return;
-      }
-    }
-
     try {
+      const values = await form.validateFields(['model_type', 'api_url', 'model_name']);
+      let apiKey = form.getFieldValue('api_key');
       setTestingConnection(true);
-      const result = await modelConfigService.testConnection({
-        api_key: formData.api_key,
-        api_url: formData.api_url,
-        model_type: formData.model_type,
-        model_name: formData.model_name
-      });
-      
-      if (result.success) {
-        showNotification('连接测试成功!', 'success');
+      let result;
+
+      if (editingConfig && !apiKey) {
+        // 编辑模式，且没有输入新密钥，则测试已保存的密钥
+        const proxyStatus = editingConfig.enable_proxy ? ' (使用代理)' : ' (直连)';
+        notification.info({
+          message: `正在使用已保存的密钥进行测试${proxyStatus}...`
+        });
+        result = await modelConfigService.testExistingConnection(editingConfig.id);
+      } else if (apiKey) {
+        // 新建模式，或编辑模式下输入了新密钥
+        const proxyUrl = values.enable_proxy ? values.proxy_url : null;
+        const proxyStatus = values.enable_proxy ? ' (使用代理)' : ' (直连)';
+        notification.info({
+          message: `正在测试连接${proxyStatus}...`
+        });
+        result = await modelConfigService.testConnection({
+          api_key: apiKey,
+          api_url: values.api_url,
+          model_type: values.model_type,
+          model_name: values.model_name,
+          proxy_url: proxyUrl
+        });
       } else {
-        showNotification('连接测试失败: ' + result.message, 'error');
+        notification.error({ message: '请输入API密钥以进行测试' });
+        setTestingConnection(false);
+        return;
+      }
+
+      if (result.success) {
+        const proxyStatus = (values.enable_proxy || (editingConfig && editingConfig.enable_proxy)) ? ' (使用代理)' : ' (直连)';
+        notification.success({ 
+          message: `连接测试成功${proxyStatus}!`,
+          description: result.message 
+        });
+      } else {
+        notification.error({ 
+          message: '连接测试失败', 
+          description: result.message 
+        });
       }
     } catch (error) {
-      showNotification('连接测试失败: ' + error.message, 'error');
+        if (error.errorFields) {
+            notification.error({ message: '请先填写模型类型等必填项' });
+        } else {
+            notification.error({ message: '连接测试失败', description: error.message });
+        }
     } finally {
       setTestingConnection(false);
     }
   };
 
-  const handleCancel = () => {
-    setEditingConfig(null);
-    setIsCreating(false);
-    setFormData(modelConfigService.getDefaultConfig());
-    setErrors([]);
-  };
+  const handleFetchModels = async () => {
+    try {
+      const modelType = form.getFieldValue('model_type');
+      if (!modelType) {
+        notification.error({ message: '请先选择模型类型' });
+        return;
+      }
 
-  const getModelOptions = () => {
-    switch (formData.model_type) {
-      case 'openai':
-        return modelConfigService.getOpenAIModels();
-      case 'claude':
-        return modelConfigService.getClaudeModels();
-      default:
-        return [];
+      let apiKey = form.getFieldValue('api_key');
+      setFetchingModels(true);
+      let models;
+
+      if (editingConfig && !apiKey) {
+        // 编辑模式，且没有输入新密钥，则使用已保存的密钥获取
+        notification.info({ message: '正在使用已保存的密钥获取模型列表...' });
+        models = await modelConfigService.listAvailableModelsById(editingConfig.id);
+      } else if (apiKey) {
+        // 新建模式，或编辑模式下输入了新密钥
+        const enableProxy = form.getFieldValue('enable_proxy');
+        const proxyUrl = enableProxy ? form.getFieldValue('proxy_url') : null;
+        models = await modelConfigService.listAvailableModels(apiKey, modelType, proxyUrl);
+      } else {
+        notification.error({ message: '请输入API密钥以获取模型列表' });
+        setFetchingModels(false);
+        return;
+      }
+
+      setModelList(models);
+      notification.success({ message: '模型列表获取成功' });
+    } catch (error) {
+      notification.error({ message: '获取模型列表失败', description: error.message });
+      setModelList([]);
+    } finally {
+      setFetchingModels(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="model-config-manager">
-        <div className="loading">
-          <FaSpinner className="spinner" />
-          <p>加载配置...</p>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
       </div>
     );
   }
 
   return (
-    <div className="model-config-manager">
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-
-      <div className="manager-header">
-        <h3>模型配置管理</h3>
-        {!isCreating && !editingConfig && (
-          <button 
-            className="btn btn-primary"
-            onClick={() => setIsCreating(true)}
-          >
-            <FaPlus /> 新建配置
-          </button>
-        )}
+    <Layout style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <Title level={3}>模型配置管理</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+          新建配置
+        </Button>
       </div>
 
-      {(isCreating || editingConfig) && (
-        <div className="config-form">
-          <h3>{isCreating ? '新建配置' : '编辑配置'}</h3>
-          
-          {errors.length > 0 && (
-            <div className="error-messages">
-              {errors.map((error, index) => (
-                <div key={index} className="error-message">{error}</div>
-              ))}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>配置名称 *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="输入配置名称"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>模型类型 *</label>
-                <select
-                  value={formData.model_type}
-                  onChange={(e) => handleInputChange('model_type', e.target.value)}
-                  required
-                >
-                  {modelConfigService.getModelTypes().map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>模型名称</label>
-                {formData.model_type === 'custom' ? (
-                  <input
-                    type="text"
-                    value={formData.model_name}
-                    onChange={(e) => handleInputChange('model_name', e.target.value)}
-                    placeholder="输入自定义模型名称"
-                  />
-                ) : (
-                  <select
-                    value={formData.model_name}
-                    onChange={(e) => handleInputChange('model_name', e.target.value)}
+      {configs.length === 0 ? (
+        <Empty description="暂无配置，点击'新建配置'开始创建" />
+      ) : (
+        <Row gutter={[12, 12]}>
+          {configs.map(config => (
+            <Col xs={24} sm={12} md={8} lg={6} xl={4} key={config.id}>
+              <Card
+                size="small"
+                title={
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {config.name}
+                  </div>
+                }
+                actions={[
+                  <CopyOutlined 
+                    key="copy" 
+                    style={{ fontSize: '14px' }} 
+                    onClick={() => handleCopyConfig(config)}
+                    title="复制配置"
+                  />,
+                  <EditOutlined 
+                    key="edit" 
+                    style={{ fontSize: '14px' }} 
+                    onClick={() => showModal(config)} 
+                    title="编辑配置"
+                  />,
+                  <Popconfirm
+                    title="确定要删除这个配置吗？"
+                    onConfirm={() => handleDelete(config.id)}
+                    okText="删除"
+                    cancelText="取消"
+                    icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
                   >
-                    <option value="">选择模型</option>
-                    {getModelOptions().map(model => (
-                      <option key={model.value} value={model.value}>
-                        {model.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>API密钥 *</label>
-                <input
-                  type="password"
-                  value={formData.api_key}
-                  onChange={(e) => handleInputChange('api_key', e.target.value)}
-                  placeholder={editingConfig && editingConfig.api_key_masked ? `当前: ${editingConfig.api_key_masked}` : "输入API密钥"}
-                  required={!editingConfig || !editingConfig.api_key_masked}
-                />
-                {editingConfig && editingConfig.api_key_masked && (
-                  <small style={{ color: '#666', fontSize: '12px' }}>
-                    留空则保持现有密钥不变，输入新密钥将替换现有密钥
-                  </small>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>自定义API URL</label>
-                <input
-                  type="url"
-                  value={formData.api_url}
-                  onChange={(e) => handleInputChange('api_url', e.target.value)}
-                  placeholder="留空使用默认URL"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>温度 (0-2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="2"
-                  value={formData.temperature}
-                  onChange={(e) => handleInputChange('temperature', parseFloat(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>最大令牌数</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.max_tokens}
-                  onChange={(e) => handleInputChange('max_tokens', parseInt(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Top P (0-1)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={formData.top_p}
-                  onChange={(e) => handleInputChange('top_p', parseFloat(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Top K (0-100)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.top_k}
-                  onChange={(e) => handleInputChange('top_k', parseInt(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>频率惩罚 (-2 to 2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="-2"
-                  max="2"
-                  value={formData.frequency_penalty}
-                  onChange={(e) => handleInputChange('frequency_penalty', parseFloat(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>存在惩罚 (-2 to 2)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="-2"
-                  max="2"
-                  value={formData.presence_penalty}
-                  onChange={(e) => handleInputChange('presence_penalty', parseFloat(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>停止序列</label>
-                <input
-                  type="text"
-                  value={formData.stop_sequences.join(', ')}
-                  onChange={(e) => handleStopSequencesChange(e.target.value)}
-                  placeholder="用逗号分隔，如: ###, END"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>流式输出</label>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={formData.stream}
-                    onChange={(e) => handleInputChange('stream', e.target.checked)}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label>对数概率</label>
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={formData.logprobs}
-                    onChange={(e) => handleInputChange('logprobs', e.target.checked)}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label>Top Logprobs (0-20)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={formData.top_logprobs}
-                  onChange={(e) => handleInputChange('top_logprobs', parseInt(e.target.value))}
-                />
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button 
-                type="button" 
-                className="test-connection-btn"
-                onClick={handleTestConnection}
-                disabled={testingConnection}
+                    <DeleteOutlined 
+                      key="delete" 
+                      style={{ fontSize: '14px' }} 
+                      title="删除配置"
+                    />
+                  </Popconfirm>,
+                ]}
+                bodyStyle={{ padding: '12px' }}
               >
-                {testingConnection ? <FaSpinner className="spinner" /> : <FaFlask />}
-                {testingConnection ? '测试中...' : '测试连接'}
-              </button>
-              
-              <div className="action-buttons">
-                <button type="submit" className="save-btn">
-                  <FaSave /> 保存
-                </button>
-                <button type="button" className="cancel-btn" onClick={handleCancel}>
-                  <FaTimes /> 取消
-                </button>
-              </div>
+                <div style={{ marginBottom: '8px' }}>
+                  <Tag color="blue" style={{ fontSize: '11px' }}>{config.model_type}</Tag>
+                  {config.enable_proxy && (
+                    <Tag color="green" style={{ fontSize: '11px', marginLeft: '4px' }}>代理</Tag>
+                  )}
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666' }}>
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>模型:</strong> {config.model_name || '默认'}
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <strong>温度:</strong> {config.temperature}
+                  </div>
+                  <div>
+                    <strong>令牌:</strong> {config.max_tokens}
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
+
+      <Modal
+        title={editingConfig ? '编辑配置' : '新建配置'}
+        open={isModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={800}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="配置名称"
+                rules={[{ required: true, message: '请输入配置名称' }]}
+              >
+                <Input placeholder="输入配置名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="model_type"
+                label="模型类型"
+                rules={[{ required: true, message: '请选择模型类型' }]}
+              >
+                <Select placeholder="选择模型类型" onChange={() => setModelList([])}>
+                  {modelConfigService.getModelTypes().map(type => (
+                    <Option key={type.value} value={type.value}>
+                      {type.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="api_key"
+                label="API密钥"
+                rules={[{ required: !editingConfig, message: '请输入API密钥' }]}
+                extra={editingConfig ? (
+                  <div>
+                    <div style={{ marginBottom: '4px' }}>
+                      <span style={{ color: '#666', fontSize: '12px' }}>
+                        当前密钥: {editingConfig.api_key_masked}
+                      </span>
+                    </div>
+                    <div style={{ color: '#999', fontSize: '11px' }}>
+                      💡 留空保持原密钥，输入新密钥则替换
+                    </div>
+                  </div>
+                ) : ''}
+              >
+                <Input.Password 
+                  placeholder={editingConfig ? "输入新密钥（可选）" : "输入API密钥"} 
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="模型名称"
+                extra={modelType !== 'custom' && "点击右侧按钮获取模型列表"}
+              >
+                <Space.Compact style={{ width: '100%' }}>
+                  <Form.Item
+                    name="model_name"
+                    noStyle
+                    rules={[{ required: modelType === 'custom', message: '请输入自定义模型名称' }]}
+                  >
+                    {modelType === 'custom' ? (
+                      <Input placeholder="输入自定义模型名称" />
+                    ) : (
+                      <Select placeholder="选择模型" allowClear loading={fetchingModels}>
+                        {modelList.map(model => (
+                          <Option key={model.value} value={model.value}>
+                            {model.label}
+                          </Option>
+                        ))}
+                      </Select>
+                    )}
+                  </Form.Item>
+                  {modelType !== 'custom' && (
+                    <Button 
+                      icon={<SyncOutlined />} 
+                      onClick={handleFetchModels} 
+                      loading={fetchingModels}
+                      style={{ 
+                        height: '32px',
+                        borderTopLeftRadius: 0,
+                        borderBottomLeftRadius: 0
+                      }}
+                    />
+                  )}
+                </Space.Compact>
+              </Form.Item>
+            </Col>
+            {modelType === 'custom' && (
+              <Col span={24}>
+                <Form.Item
+                  name="api_url"
+                  label="自定义API URL"
+                  extra="留空使用默认URL"
+                  rules={[{ required: true, message: '自定义模型需要提供API URL' }]}
+                >
+                  <Input placeholder="https://api.example.com/v1" />
+                </Form.Item>
+              </Col>
+            )}
+            <Col span={24}>
+              <Form.Item 
+                name="enable_proxy" 
+                label="启用代理" 
+                valuePropName="checked"
+                extra="开启后需要填写代理地址"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            {enableProxy && (
+              <Col span={24}>
+                <Form.Item
+                  name="proxy_url"
+                  label="代理URL"
+                  extra="请输入代理服务器的URL"
+                  rules={[
+                    { required: true, message: '启用代理时必须填写代理URL' }
+                  ]}
+                >
+                  <Input placeholder="http://127.0.0.1:7890" />
+                </Form.Item>
+              </Col>
+            )}
+            <Col span={12}>
+              <Form.Item label="温度 (0-2)">
+                <Row>
+                  <Col span={12}>
+                    <Form.Item name="temperature" noStyle>
+                      <Slider min={0} max={2} step={0.1} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="temperature" noStyle>
+                      <InputNumber min={0} max={2} step={0.1} style={{ margin: '0 16px' }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="max_tokens"
+                label="最大令牌数"
+              >
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Top P (0-1)">
+                <Row>
+                  <Col span={12}>
+                    <Form.Item name="top_p" noStyle>
+                      <Slider min={0} max={1} step={0.1} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="top_p" noStyle>
+                      <InputNumber min={0} max={1} step={0.1} style={{ margin: '0 16px' }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="top_k"
+                label="Top K (0-100)"
+              >
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="频率惩罚 (-2 to 2)">
+                <Row>
+                  <Col span={12}>
+                    <Form.Item name="frequency_penalty" noStyle>
+                      <Slider min={-2} max={2} step={0.1} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="frequency_penalty" noStyle>
+                      <InputNumber min={-2} max={2} step={0.1} style={{ margin: '0 16px' }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="存在惩罚 (-2 to 2)">
+                <Row>
+                  <Col span={12}>
+                    <Form.Item name="presence_penalty" noStyle>
+                      <Slider min={-2} max={2} step={0.1} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Form.Item name="presence_penalty" noStyle>
+                      <InputNumber min={-2} max={2} step={0.1} style={{ margin: '0 16px' }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="stop_sequences"
+                label="停止序列"
+                extra="用逗号分隔, 如: ###, END"
+              >
+                <Input placeholder="###, END" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="stream" label="流式输出" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="logprobs" label="对数概率" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="top_logprobs"
+                label="Top Logprobs (0-20)"
+              >
+                <InputNumber min={0} max={20} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
+            <Button
+              icon={<ApiOutlined />}
+              onClick={handleTestConnection}
+              loading={testingConnection}
+            >
+              测试连接
+            </Button>
+            <div>
+              <Button onClick={handleCancel} style={{ marginRight: 8 }}>
+                取消
+              </Button>
+              <Button type="primary" htmlType="submit">
+                保存
+              </Button>
             </div>
-          </form>
-        </div>
-      )}
-
-      <div className="configs-list">
-        <h3>现有配置</h3>
-        {configs.length === 0 ? (
-          <div className="no-configs">
-            <p>暂无配置，点击"新建配置"开始创建</p>
           </div>
-        ) : (
-          <div className="configs-grid">
-            {configs.map(config => (
-              <div key={config.id} className="config-card">
-                <div className="config-header">
-                  <h4>{config.name}</h4>
-                  <div className="config-actions">
-                    <button 
-                      className="btn-icon"
-                      onClick={() => handleEdit(config)}
-                      title="编辑"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button 
-                      className="btn-icon btn-danger"
-                      onClick={() => handleDelete(config.id)}
-                      title="删除"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="config-details">
-                  <div className="config-item">
-                    <span className="label">模型类型:</span>
-                    <span className="value">{config.model_type}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">模型名称:</span>
-                    <span className="value">{config.model_name || '默认'}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">温度:</span>
-                    <span className="value">{config.temperature}</span>
-                  </div>
-                  <div className="config-item">
-                    <span className="label">最大令牌:</span>
-                    <span className="value">{config.max_tokens}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {deleteConfirmDialog && (
-        <UniversalDialog
-          title="删除配置"
-          message={`确定要删除配置 "${deleteConfirmDialog.name}" 吗？此操作无法撤销。`}
-          type="warning"
-          confirmText="删除"
-          cancelText="取消"
-          onConfirm={() => confirmDelete(deleteConfirmDialog.id)}
-          onCancel={cancelDelete}
-        />
-      )}
-    </div>
+        </Form>
+      </Modal>
+    </Layout>
   );
 };
 

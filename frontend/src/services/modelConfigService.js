@@ -2,7 +2,13 @@ const API_BASE_URL = '/api';
 
 // 获取认证头
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('ainovel_token');
+  let token = localStorage.getItem('ainovel_token');
+  
+  // 清理token中可能存在的引号包装
+  if (token && typeof token === 'string') {
+    token = token.replace(/^"|"$/g, '');
+  }
+  
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -69,35 +75,36 @@ class ModelConfigService {
     });
   }
 
+  // 测试已保存的连接
+  async testExistingConnection(configId) {
+    return this.request(`/${configId}/test`, {
+      method: 'POST',
+    });
+  }
+
   // 获取模型类型列表
   getModelTypes() {
     return [
       { value: 'openai', label: 'OpenAI' },
       { value: 'claude', label: 'Claude' },
+      { value: 'gemini', label: 'Gemini' },
       { value: 'custom', label: '自定义' },
     ];
   }
 
-  // 获取OpenAI模型列表
-  getOpenAIModels() {
-    return [
-      { value: 'gpt-4', label: 'GPT-4' },
-      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-      { value: 'gpt-4o', label: 'GPT-4o' },
-      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-    ];
+  // 从后端获取可用模型列表
+  async listAvailableModels(apiKey, modelType, proxyUrl) {
+    return this.request('/list-models', {
+      method: 'POST',
+      body: JSON.stringify({ api_key: apiKey, model_type: modelType, proxy_url: proxyUrl }),
+    });
   }
 
-  // 获取Claude模型列表
-  getClaudeModels() {
-    return [
-      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-      { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-      { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
-    ];
+  // 使用已保存的配置获取模型列表
+  async listAvailableModelsById(configId) {
+    return this.request(`/${configId}/list-models`, {
+      method: 'POST',
+    });
   }
 
   // 验证模型配置
@@ -148,6 +155,11 @@ class ModelConfigService {
       errors.push('Top Logprobs值必须在0-20之间');
     }
 
+    // 检查代理配置
+    if (config.enable_proxy && (!config.proxy_url || config.proxy_url.trim() === '')) {
+      errors.push('启用代理时必须填写代理URL');
+    }
+
     return errors;
   }
 
@@ -169,6 +181,8 @@ class ModelConfigService {
       stream: false,
       logprobs: false,
       top_logprobs: 0,
+      proxy_url: '',
+      enable_proxy: false,
     };
   }
 }
