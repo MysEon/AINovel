@@ -84,6 +84,12 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Token validation error:', error);
+      // 如果网络错误，可能是后端服务未启动，此时应该保留登录状态
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        console.log('Network error - backend might be down, preserving login state');
+        // 返回一个模拟的用户数据，保持登录状态
+        return { id: 'temp', username: 'temp_user', is_temp: true };
+      }
       return false;
     }
   };
@@ -108,6 +114,14 @@ function AppContent() {
       
       console.log('Step 2: Token validated successfully, setting user data');
       setUser(userData);
+      
+      // 如果是临时用户（网络错误情况），跳过项目获取
+      if (userData.is_temp) {
+        console.log('Using temporary user due to network issues, skipping project fetch');
+        setCurrentView('dashboard');
+        console.log('=== App initialization completed with temporary user ===');
+        return;
+      }
       
       // 获取用户的项目数据
       console.log('Step 3: Fetching user projects...');
@@ -184,7 +198,35 @@ function AppContent() {
     }
     
     console.log('Checking for saved token...');
-    const savedToken = storageHealthCheck.safeGetLocalStorage('ainovel_token');
+    let savedToken = null;
+    
+    // 尝试从多个存储位置获取token
+    try {
+      // 方式1：从storageHealthCheck获取
+      savedToken = storageHealthCheck.safeGetLocalStorage('ainovel_token');
+      
+      // 方式2：从备份位置获取
+      if (!savedToken) {
+        savedToken = localStorage.getItem('ainovel_token_backup');
+        if (savedToken) {
+          console.log('Found token in backup storage');
+          // 恢复到主存储位置
+          storageHealthCheck.safeSetLocalStorage('ainovel_token', savedToken);
+        }
+      }
+      
+      // 方式3：从sessionStorage获取
+      if (!savedToken) {
+        savedToken = sessionStorage.getItem('ainovel_token');
+        if (savedToken) {
+          console.log('Found token in session storage');
+          // 恢复到主存储位置
+          storageHealthCheck.safeSetLocalStorage('ainovel_token', savedToken);
+        }
+      }
+    } catch (error) {
+      console.error('Error retrieving token from storage:', error);
+    }
     
     if (savedToken) {
       console.log('Found saved token, initializing app...');
@@ -217,7 +259,24 @@ function AppContent() {
     // 确保 token 没有引号包装
     const cleanToken = typeof token === 'string' ? token.replace(/^"|"$/g, '') : token;
     console.log('handleLogin: Saving cleaned token:', cleanToken.substring(0, 20) + '...');
-    storageHealthCheck.safeSetLocalStorage('ainovel_token', cleanToken);
+    
+    // 使用多种方式保存token，确保至少有一种方式成功
+    try {
+      // 方式1：使用storageHealthCheck
+      storageHealthCheck.safeSetLocalStorage('ainovel_token', cleanToken);
+      
+      // 方式2：直接保存作为备份
+      localStorage.setItem('ainovel_token_backup', cleanToken);
+      
+      // 方式3：sessionStorage作为额外备份
+      sessionStorage.setItem('ainovel_token', cleanToken);
+      
+      console.log('Token saved using multiple storage methods');
+    } catch (error) {
+      console.error('Error saving token to storage:', error);
+      // 即使保存失败，也尝试继续初始化
+    }
+    
     initializeApp(cleanToken);
   };
 
@@ -230,14 +289,23 @@ function AppContent() {
     setIsRestoring(false);
     setIsInitializing(false);
     
-    // 使用安全的清理方法
-    ['ainovel_user', 'ainovel_token', 'ainovel_last_view', 'ainovel_current_project'].forEach(key => {
+    // 使用安全的清理方法，清理所有存储位置
+    const keysToRemove = ['ainovel_user', 'ainovel_token', 'ainovel_token_backup', 'ainovel_last_view', 'ainovel_current_project'];
+    
+    keysToRemove.forEach(key => {
       try {
         localStorage.removeItem(key);
       } catch (error) {
         console.warn(`Failed to remove ${key} from localStorage:`, error);
       }
     });
+    
+    // 清理sessionStorage
+    try {
+      sessionStorage.removeItem('ainovel_token');
+    } catch (error) {
+      console.warn('Failed to remove token from sessionStorage:', error);
+    }
     
     console.log('Logout completed');
   };
