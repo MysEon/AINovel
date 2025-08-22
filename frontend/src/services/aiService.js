@@ -325,8 +325,20 @@ class AIService {
               if (onComplete) onComplete();
               return;
             }
-            // 加强空内容过滤：检查数据是否存在、不是错误消息、且不为空白
-            if (data && data.trim() && !data.startsWith('错误:')) {
+            // 调试信息：显示接收到的原始chunk数据
+            console.log('🔍 [AI Stream Debug] 接收到chunk:', {
+              rawData: data,
+              dataLength: data.length,
+              containsNewline: data.includes('\n'),
+              containsCarriageReturn: data.includes('\r'),
+              hasWhitespace: /\s/.test(data),
+              isEmptyString: data === '',
+              charCodes: [...data].map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
+            });
+            
+            // 过滤错误消息，但保留所有有效内容包括换行符
+            // 只过滤null、undefined和错误消息，保留所有其他内容（包括空白字符、换行符等）
+            if (data !== null && data !== undefined && !data.startsWith('错误:')) {
               if (onChunk) onChunk(data);
             }
           }
