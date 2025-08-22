@@ -3,7 +3,13 @@ const API_BASE_URL = '/api';
 
 // 获取认证头
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('ainovel_token');
+  let token = localStorage.getItem('ainovel_token');
+  
+  // 清理token中可能存在的引号包装
+  if (token && typeof token === 'string') {
+    token = token.replace(/^"|"$/g, '');
+  }
+  
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -14,7 +20,7 @@ const getAuthHeaders = () => {
 const getDefaultModelConfig = async () => {
   try {
     console.log('正在获取默认模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
+    const response = await fetch(`${API_BASE_URL}/model-configs`, {
       headers: getAuthHeaders()
     });
     
@@ -42,7 +48,7 @@ const getDefaultModelConfig = async () => {
 const getAvailableModelConfigs = async () => {
   try {
     console.log('正在获取模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
+    const response = await fetch(`${API_BASE_URL}/model-configs`, {
       headers: getAuthHeaders()
     });
     

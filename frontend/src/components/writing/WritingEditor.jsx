@@ -10,17 +10,16 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css'; // 代码高亮样式
 import './WritingEditorSimple.css';
+import useWritingPersistentState from '../../hooks/useWritingPersistentState';
 
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
-  const [aiAssisted, setAiAssisted] = useState(false);
-  const [aiMode, setAiMode] = useState('optimize'); // 'optimize' or 'takeover'
-  const [layoutMode, setLayoutMode] = useState('left'); // 'left' or 'right' - chat on left or right
-  const [content, setContent] = useState('');
+  // 先声明基本状态
   const [currentChapter, setCurrentChapter] = useState(null);
+  const [content, setContent] = useState('');
   const [chapters, setChapters] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -32,6 +31,23 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [selectedModelConfig, setSelectedModelConfig] = useState(null);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
   const { addNotification, showConfirmDialog } = useNotification();
+
+  // 使用增强型持久化状态管理（现在 currentChapter 已经声明了）
+  const {
+    writingState,
+    setWritingState,
+    aiChatState,
+    setAiChatState,
+    draftState,
+    setDraftState,
+    isRestoring,
+    restorationProgress
+  } = useWritingPersistentState(projectId, currentChapter?.id);
+
+  // 从持久化状态中获取写作相关状态，提供默认值以防状态未恢复
+  const aiAssisted = writingState?.aiAssisted ?? false;
+  const aiMode = writingState?.aiMode ?? 'optimize';
+  const layoutMode = writingState?.layoutMode ?? 'left';
 
   // 当 currentChapter 改变时，也更新 content 和锁定状态
   useEffect(() => {
@@ -58,6 +74,13 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     if (config) {
       setSelectedModelConfig(config);
       aiService.setSelectedModelConfigId(configId);
+      
+      // 持久化选中的模型配置
+      setWritingState(prevState => ({
+        ...prevState,
+        selectedModelConfigId: configId
+      }));
+      
       addNotification({
         message: `已切换到 ${config.name} 模型`,
         type: 'success',
@@ -74,12 +97,24 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       console.log('WritingEditor: 获取到的模型配置:', configs);
       setModelConfigs(configs);
       
-      // 如果有配置且没有选择过配置，选择第一个
-      if (configs.length > 0 && !selectedModelConfig) {
-        const firstConfig = configs[0];
-        console.log('WritingEditor: 选择第一个模型配置:', firstConfig);
-        setSelectedModelConfig(firstConfig);
-        aiService.setSelectedModelConfigId(firstConfig.id);
+      // 如果有配置且没有选择过配置，优先从持久化状态恢复，否则选择第一个
+      if (configs.length > 0) {
+        const savedConfigId = writingState?.selectedModelConfigId;
+        let configToSelect = null;
+        
+        if (savedConfigId) {
+          configToSelect = configs.find(c => c.id === savedConfigId);
+        }
+        
+        if (!configToSelect && !selectedModelConfig) {
+          configToSelect = configs[0];
+        }
+        
+        if (configToSelect) {
+          console.log('WritingEditor: 选择模型配置:', configToSelect);
+          setSelectedModelConfig(configToSelect);
+          aiService.setSelectedModelConfigId(configToSelect.id);
+        }
       }
     } catch (error) {
       console.error('WritingEditor: Error fetching model configs:', error);
@@ -259,15 +294,26 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   };
 
   const toggleAiAssisted = () => {
-    setAiAssisted(!aiAssisted);
+    const newValue = !aiAssisted;
+    setWritingState(prevState => ({
+      ...prevState,
+      aiAssisted: newValue
+    }));
   };
 
   const handleAiModeChange = (mode) => {
-    setAiMode(mode);
+    setWritingState(prevState => ({
+      ...prevState,
+      aiMode: mode
+    }));
   };
 
   const toggleLayout = () => {
-    setLayoutMode(layoutMode === 'left' ? 'right' : 'left');
+    const newLayoutMode = layoutMode === 'left' ? 'right' : 'left';
+    setWritingState(prevState => ({
+      ...prevState,
+      layoutMode: newLayoutMode
+    }));
   };
 
   const handleChapterChange = async (e) => {
@@ -436,6 +482,39 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     );
   }
 
+  // 状态恢复加载界面
+  if (isRestoring && restorationProgress < 100) {
+    return (
+      <div className="writing-editor">
+        <div className="state-restoration-overlay">
+          <div className="restoration-content">
+            <div className="loading-spinner">
+              <Spin size="large" />
+            </div>
+            <div className="restoration-text">
+              正在恢复写作状态...
+            </div>
+            <div className="restoration-progress">
+              <div 
+                className="progress-bar" 
+                style={{ 
+                  width: `${restorationProgress}%`,
+                  height: '4px',
+                  backgroundColor: '#1890ff',
+                  borderRadius: '2px',
+                  transition: 'width 0.3s ease'
+                }} 
+              />
+            </div>
+            <div className="restoration-details" style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+              恢复AI设置、聊天记录和编辑器状态
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="writing-editor">
       <div className="editor-content">
@@ -473,6 +552,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             modelConfigs={modelConfigs}
             selectedModelConfig={selectedModelConfig}
             onModelConfigChange={handleModelConfigChange}
+            aiChatState={aiChatState}
+            setAiChatState={setAiChatState}
           />
         ) : (
           <RichTextEditor 
@@ -638,13 +719,47 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, onModelConfigChange }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
-  ]);
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, onModelConfigChange, aiChatState, setAiChatState }) => {
+  // 从持久化状态恢复聊天记录，如果没有则使用默认消息
+  const [messages, setMessages] = useState(() => {
+    if (aiChatState?.messages && aiChatState.messages.length > 0) {
+      return aiChatState.messages;
+    }
+    return [
+      { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+    ];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef(null);
+
+  // 当章节变化或aiChatState变化时，更新聊天记录
+  useEffect(() => {
+    if (currentChapter?.id && aiChatState?.messages) {
+      // 如果有持久化的消息记录，使用它
+      if (aiChatState.messages.length > 0) {
+        setMessages(aiChatState.messages);
+      } else {
+        // 如果没有，重置为默认消息
+        const defaultMessages = [
+          { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+        ];
+        setMessages(defaultMessages);
+        // 持久化默认消息
+        if (setAiChatState) {
+          setAiChatState({ messages: defaultMessages });
+        }
+      }
+    }
+  }, [currentChapter?.id, aiChatState, setAiChatState]);
+
+  // 消息变化时持久化到存储
+  useEffect(() => {
+    if (currentChapter?.id && messages.length > 1 && setAiChatState) {
+      // 避免只有默认消息时的重复持久化
+      setAiChatState({ messages });
+    }
+  }, [messages, currentChapter?.id, setAiChatState]);
 
   const handleContentChange = (e) => {
     onContentChange(e.target.value);
@@ -677,7 +792,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
     }
 
     const userMessage = { id: messages.length + 1, role: 'user', content: input };
-    setMessages([...messages, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
@@ -692,7 +808,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
       content: 'AI正在思考中...',
       isThinking: true  // 统一标记为思考状态
     };
-    setMessages(prev => [...prev, aiResponse]);
+    const messagesWithThinking = [...newMessages, aiResponse];
+    setMessages(messagesWithThinking);
     
     try {
       if (supportsStream) {
@@ -702,7 +819,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         await aiService.chatWithAIStream(
           projectId,
           input,
-          messages,
+          newMessages,  // 传入用户消息前的聊天历史
           (chunk) => {
             // 过滤空内容chunk
             if (!chunk || !chunk.trim()) {
@@ -727,7 +844,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         );
       } else {
         // 使用普通输出
-        const response = await aiService.chatWithAI(projectId, input, messages);
+        const response = await aiService.chatWithAI(projectId, input, newMessages);  // 传入用户消息前的聊天历史
         // 更新思考中的消息为实际回复
         setMessages(prev => prev.map(msg => 
           msg.id === aiResponseId 
@@ -786,7 +903,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
       content: 'AI正在思考中...',
       isThinking: true
     };
-    setMessages(prev => [...prev, aiResponse]);
+    const messagesWithThinking = [...messages, aiResponse];
+    setMessages(messagesWithThinking);
     
     try {
       let response;

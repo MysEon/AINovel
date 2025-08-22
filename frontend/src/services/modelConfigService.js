@@ -2,7 +2,13 @@ const API_BASE_URL = '/api';
 
 // 获取认证头
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('ainovel_token');
+  let token = localStorage.getItem('ainovel_token');
+  
+  // 清理token中可能存在的引号包装
+  if (token && typeof token === 'string') {
+    token = token.replace(/^"|"$/g, '');
+  }
+  
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`

@@ -3,9 +3,11 @@ import { App as AntdApp } from 'antd';
 import AuthPage from './components/AuthPage';
 import ProjectDashboard from './components/ProjectDashboard';
 import ProjectEditor from './components/ProjectEditor';
+import ErrorBoundary from './components/ErrorBoundary';
 import { NotificationProvider, useNotification } from './components/NotificationManager';
 import { createProject as createProjectAPI, getUserProjects, deleteProject, getProject } from './services/projectService';
 import usePersistentState from './hooks/usePersistentState';
+import storageHealthCheck from './utils/storageHealthCheck';
 import './App.css';
 
 function AppContent() {
@@ -21,10 +23,15 @@ function AppContent() {
 
   // 验证项目是否有效
   const validateProject = async (project) => {
-    if (!project || !project.id) return null;
+    if (!project || !project.id) {
+      console.log('No project to validate');
+      return null;
+    }
     
     try {
+      console.log('Validating project:', project.id);
       const validProject = await getProject(project.id);
+      console.log('Project validation successful:', validProject);
       return validProject;
     } catch (error) {
       console.warn(`Project ${project.id} is no longer accessible:`, error);
@@ -34,30 +41,80 @@ function AppContent() {
     }
   };
 
-  // 增强的初始化逻辑
-  const initializeApp = async (token) => {
-    setIsInitializing(true);
+  // 验证Token是否有效的辅助函数
+  const validateToken = async (token) => {
+    if (!token) {
+      console.log('No token to validate');
+      return false;
+    }
+    
+    console.log('Validating token format...');
+    // 检查token格式是否合理
+    if (typeof token !== 'string' || token.length < 10) {
+      console.log('Token format is invalid');
+      return false;
+    }
     
     try {
-      // 验证用户身份
+      console.log('Testing token with /api/auth/me...');
       const response = await fetch('/api/auth/me', {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
+      
+      console.log('Token validation response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('Token is valid, user data:', userData);
+        return userData;
+      } else {
+        console.log('Token validation failed');
+        if (response.status === 401) {
+          console.log('Token is expired or invalid');
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  };
 
-      if (!response.ok) {
+  // 增强的初始化逻辑
+  const initializeApp = async (token) => {
+    console.log('=== Starting app initialization ===');
+    console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+    setIsInitializing(true);
+    setIsRestoring(true);
+    
+    try {
+      // 验证Token
+      console.log('Step 1: Validating token...');
+      const userData = await validateToken(token);
+      
+      if (!userData) {
+        console.log('Token validation failed, redirecting to login');
         handleLogout();
         return;
       }
-
-      const userData = await response.json();
+      
+      console.log('Step 2: Token validated successfully, setting user data');
       setUser(userData);
       
       // 获取用户的项目数据
+      console.log('Step 3: Fetching user projects...');
       await fetchUserProjects();
       
       // 检查是否需要恢复编辑器状态
+      console.log('Step 4: Checking editor state restoration...');
       if (currentView === 'editor' && currentProject) {
         console.log('Attempting to restore editor state for project:', currentProject);
         const validProject = await validateProject(currentProject);
@@ -68,28 +125,41 @@ function AppContent() {
           setCurrentView('editor');
         } else {
           console.log('Project validation failed, falling back to dashboard');
+          setCurrentProject(null);
           setCurrentView('dashboard');
         }
       } else {
         // 默认到仪表板
+        console.log('No editor state to restore, going to dashboard');
         setCurrentView('dashboard');
       }
+      
+      console.log('=== App initialization completed successfully ===');
     } catch (error) {
-      console.error('Failed to initialize app:', error);
-      handleLogout();
+      console.error('=== App initialization failed ===', error);
+      // 确保在任何错误情况下都能恢复到可用状态
+      setCurrentProject(null);
+      setCurrentView('auth');
+      setUser(null);
+      // 不调用 handleLogout，避免清除token导致无限循环
+      localStorage.removeItem('ainovel_token');
     } finally {
+      // 确保状态始终被重置
       setIsInitializing(false);
       setIsRestoring(false);
+      console.log('=== App initialization process finished ===');
     }
   };
 
-  // 获取用户的所有项目
+  // 获取项目的所有项目
   const fetchUserProjects = async () => {
     try {
+      console.log('App: Starting to fetch user projects...');
       const userProjects = await getUserProjects();
+      console.log('App: Successfully fetched projects:', userProjects);
       setProjects(userProjects);
     } catch (error) {
-      console.error('Failed to fetch projects', error);
+      console.error('App: Failed to fetch projects', error);
       addNotification({
         message: '获取项目列表失败: ' + error.message,
         type: 'error',
@@ -100,10 +170,39 @@ function AppContent() {
 
   // 初始化时检查本地存储的用户信息
   useEffect(() => {
-    const savedToken = localStorage.getItem('ainovel_token');
+    console.log('App useEffect triggered, performing storage health check...');
+    
+    // 先进行存储健康检查
+    try {
+      const healthCheckResult = storageHealthCheck.performStorageHealthCheck();
+      if (healthCheckResult.repair.corrupted > 0) {
+        console.warn(`Fixed ${healthCheckResult.repair.repaired} corrupted localStorage items`);
+      }
+    } catch (error) {
+      console.error('Storage health check failed:', error);
+      // 即使健康检查失败，也要继续应用初始化
+    }
+    
+    console.log('Checking for saved token...');
+    const savedToken = storageHealthCheck.safeGetLocalStorage('ainovel_token');
+    
     if (savedToken) {
-      initializeApp(savedToken);
+      console.log('Found saved token, initializing app...');
+      // 使用 setTimeout 确保状态更新不会被阻塞
+      setTimeout(() => {
+        initializeApp(savedToken).catch((error) => {
+          console.error('Critical initialization error:', error);
+          // 出现严重错误时，强制重置到登录页
+          setIsInitializing(false);
+          setIsRestoring(false);
+          setCurrentView('auth');
+          setUser(null);
+          setCurrentProject(null);
+          localStorage.removeItem('ainovel_token');
+        });
+      }, 100);
     } else {
+      console.log('No saved token found, going to auth page');
       // 没有 token，直接显示登录页
       setIsInitializing(false);
       setIsRestoring(false);
@@ -115,20 +214,32 @@ function AppContent() {
 
   // 登录处理
   const handleLogin = (token) => {
-    localStorage.setItem('ainovel_token', token);
-    initializeApp(token);
+    // 确保 token 没有引号包装
+    const cleanToken = typeof token === 'string' ? token.replace(/^"|"$/g, '') : token;
+    console.log('handleLogin: Saving cleaned token:', cleanToken.substring(0, 20) + '...');
+    storageHealthCheck.safeSetLocalStorage('ainovel_token', cleanToken);
+    initializeApp(cleanToken);
   };
 
   // 登出处理
   const handleLogout = () => {
+    console.log('Handling logout...');
     setUser(null);
     setCurrentProject(null);
     setCurrentView('auth');
     setIsRestoring(false);
-    localStorage.removeItem('ainovel_user');
-    localStorage.removeItem('ainovel_token');
-    localStorage.removeItem('ainovel_last_view');
-    localStorage.removeItem('ainovel_current_project');
+    setIsInitializing(false);
+    
+    // 使用安全的清理方法
+    ['ainovel_user', 'ainovel_token', 'ainovel_last_view', 'ainovel_current_project'].forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove ${key} from localStorage:`, error);
+      }
+    });
+    
+    console.log('Logout completed');
   };
 
   // 创建项目
@@ -194,7 +305,9 @@ function AppContent() {
           alignItems: 'center',
           height: '100vh',
           flexDirection: 'column',
-          gap: '20px'
+          gap: '20px',
+          backgroundColor: '#ffffff',
+          color: '#333'
         }}>
           <div className="loading-spinner" style={{
             width: '40px',
@@ -204,8 +317,33 @@ function AppContent() {
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
           }}></div>
-          <div style={{ color: '#666', fontSize: '16px' }}>
+          <div style={{ color: '#666', fontSize: '16px', textAlign: 'center' }}>
             {isRestoring ? '正在恢复上次状态...' : '初始化中...'}
+          </div>
+          {/* 添加一个安全机制：如果加载时间过长，提供手动重置选项 */}
+          <div style={{ marginTop: '20px' }}>
+            <button 
+              onClick={() => {
+                console.log('Manual reset triggered by user');
+                setIsRestoring(false);
+                setIsInitializing(false);
+                setCurrentView('auth');
+                setUser(null);
+                setCurrentProject(null);
+                localStorage.clear();
+              }}
+              style={{
+                background: '#ff4d4f',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              重置应用
+            </button>
           </div>
         </div>
       );
@@ -251,11 +389,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AntdApp>
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
-    </AntdApp>
+    <ErrorBoundary>
+      <AntdApp>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </AntdApp>
+    </ErrorBoundary>
   );
 }
 

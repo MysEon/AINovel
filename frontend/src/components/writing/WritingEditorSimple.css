@@ -1263,3 +1263,105 @@
 .dark-theme .ai-chat-markdown hr {
   border-top-color: #495057;
 }
+
+/* 状态恢复加载界面 */
+.state-restoration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.restoration-content {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  min-width: 320px;
+  max-width: 400px;
+  border: 1px solid #e9ecef;
+}
+
+.loading-spinner {
+  margin-bottom: 24px;
+}
+
+.restoration-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+.restoration-progress {
+  width: 100%;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1890ff, #40a9ff, #69c0ff);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.restoration-details {
+  font-size: 13px;
+  color: #666;
+  margin-top: 12px;
+  line-height: 1.4;
+}
+
+/* 暗色主题支持 */
+.dark-theme .state-restoration-overlay {
+  background: rgba(45, 45, 45, 0.95);
+}
+
+.dark-theme .restoration-content {
+  background: #2d2d2d;
+  color: #ffffff;
+  border: 1px solid #4d4d4d;
+}
+
+.dark-theme .restoration-text {
+  color: #ffffff;
+}
+
+.dark-theme .restoration-progress {
+  background: #4d4d4d;
+}
+
+.dark-theme .restoration-details {
+  color: #aaa;
+}
