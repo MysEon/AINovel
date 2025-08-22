@@ -739,10 +739,15 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesContainerRef = useRef(null);
+  
+  // 用于防止循环更新的标记
+  const isUpdatingFromState = useRef(false);
+  const isUpdatingToState = useRef(false);
 
   // 当章节变化或aiChatState变化时，更新聊天记录
   useEffect(() => {
-    if (currentChapter?.id && aiChatState?.messages) {
+    if (currentChapter?.id && aiChatState?.messages && !isUpdatingFromState.current) {
+      isUpdatingFromState.current = true;
       // 如果有持久化的消息记录，使用它
       if (aiChatState.messages.length > 0) {
         setMessages(aiChatState.messages);
@@ -753,20 +758,42 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         ];
         setMessages(defaultMessages);
         // 持久化默认消息
-        if (setAiChatState) {
+        if (setAiChatState && !isUpdatingToState.current) {
+          isUpdatingToState.current = true;
           setAiChatState({ messages: defaultMessages });
+          setTimeout(() => { isUpdatingToState.current = false; }, 0);
         }
       }
+      setTimeout(() => { isUpdatingFromState.current = false; }, 0);
     }
   }, [currentChapter?.id, aiChatState, setAiChatState]);
 
-  // 消息变化时持久化到存储
+  // 消息变化时持久化到存储（只在非初始化更新时）
   useEffect(() => {
-    if (currentChapter?.id && messages.length > 1 && setAiChatState) {
-      // 避免只有默认消息时的重复持久化
+    if (currentChapter?.id && messages.length > 1 && setAiChatState && !isUpdatingFromState.current && !isUpdatingToState.current) {
+      isUpdatingToState.current = true;
       setAiChatState({ messages });
+      setTimeout(() => { isUpdatingToState.current = false; }, 0);
     }
   }, [messages, currentChapter?.id, setAiChatState]);
+
+  // 开启新对话功能
+  const handleNewChat = () => {
+    const newChatMessages = [
+      { id: 1, role: 'assistant', content: '你好！我是你的AI写作助手。我可以帮助你进行创意构思、内容优化、情节建议等。有什么需要帮助的吗？' }
+    ];
+    setMessages(newChatMessages);
+    // 清空输入框
+    setInput('');
+    // 重置加载状态
+    setIsLoading(false);
+    // 持久化新的聊天记录
+    if (setAiChatState && !isUpdatingToState.current) {
+      isUpdatingToState.current = true;
+      setAiChatState({ messages: newChatMessages });
+      setTimeout(() => { isUpdatingToState.current = false; }, 0);
+    }
+  };
 
   const handleContentChange = (e) => {
     onContentChange(e.target.value);
@@ -798,7 +825,9 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
       return;
     }
 
-    const userMessage = { id: messages.length + 1, role: 'user', content: input };
+    // 保存用户输入的内容
+    const userInputContent = input;
+    const userMessage = { id: messages.length + 1, role: 'user', content: userInputContent };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
@@ -825,8 +854,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         
         await aiService.chatWithAIStream(
           projectId,
-          input,
-          newMessages,  // 传入用户消息前的聊天历史
+          userInputContent,  // 传入用户当前输入的内容
+          messages,  // 传入用户消息前的聊天历史
           (chunk) => {
             // 过滤空内容chunk
             if (!chunk || !chunk.trim()) {
@@ -851,7 +880,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         );
       } else {
         // 使用普通输出
-        const response = await aiService.chatWithAI(projectId, input, newMessages);  // 传入用户消息前的聊天历史
+        const response = await aiService.chatWithAI(projectId, userInputContent, messages);  // 传入用户输入内容和历史消息
         // 更新思考中的消息为实际回复
         setMessages(prev => prev.map(msg => 
           msg.id === aiResponseId 
@@ -974,7 +1003,18 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           title={
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>AI写作助手</span>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<FaPlus />}
+                  onClick={handleNewChat}
+                  title="开启新对话"
+                  disabled={isLoading}
+                  style={{ color: '#1890ff' }}
+                >
+                  新对话
+                </Button>
                 {selectedModelConfig && (
                   <Tag color="blue" style={{ marginRight: 8 }}>
                     {selectedModelConfig.name}
