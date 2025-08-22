@@ -20,7 +20,7 @@ const getAuthHeaders = () => {
 const getDefaultModelConfig = async () => {
   try {
     console.log('正在获取默认模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs`, {
+    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
       headers: getAuthHeaders()
     });
     
@@ -48,7 +48,7 @@ const getDefaultModelConfig = async () => {
 const getAvailableModelConfigs = async () => {
   try {
     console.log('正在获取模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs`, {
+    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
       headers: getAuthHeaders()
     });
     
