@@ -6,13 +6,15 @@ import PublishedChapters from './writing/PublishedChapters';
 import KanbanBoard from './KanbanBoard';
 import ModelConfigManager from './ModelConfigManager';
 import KnowledgeBase from './KnowledgeBase';
+import usePersistentState from '../hooks/usePersistentState';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import './ProjectEditor.css';
 
 const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) => {
   const [theme, setTheme] = useState('system');
   const [actualTheme, setActualTheme] = useState('dark');
-  const [activeItem, setActiveItem] = useState('项目总览');
+  // 使用持久化状态保存编辑器内的活动页面
+  const [activeItem, setActiveItem] = usePersistentState(`ainovel_editor_page_${project.id}`, '项目总览');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
 
