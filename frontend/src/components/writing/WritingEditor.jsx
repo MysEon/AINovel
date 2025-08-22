@@ -11,6 +11,7 @@ import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css'; // 代码高亮样式
 import './WritingEditorSimple.css';
 import useWritingPersistentState from '../../hooks/useWritingPersistentState';
+import { useAIModelConfig } from '../../hooks/useAIModelConfig';
 
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
@@ -31,6 +32,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [selectedModelConfig, setSelectedModelConfig] = useState(null);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
   const { addNotification, showConfirmDialog } = useNotification();
+
+  // 使用全局AI模型配置持久化
+  const { selectedModelConfigId: globalSelectedConfigId, setSelectedModelConfigId: setGlobalSelectedConfigId, isLoaded: configLoaded } = useAIModelConfig();
 
   // 使用增强型持久化状态管理（现在 currentChapter 已经声明了）
   const {
@@ -64,9 +68,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   useEffect(() => {
     if (projectId) {
       fetchChapters();
-      fetchModelConfigs();
+      if (configLoaded) {
+        fetchModelConfigs();
+      }
     }
-  }, [projectId]);
+  }, [projectId, configLoaded]);
 
   // 处理模型配置选择
   const handleModelConfigChange = (configId) => {
@@ -75,11 +81,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       setSelectedModelConfig(config);
       aiService.setSelectedModelConfigId(configId);
       
-      // 持久化选中的模型配置
-      setWritingState(prevState => ({
-        ...prevState,
-        selectedModelConfigId: configId
-      }));
+      // 使用全局持久化
+      setGlobalSelectedConfigId(configId);
       
       addNotification({
         message: `已切换到 ${config.name} 模型`,
@@ -97,16 +100,15 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       console.log('WritingEditor: 获取到的模型配置:', configs);
       setModelConfigs(configs);
       
-      // 如果有配置且没有选择过配置，优先从持久化状态恢复，否则选择第一个
-      if (configs.length > 0) {
-        const savedConfigId = writingState?.selectedModelConfigId;
+      // 如果有配置，优先使用全局持久化的配置
+      if (configs.length > 0 && configLoaded) {
         let configToSelect = null;
         
-        if (savedConfigId) {
-          configToSelect = configs.find(c => c.id === savedConfigId);
+        if (globalSelectedConfigId) {
+          configToSelect = configs.find(c => c.id === globalSelectedConfigId);
         }
         
-        if (!configToSelect && !selectedModelConfig) {
+        if (!configToSelect) {
           configToSelect = configs[0];
         }
         
@@ -114,6 +116,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           console.log('WritingEditor: 选择模型配置:', configToSelect);
           setSelectedModelConfig(configToSelect);
           aiService.setSelectedModelConfigId(configToSelect.id);
+          
+          // 如果全局没有保存这个配置，则保存它
+          if (globalSelectedConfigId !== configToSelect.id) {
+            setGlobalSelectedConfigId(configToSelect.id);
+          }
         }
       }
     } catch (error) {
@@ -551,7 +558,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             layoutMode={layoutMode}
             modelConfigs={modelConfigs}
             selectedModelConfig={selectedModelConfig}
-            onModelConfigChange={handleModelConfigChange}
+            handleModelConfigChange={handleModelConfigChange}
             aiChatState={aiChatState}
             setAiChatState={setAiChatState}
           />
@@ -719,7 +726,7 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, onModelConfigChange, aiChatState, setAiChatState }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, handleModelConfigChange, aiChatState, setAiChatState }) => {
   // 从持久化状态恢复聊天记录，如果没有则使用默认消息
   const [messages, setMessages] = useState(() => {
     if (aiChatState?.messages && aiChatState.messages.length > 0) {
@@ -975,7 +982,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                 )}
                 <Dropdown
                   overlay={
-                    <Menu onClick={(e) => onModelConfigChange && onModelConfigChange(parseInt(e.key))}>
+                    <Menu onClick={(e) => handleModelConfigChange(parseInt(e.key))}>
                       {modelConfigs.map(config => (
                         <Menu.Item key={config.id}>
                           {config.name} ({config.model_type})

@@ -88,6 +88,7 @@ class AIService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/ai`;
     this.selectedModelConfigId = null; // 存储用户选择的模型配置ID
+    this.loadSelectedModelConfig(); // 启动时加载持久化的配置
   }
 
   async request(endpoint, options = {}) {
@@ -107,6 +108,46 @@ class AIService {
   // 设置当前使用的模型配置ID
   setSelectedModelConfigId(configId) {
     this.selectedModelConfigId = configId;
+    // 持久化到localStorage
+    this.saveSelectedModelConfig(configId);
+  }
+
+  // 从localStorage加载保存的模型配置ID
+  loadSelectedModelConfig() {
+    try {
+      const savedConfigId = localStorage.getItem('ainovel_selected_model_config');
+      if (savedConfigId) {
+        const configId = parseInt(savedConfigId, 10);
+        if (!isNaN(configId)) {
+          this.selectedModelConfigId = configId;
+        }
+      }
+    } catch (error) {
+      console.warn('加载AI模型配置失败:', error);
+    }
+  }
+
+  // 保存选中的模型配置ID到localStorage
+  saveSelectedModelConfig(configId) {
+    try {
+      if (configId && typeof configId === 'number') {
+        localStorage.setItem('ainovel_selected_model_config', configId.toString());
+      } else if (configId === null || configId === undefined) {
+        localStorage.removeItem('ainovel_selected_model_config');
+      }
+    } catch (error) {
+      console.error('保存AI模型配置失败:', error);
+    }
+  }
+
+  // 清除保存的模型配置
+  clearSelectedModelConfig() {
+    this.selectedModelConfigId = null;
+    try {
+      localStorage.removeItem('ainovel_selected_model_config');
+    } catch (error) {
+      console.error('清除AI模型配置失败:', error);
+    }
   }
 
   // 获取当前选择的模型配置
