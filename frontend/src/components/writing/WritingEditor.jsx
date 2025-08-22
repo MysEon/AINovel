@@ -855,7 +855,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         await aiService.chatWithAIStream(
           projectId,
           userInputContent,  // 传入用户当前输入的内容
-          messages,  // 传入用户消息前的聊天历史
+          newMessages,  // 传入包含用户新消息的聊天历史
           (chunk) => {
             // 过滤空内容chunk
             if (!chunk || !chunk.trim()) {
@@ -880,7 +880,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         );
       } else {
         // 使用普通输出
-        const response = await aiService.chatWithAI(projectId, userInputContent, messages);  // 传入用户输入内容和历史消息
+        const response = await aiService.chatWithAI(projectId, userInputContent, newMessages);  // 传入用户输入内容和包含新消息的历史消息
         // 更新思考中的消息为实际回复
         setMessages(prev => prev.map(msg => 
           msg.id === aiResponseId 
