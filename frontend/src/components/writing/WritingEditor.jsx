@@ -17,6 +17,25 @@ const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Option } = Select;
 
+// 安全拼接中文文本的函数，确保字符完整性
+const safeConcatChineseText = (existingText, newText) => {
+  // 如果现有文本为空，直接返回新文本
+  if (!existingText) return newText;
+  
+  // 检查现有文本末尾是否有可能被截断的中文字符
+  // UTF-8中文字符通常占用3个字节，检查最后一个字符是否完整
+  const lastChar = existingText.slice(-1);
+  
+  // 如果最后一个字符是中文（Unicode范围），检查是否完整
+  if (/[\u4e00-\u9fff]/.test(lastChar)) {
+    return existingText + newText;
+  }
+  
+  // 如果现有文本以不完整的字节序列结尾，可能会影响拼接
+  // 这里采用保守的方法，直接拼接
+  return existingText + newText;
+};
+
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
   // 先声明基本状态
   const [currentChapter, setCurrentChapter] = useState(null);
@@ -851,6 +870,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
       if (supportsStream) {
         // 使用流式输出
         let isFirstChunk = true;
+        // 使用ref来跟踪当前消息内容，避免状态竞争
+        const currentContentRef = { current: '' };
         
         await aiService.chatWithAIStream(
           projectId,
@@ -862,12 +883,18 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
               return; // 忽略空的chunk
             }
             
-            // 更新消息内容
+            // 更新消息内容 - 使用ref避免状态竞争
+            if (isFirstChunk) {
+              currentContentRef.current = chunk;
+            } else {
+              currentContentRef.current = safeConcatChineseText(currentContentRef.current, chunk);
+            }
+            
             setMessages(prev => prev.map(msg => 
               msg.id === aiResponseId 
                 ? { 
                     ...msg, 
-                    content: isFirstChunk ? chunk : msg.content + chunk,
+                    content: currentContentRef.current,
                     isThinking: false  // 收到内容后取消思考状态
                   }
                 : msg

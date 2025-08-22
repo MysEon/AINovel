@@ -302,7 +302,7 @@ class AIService {
     }
 
     const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder('utf-8');
     let buffer = '';
 
     try {
@@ -310,9 +310,13 @@ class AIService {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
+        // 解码新的数据块，确保UTF-8编码正确处理
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // 安全地按行分割，确保不会在多字节字符中间分割
+        const lines = this.safeSplitLines(buffer);
+        buffer = lines.pop() || ''; // 保留最后一个不完整的行
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -494,6 +498,26 @@ class AIService {
   // 获取AI使用统计
   async getUsageStats(projectId) {
     return this.request(`/usage-stats/${projectId}`);
+  }
+
+  // 安全地按行分割文本，确保不会在多字节字符中间分割
+  safeSplitLines(text) {
+    const lines = [];
+    let start = 0;
+    
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '\n') {
+        lines.push(text.slice(start, i));
+        start = i + 1;
+      }
+    }
+    
+    // 添加最后一行（如果没有以换行符结尾）
+    if (start < text.length) {
+      lines.push(text.slice(start));
+    }
+    
+    return lines;
   }
 }
 
