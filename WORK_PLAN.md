@@ -288,6 +288,59 @@
 - `frontend/src/components/markdown/` - 新增markdown组件目录
 - `markdown处理流程分析报告.md` - 参考分析报告
 
+### 提示词管理功能开发 - 2025-08-23
+
+**需求描述**：实现用户可自定义的提示词管理功能，让用户完全控制AI写作助手的各种prompt模板，包括大纲生成、建议提供、优化改进、创意生成等功能的提示词。
+
+**功能范围分析**：
+1. **当前系统prompt使用情况**：
+   - 章节大纲生成 (generateChapterOutline)
+   - 情节发展建议 (getPlotSuggestions) 
+   - 内容优化 (optimizeContent)
+   - 创意生成 (generateCreativeIdeas)
+   - AI聊天对话 (chatWithAI)
+   - 写作建议 (getWritingSuggestions)
+   - 辅助优化型/全面接管型模式
+
+2. **需要实现的功能**：
+   - 提示词模板的CRUD操作
+   - 分类管理（大纲、建议、优化、创意、对话等）
+   - 模板变量支持（项目信息、章节内容等）
+   - 用户个人模板库
+   - 默认系统模板
+   - 模板预览和测试功能
+
+**实施步骤**：
+1. ✅ 分析现有PromptTemplate表结构
+2. ✅ 创建prompt-management特性分支
+3. ✅ 扩展数据库模型，支持更完善的提示词管理
+4. ✅ 实现后端提示词管理API
+5. ✅ 创建前端提示词管理组件
+6. ✅ 集成到模型参数选择界面
+7. ✅ 修改为正常页面形式而非弹窗模式
+8. ✅ 测试提示词管理功能
+
+**技术实现要点**：
+- 数据库：扩展PromptTemplate表，增加is_system、is_active、usage_count、variables、tags等字段
+- 后端API：完整的CRUD操作，支持系统模板和用户模板分离，模板复制和预览功能
+- 前端组件：采用正常页面形式，提供搜索、分类过滤、批量操作等功能
+- 变量系统：支持{{变量名}}格式的模板变量定义和替换
+- 权限控制：系统模板只读，用户模板可编辑删除
+
+**功能特色**：
+- 6个预定义系统模板：章节大纲生成、情节发展建议、内容优化改进、创意灵感生成、AI写作助手对话、写作技巧建议
+- 支持模板复制、预览、使用次数统计
+- 分类管理和标签系统
+- 变量化模板支持，可以根据项目信息动态填充
+- 用户友好的界面，支持搜索和筛选
+
+**相关文件**：
+- backend/models.py (扩展PromptTemplate模型)
+- backend/routers/prompt_templates.py (新建API路由)
+- frontend/src/components/PromptManager.jsx (新建管理组件)
+- frontend/src/services/aiService.js (修改AI服务支持自定义模板)
+- frontend/src/components/ProjectEditor.jsx (集成到项目界面)
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式

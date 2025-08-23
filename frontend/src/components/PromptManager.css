@@ -1,0 +1,212 @@
+/* 提示词管理器样式 */
+.prompt-manager-container {
+  padding: 24px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.prompt-manager-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.prompt-manager-toolbar {
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.prompt-manager-table .ant-table-thead > tr > th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.prompt-manager-table .ant-table-tbody > tr:hover > td {
+  background-color: #f0f7ff;
+}
+
+/* 系统模板样式 */
+.prompt-manager-table .system-template {
+  background-color: #f6ffed;
+}
+
+/* 表格操作按钮组 */
+.prompt-manager-table .ant-space-item {
+  margin-right: 4px;
+}
+
+.prompt-manager-table .ant-btn-sm {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+/* 标签样式 */
+.prompt-manager-table .ant-tag {
+  margin: 2px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+/* 编辑和预览模态框样式 */
+.ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: none;
+}
+
+.ant-modal-header .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.ant-modal-close {
+  color: white;
+}
+
+.ant-modal-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 编辑表单样式 */
+.ant-input,
+.ant-select-selector,
+.ant-input {
+  border-radius: 6px;
+}
+
+.ant-input:focus,
+.ant-input:hover,
+.ant-select-selector:focus,
+.ant-select-selector:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* 预览模板样式 */
+.prompt-preview-content {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 工具栏按钮样式 */
+.prompt-manager-toolbar .ant-btn {
+  border-radius: 6px;
+  height: 32px;
+  font-weight: 500;
+}
+
+.prompt-manager-toolbar .ant-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+}
+
+.prompt-manager-toolbar .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* 搜索框样式 */
+.prompt-manager-toolbar .ant-input-search .ant-input {
+  border-radius: 6px 0 0 6px;
+}
+
+.prompt-manager-toolbar .ant-input-search .ant-input-group-addon .ant-btn {
+  border-radius: 0 6px 6px 0;
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.prompt-manager-toolbar .ant-input-search .ant-input-group-addon .ant-btn:hover {
+  background: #5a6fd8;
+  border-color: #5a6fd8;
+}
+
+/* 分页样式 */
+.prompt-manager-table .ant-pagination {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.prompt-manager-table .ant-pagination-item-active {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.prompt-manager-table .ant-pagination-item-active a {
+  color: white;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .prompt-manager-container {
+    padding: 16px;
+  }
+  
+  .prompt-manager-toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .prompt-manager-toolbar .ant-col {
+    flex: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .prompt-manager-container {
+    padding: 12px;
+  }
+  
+  .prompt-manager-table .ant-table {
+    font-size: 12px;
+  }
+  
+  .prompt-manager-table .ant-btn-sm {
+    height: 24px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+  
+  .prompt-manager-toolbar {
+    padding: 12px;
+  }
+}
+
+/* 暗色主题适配 */
+.dark-theme .prompt-manager-container {
+  background-color: #1f1f1f;
+}
+
+.dark-theme .prompt-manager-card {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .prompt-manager-toolbar {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-theme .prompt-manager-table .ant-table-thead > tr > th {
+  background-color: #3c3c3c;
+  color: #ffffff;
+}
+
+.dark-theme .prompt-manager-table .ant-table-tbody > tr:hover > td {
+  background-color: #404040;
+}
+
+.dark-theme .prompt-preview-content {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  color: #ffffff;
+}
