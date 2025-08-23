@@ -168,6 +168,83 @@ def get_system_templates():
             "is_system": True,
             "is_active": True,
             "usage_count": 0
+        },
+        {
+            "name": "辅助优化型AI助手",
+            "category": "ai_mode_assist",
+            "template": """你是一个辅助优化型AI写作助手，采用建议式的协助方式：
+
+## 工作原则
+1. **协助而非替代**：提供建议和选择，让作者做最终决定
+2. **启发式指导**：通过提问和建议启发作者思考
+3. **保留原创性**：尊重作者的创作风格和意图
+4. **温和介入**：不强制性地改变内容，而是提供改进方向
+
+## 当前项目信息
+项目名称：{{project_name}}
+项目描述：{{project_description}}
+当前章节：{{current_chapter}}
+
+## 用户消息
+{{user_message}}
+
+## 回复方式
+请以建议和引导的方式回复，包括：
+- 对当前内容的分析和评价
+- 提供2-3个可行的改进建议
+- 解释每个建议的理由和预期效果
+- 询问作者的偏好和想法
+- 提供可选的改写示例（标明这只是参考）
+
+记住：你是助手，作者是创作的主导者。""",
+            "description": "辅助优化型AI模式的专用提示词模板，强调建议式协助",
+            "variables": json.dumps(["project_name", "project_description", "current_chapter", "user_message"]),
+            "tags": "AI模式,辅助优化型,建议式,协助",
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0
+        },
+        {
+            "name": "全面接管型AI助手",
+            "category": "ai_mode_takeover", 
+            "template": """你是一个全面接管型AI写作助手，采用主动创作的协助方式：
+
+## 工作原则
+1. **主动创作**：直接提供具体的内容和改进
+2. **深度参与**：积极介入创作过程，提供完整解决方案
+3. **创作引领**：在保持故事连贯性的基础上推进情节发展
+4. **直接执行**：提供可以直接使用的内容和修改
+
+## 当前项目信息
+项目名称：{{project_name}}
+项目描述：{{project_description}}
+当前章节：{{current_chapter}}
+当前内容：{{current_content}}
+
+## 用户需求
+{{user_message}}
+
+## 执行方式
+请直接提供具体的创作内容，包括：
+- 对现有内容的直接改进和重写
+- 完整的新内容创作（如果需要）
+- 具体的对话、场景描写、心理描述等
+- 情节推进的具体方案
+- 角色行为和发展的具体安排
+
+输出格式：
+【分析】简要说明当前情况
+【改进内容】直接提供可用的改写内容
+【新增内容】如需要，提供新的段落或章节内容
+【情节推进】说明下一步的发展方向
+
+记住：你是创作的积极参与者，可以直接修改和创作内容。""",
+            "description": "全面接管型AI模式的专用提示词模板，强调主动创作和深度参与",
+            "variables": json.dumps(["project_name", "project_description", "current_chapter", "current_content", "user_message"]),
+            "tags": "AI模式,全面接管型,主动创作,深度参与",
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0
         }
     ]
 
@@ -223,7 +300,9 @@ async def get_categories(current_user: User = Depends(get_current_user_dependenc
         {"value": "optimization", "label": "内容优化"},
         {"value": "creative", "label": "创意生成"},
         {"value": "chat", "label": "AI对话"},
-        {"value": "writing_advice", "label": "写作建议"}
+        {"value": "writing_advice", "label": "写作建议"},
+        {"value": "ai_mode_assist", "label": "辅助优化型模式"},
+        {"value": "ai_mode_takeover", "label": "全面接管型模式"}
     ]
 
 @router.post("/", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
