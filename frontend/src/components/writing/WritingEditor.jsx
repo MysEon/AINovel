@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog, FaFileAlt } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
 import { aiService, getAvailableModelConfigs } from '../../services/aiService';
+import promptService from '../../services/promptService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
 // 使用官方Streamdown组件 - 修正导入方式
@@ -29,6 +30,9 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [modelConfigs, setModelConfigs] = useState([]);
   const [selectedModelConfig, setSelectedModelConfig] = useState(null);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
+  const [promptTemplates, setPromptTemplates] = useState([]);
+  const [selectedPromptTemplate, setSelectedPromptTemplate] = useState(null);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const { addNotification, showConfirmDialog } = useNotification();
 
   // 使用全局AI模型配置持久化
@@ -68,6 +72,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       fetchChapters();
       if (configLoaded) {
         fetchModelConfigs();
+        fetchPromptTemplates(); // 获取提示词模板
       }
     }
   }, [projectId, configLoaded]);
@@ -133,6 +138,31 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       }
     } finally {
       setIsLoadingConfigs(false);
+    }
+  };
+
+  // 获取提示词模板
+  const fetchPromptTemplates = async () => {
+    setIsLoadingTemplates(true);
+    try {
+      // 获取AI对话分类的模板
+      const templates = await promptService.getTemplates({ category: 'chat', include_system: true });
+      setPromptTemplates(templates);
+      
+      // 选择默认模板（系统模板中的第一个）
+      const systemTemplate = templates.find(t => t.is_system && t.category === 'chat');
+      if (systemTemplate) {
+        setSelectedPromptTemplate(systemTemplate);
+      }
+    } catch (error) {
+      console.error('Error fetching prompt templates:', error);
+      addNotification({
+        message: '获取提示词模板失败: ' + error.message,
+        type: 'error',
+        duration: 3000
+      });
+    } finally {
+      setIsLoadingTemplates(false);
     }
   };
 
@@ -559,6 +589,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             handleModelConfigChange={handleModelConfigChange}
             aiChatState={aiChatState}
             setAiChatState={setAiChatState}
+            selectedPromptTemplate={selectedPromptTemplate}
+            setSelectedPromptTemplate={setSelectedPromptTemplate}
+            promptTemplates={promptTemplates}
+            addNotification={addNotification}
+            isLoadingTemplates={isLoadingTemplates}
           />
         ) : (
           <RichTextEditor 
@@ -724,7 +759,7 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
   );
 };
 
-const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, handleModelConfigChange, aiChatState, setAiChatState }) => {
+const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, handleModelConfigChange, aiChatState, setAiChatState, selectedPromptTemplate, setSelectedPromptTemplate, promptTemplates, addNotification, isLoadingTemplates }) => {
   // 从持久化状态恢复聊天记录，如果没有则使用默认消息
   const [messages, setMessages] = useState(() => {
     if (aiChatState?.messages && aiChatState.messages.length > 0) {
@@ -884,11 +919,12 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
             setTimeout(() => {
               setIsLoading(false);
             }, 100);
-          }
+          },
+          selectedPromptTemplate?.id  // 传入选中的模板 ID
         );
       } else {
         // 使用普通输出
-        const response = await aiService.chatWithAI(projectId, userInputContent, newMessages);  // 传入用户输入内容和包含新消息的历史消息
+        const response = await aiService.chatWithAI(projectId, userInputContent, newMessages, selectedPromptTemplate?.id);  // 传入用户输入内容和包含新消息的历史消息，以及模板 ID
         // 更新思考中的消息为实际回复
         setMessages(prev => prev.map(msg => 
           msg.id === aiResponseId 
@@ -1028,6 +1064,53 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                     {selectedModelConfig.name}
                   </Tag>
                 )}
+                {selectedPromptTemplate && (
+                  <Tag color="green" style={{ marginRight: 8 }}>
+                    {selectedPromptTemplate.name}
+                  </Tag>
+                )}
+                <Dropdown
+                  overlay={
+                    <Menu onClick={(e) => {
+                      const templateId = parseInt(e.key);
+                      const template = promptTemplates.find(t => t.id === templateId);
+                      if (template) {
+                        setSelectedPromptTemplate(template);
+                        addNotification({
+                          message: `已切换到模板：${template.name}`,
+                          type: 'success',
+                          duration: 2000
+                        });
+                      }
+                    }}>
+                      {promptTemplates.map(template => (
+                        <Menu.Item key={template.id}>
+                          <div>
+                            <div>{template.name}</div>
+                            <div style={{ fontSize: '12px', color: '#999' }}>
+                              {template.description}
+                            </div>
+                          </div>
+                        </Menu.Item>
+                      ))}
+                      {promptTemplates.length === 0 && (
+                        <Menu.Item disabled>
+                          <span style={{ color: '#999' }}>暂无可用模板</span>
+                        </Menu.Item>
+                      )}
+                    </Menu>
+                  }
+                  trigger={['click']}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<FaFileAlt />}
+                    title="选择提示词模板"
+                    loading={isLoadingTemplates}
+                    style={{ color: selectedPromptTemplate ? '#52c41a' : '#8c8c8c' }}
+                  />
+                </Dropdown>
                 <Dropdown
                   overlay={
                     <Menu onClick={(e) => handleModelConfigChange(parseInt(e.key))}>

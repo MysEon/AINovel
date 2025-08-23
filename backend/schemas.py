@@ -431,6 +431,7 @@ class ChatRequest(BaseModel):
     message: str
     history: List[dict] = []
     model_config_id: int
+    prompt_template_id: Optional[int] = None  # 可选的提示词模板 ID
 
 class ChatResponse(BaseModel):
     success: bool

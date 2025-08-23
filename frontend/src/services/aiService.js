@@ -256,31 +256,50 @@ class AIService {
   }
 
   // AI智能体对话
-  async chatWithAI(projectId, message, history = []) {
+  async chatWithAI(projectId, message, history = [], promptTemplateId = null) {
     // 检查模型配置可用性
     await this.checkModelConfigAvailability();
     
     // 获取选择的模型配置
     const modelConfig = await this.getSelectedModelConfig();
     
+    const requestBody = {
+      project_id: projectId,
+      message: message,
+      history: history,
+      model_config_id: modelConfig.id
+    };
+    
+    // 如果指定了提示词模板，添加到请求中
+    if (promptTemplateId) {
+      requestBody.prompt_template_id = promptTemplateId;
+    }
+    
     return this.request('/chat', {
       method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        message: message,
-        history: history,
-        model_config_id: modelConfig.id
-      })
+      body: JSON.stringify(requestBody)
     });
   }
 
   // AI智能体对话 - 流式输出
-  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete) {
+  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete, promptTemplateId = null) {
     // 检查模型配置可用性
     await this.checkModelConfigAvailability();
     
     // 获取选择的模型配置
     const modelConfig = await this.getSelectedModelConfig();
+    
+    const requestBody = {
+      project_id: projectId,
+      message: message,
+      history: history,
+      model_config_id: modelConfig.id
+    };
+    
+    // 如果指定了提示词模板，添加到请求中
+    if (promptTemplateId) {
+      requestBody.prompt_template_id = promptTemplateId;
+    }
     
     const response = await fetch(`${this.baseURL}/chat-stream`, {
       method: 'POST',
@@ -288,12 +307,7 @@ class AIService {
         ...getAuthHeaders(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        project_id: projectId,
-        message: message,
-        history: history,
-        model_config_id: modelConfig.id
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -304,19 +318,49 @@ class AIService {
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let processedChunks = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        
+        if (done) {
+          // 处理剩余的buffer内容 - 这是关键的修复
+          if (buffer.trim()) {
+            console.log('🔍 [AI Stream Debug] 处理最后的buffer内容:', buffer);
+            // 直接处理剩余内容，不依赖行分割
+            const lines = buffer.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') {
+                  console.log('🔍 [AI Stream Debug] 接收到[DONE]信号');
+                  if (onComplete) onComplete();
+                  return;
+                }
+                if (data && data !== null && data !== undefined && !data.startsWith('错误:')) {
+                  console.log('🔍 [AI Stream Debug] 最终处理剩余数据:', data);
+                  if (onChunk) onChunk(data);
+                }
+              } else if (line.trim() && !line.startsWith('data: ') && line !== '[DONE]') {
+                // 处理不以data:开头的纯文本内容
+                console.log('🔍 [AI Stream Debug] 处理纯文本内容:', line.trim());
+                if (onChunk) onChunk(line.trim());
+              }
+            }
+          }
+          console.log(`🔍 [AI Stream Debug] 流式输出完成，共处理 ${processedChunks} 个chunk`);
+          if (onComplete) onComplete();
+          break;
+        }
 
-        // 解码新的数据块，确保UTF-8编码正确处理
+        // 解码新的数据块
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
 
-        // 安全地按行分割，确保不会在多字节字符中间分割
-        const lines = this.safeSplitLines(buffer);
-        buffer = lines.pop() || ''; // 保留最后一个不完整的行
+        // 按行分割处理
+        let lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 保留最后一个可能不完整的行
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -325,20 +369,17 @@ class AIService {
               if (onComplete) onComplete();
               return;
             }
-            // 调试信息：显示接收到的原始chunk数据
+            
+            processedChunks++;
             console.log('🔍 [AI Stream Debug] 接收到chunk:', {
+              chunkNumber: processedChunks,
               rawData: data,
               dataLength: data.length,
-              containsNewline: data.includes('\n'),
-              containsCarriageReturn: data.includes('\r'),
-              hasWhitespace: /\s/.test(data),
-              isEmptyString: data === '',
-              charCodes: [...data].map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
+              isEmpty: data === '',
+              charCodes: [...data].slice(0, 10).map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
             });
             
-            // 过滤错误消息，但保留所有有效内容包括换行符
-            // 只过滤null、undefined和错误消息，保留所有其他内容（包括空白字符、换行符等）
-            if (data !== null && data !== undefined && !data.startsWith('错误:')) {
+            if (data && data !== null && data !== undefined && !data.startsWith('错误:')) {
               if (onChunk) onChunk(data);
             }
           }

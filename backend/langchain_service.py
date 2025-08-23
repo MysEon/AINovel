@@ -473,7 +473,8 @@ class LangChainService:
         project_context: dict,
         message: str,
         history: List[dict],
-        model_config: ModelConfig
+        model_config: ModelConfig,
+        selected_template = None
     ):
         """与AI助手对话 - 流式输出（使用预先获取的上下文数据）"""
         try:
@@ -520,6 +521,8 @@ class LangChainService:
                     # 使用流式输出
                     chunk_count = 0
                     valid_chunk_count = 0
+                    accumulated_content = ""
+                    
                     async for chunk in model.astream(messages):
                         chunk_count += 1
                         
@@ -528,17 +531,26 @@ class LangChainService:
                             print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
                         
                         # 检查chunk是否有content属性且内容不为空
-                        if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
-                            valid_chunk_count += 1
-                            yield chunk.content
+                        if hasattr(chunk, 'content') and chunk.content is not None:
+                            # 对于非空内容，直接yield，不过滤空字符串
+                            if chunk.content:  # 只过滤完全为空的内容
+                                valid_chunk_count += 1
+                                accumulated_content += chunk.content
+                                yield chunk.content
+                            # 即使内容为空字符串，也不过滤，因为可能是有意义的空格
+                            elif chunk.content == "":  # 空字符串也要保留
+                                valid_chunk_count += 1
+                                yield chunk.content
                         # 如果chunk本身就是字符串且不为空，直接yield
-                        elif isinstance(chunk, str) and chunk.strip():
+                        elif isinstance(chunk, str):
                             valid_chunk_count += 1
+                            accumulated_content += chunk
                             yield chunk
                         # 不处理没有实际content的chunk对象
                         # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
                     
                     print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                    print(f"累积内容总长度: {len(accumulated_content)}, 最后20个字符: '{accumulated_content[-20:] if accumulated_content else 'N/A'}'")
                     
                     # 如果没有有效chunks，回退到非流式
                     if valid_chunk_count == 0:
@@ -710,7 +722,8 @@ async def chat_with_ai(
     message: str,
     history: List[dict],
     model_config: ModelConfig,
-    db: AsyncSession
+    db: AsyncSession,
+    prompt_template_id: Optional[int] = None
 ) -> str:
     """与AI助手对话"""
     try:
@@ -723,23 +736,10 @@ async def chat_with_ai(
         # 准备对话历史
         messages = []
         
-        # 添加系统提示
-        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
-
-项目信息：
-- 项目名称：{project_context['project']['name']}
-- 项目描述：{project_context['project']['description']}
-
-角色信息：
-{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
-
-世界观信息：
-{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
-
-地点信息：
-{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
-
-请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
+        # 获取系统提示：优先使用用户选择的模板，否则使用默认模板
+        system_prompt = await self._get_system_prompt_from_template(
+            prompt_template_id, project_context, db
+        )
         
         messages.append(SystemMessage(content=system_prompt))
         
@@ -761,6 +761,63 @@ async def chat_with_ai(
     except Exception as e:
         print(f"AI对话失败: {str(e)}")
         return f"抱歉，AI服务暂时不可用: {str(e)}"
+
+    async def _get_system_prompt_from_template(
+        self,
+        template_id: Optional[int],
+        project_context: dict,
+        db: AsyncSession
+    ) -> str:
+        """从模板获取系统提示，如果模板不存在则使用默认提示"""
+        if template_id:
+            try:
+                from models import PromptTemplate
+                from sqlalchemy.future import select
+                
+                result = await db.execute(
+                    select(PromptTemplate).where(PromptTemplate.id == template_id)
+                )
+                template = result.scalar_one_or_none()
+                
+                if template:
+                    # 准备模板变量
+                    template_variables = {
+                        'project_name': project_context['project']['name'],
+                        'project_description': project_context['project']['description'],
+                        'project_info': json.dumps(project_context['project'], ensure_ascii=False, indent=2),
+                        'history': '',  # 将在实际使用中填充
+                        'message': '',  # 将在实际使用中填充
+                        'current_chapter': '',  # 可以根据需要添加
+                        'current_content': '',  # 可以根据需要添加
+                        'user_message': ''  # 将在实际使用中填充
+                    }
+                    
+                    # 渲染模板
+                    rendered_template = template.template
+                    for key, value in template_variables.items():
+                        rendered_template = rendered_template.replace(f'{{{{{key}}}}}', str(value))
+                    
+                    return rendered_template
+            except Exception as e:
+                print(f"获取模板失败: {str(e)}")
+        
+        # 默认提示
+        return f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+
+项目信息：
+- 项目名称：{project_context['project']['name']}
+- 项目描述：{project_context['project']['description']}
+
+角色信息：
+{json.dumps(project_context['characters'], ensure_ascii=False, indent=2)}
+
+世界观信息：
+{json.dumps(project_context['worldviews'], ensure_ascii=False, indent=2)}
+
+地点信息：
+{json.dumps(project_context['locations'], ensure_ascii=False, indent=2)}
+
+请以专业、友好的语调回答用户的问题，并提供有关小说创作的建议和帮助。"""
 
 async def optimize_content(
     self,
@@ -907,8 +964,27 @@ async def chat_with_ai_stream(
         # 准备对话历史
         messages = []
         
-        # 添加系统提示
-        system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
+        # 获取系统提示：优先使用模板，否则使用默认提示
+        if selected_template:
+            # 准备模板变量
+            template_variables = {
+                'project_name': project_context['project']['name'],
+                'project_description': project_context['project']['description'],
+                'project_info': json.dumps(project_context['project'], ensure_ascii=False, indent=2),
+                'history': json.dumps(history, ensure_ascii=False, indent=2) if history else '',
+                'message': message,
+                'current_chapter': '',  # 可以根据需要添加
+                'current_content': '',  # 可以根据需要添加
+                'user_message': message
+            }
+            
+            # 渲染模板
+            system_prompt = selected_template.template
+            for key, value in template_variables.items():
+                system_prompt = system_prompt.replace(f'{{{{{key}}}}}', str(value))
+        else:
+            # 默认系统提示
+            system_prompt = f"""你是一个专业的AI小说写作助手。请根据以下项目信息来帮助用户：
 
 项目信息：
 - 项目名称：{project_context['project']['name']}
@@ -944,6 +1020,8 @@ async def chat_with_ai_stream(
                 # 使用流式输出
                 chunk_count = 0
                 valid_chunk_count = 0
+                accumulated_content = ""
+                
                 async for chunk in model.astream(messages):
                     chunk_count += 1
                     
@@ -952,17 +1030,26 @@ async def chat_with_ai_stream(
                         print(f"Debug chunk {chunk_count}: type={type(chunk)}, content='{getattr(chunk, 'content', 'NO_CONTENT')}', str={str(chunk)[:100]}")
                     
                     # 检查chunk是否有content属性且内容不为空
-                    if hasattr(chunk, 'content') and chunk.content and chunk.content.strip():
-                        valid_chunk_count += 1
-                        yield chunk.content
+                    if hasattr(chunk, 'content') and chunk.content is not None:
+                        # 对于非空内容，直接yield，不过滤空字符串
+                        if chunk.content:  # 只过滤完全为空的内容
+                            valid_chunk_count += 1
+                            accumulated_content += chunk.content
+                            yield chunk.content
+                        # 即使内容为空字符串，也不过滤，因为可能是有意义的空格
+                        elif chunk.content == "":  # 空字符串也要保留
+                            valid_chunk_count += 1
+                            yield chunk.content
                     # 如果chunk本身就是字符串且不为空，直接yield
-                    elif isinstance(chunk, str) and chunk.strip():
+                    elif isinstance(chunk, str):
                         valid_chunk_count += 1
+                        accumulated_content += chunk
                         yield chunk
                     # 不处理没有实际content的chunk对象
                     # 基于你的输出，这些chunk有id但content为空，应该被过滤掉
                 
                 print(f"流式输出完成，共处理了 {chunk_count} 个chunk，其中有效chunk {valid_chunk_count} 个")
+                print(f"累积内容总长度: {len(accumulated_content)}, 最后20个字符: '{accumulated_content[-20:] if accumulated_content else 'N/A'}'")
                 
                 # 如果没有有效chunks，回退到非流式
                 if valid_chunk_count == 0:
