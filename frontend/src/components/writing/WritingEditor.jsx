@@ -5,16 +5,8 @@ import { getChapters, updateChapter, publishChapter, createChapter, getChapter, 
 import { aiService, getAvailableModelConfigs } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github.css'; // 代码高亮样式
-
-// 导入增强的Markdown组件和工具
-import EnhancedMarkdown from '../markdown/EnhancedMarkdown';
-import { enhancedFormatAIResponse, processStreamChunk } from '../../utils/aiResponseFormatter';
-import { useSmartUpdate, usePerformanceTimer } from '../../utils/performanceOptimizer';
+// 使用官方Streamdown组件 - 修正导入方式
+import { Streamdown } from 'streamdown';
 import './WritingEditorSimple.css';
 import useWritingPersistentState from '../../hooks/useWritingPersistentState';
 import { useAIModelConfig } from '../../hooks/useAIModelConfig';
@@ -22,12 +14,6 @@ import { useAIModelConfig } from '../../hooks/useAIModelConfig';
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Option } = Select;
-
-// 使用增强的格式化函数替代原来的formatAIResponse
-// const formatAIResponse = (text) => { ... } 已被 enhancedFormatAIResponse 替代
-// 使用增强的安全拼接函数（从工具文件导入）
-// const safeConcatChineseText = (existingText, newText) => { ... } 
-// 已被 processStreamChunk 中的安全拼接替代
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
   // 先声明基本状态
@@ -739,16 +725,6 @@ const RichTextEditor = ({ content, onContentChange, readOnly }) => {
 };
 
 const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, currentChapter, layoutMode, modelConfigs = [], selectedModelConfig = null, handleModelConfigChange, aiChatState, setAiChatState }) => {
-  // 性能监控
-  const performanceTimer = usePerformanceTimer('AiWritingInterface');
-  
-  // 智能更新优化
-  const { smartUpdate } = useSmartUpdate(content, {
-    throttleDelay: 100,
-    debounceDelay: 200,
-    enableCache: true,
-    debug: false
-  });
   // 从持久化状态恢复聊天记录，如果没有则使用默认消息
   const [messages, setMessages] = useState(() => {
     if (aiChatState?.messages && aiChatState.messages.length > 0) {
@@ -881,60 +857,33 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           userInputContent,  // 传入用户当前输入的内容
           newMessages,  // 传入包含用户新消息的聊天历史
           (chunk) => {
-            // 调试信息：显示前端接收到的chunk数据
-            console.log('🎯 [Frontend Debug] 前端接收chunk:', {
-              rawChunk: chunk,
-              chunkType: typeof chunk,
-              chunkLength: chunk?.length || 0,
-              containsNewline: chunk?.includes('\n') || false,
-              containsCarriageReturn: chunk?.includes('\r') || false,
-              hasWhitespace: chunk ? /\s/.test(chunk) : false,
-              isNull: chunk === null,
-              isUndefined: chunk === undefined,
-              isEmpty: chunk === '',
-              charCodes: chunk ? [...chunk].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
-            });
-            
-            // 只过滤null和undefined，保留所有有效内容包括空字符串和换行符
-            // 这对于正确显示AI回复中的段落分隔很重要
+            // 只过滤null和undefined，保留所有有效内容
             if (chunk !== null && chunk !== undefined) {
-              // 使用增强的流式文本处理
-              const processResult = processStreamChunk(currentContentRef.current, chunk, {
-                enableFormatting: false, // 实时格式化可能影响性能，在完成时统一格式化
-                enableSafeConcat: true,
-                debug: false
-              });
-              
-              // 更新消息内容 - 使用处理结果
+              // 直接拼接文本，不做任何额外处理，完全依赖Streamdown
               if (isFirstChunk) {
-                currentContentRef.current = processResult.rawText;
-                console.log('✅ [Frontend Debug] 设置第一个chunk:', processResult.rawText);
+                currentContentRef.current = chunk;
               } else {
-                const oldContent = currentContentRef.current;
-                currentContentRef.current = processResult.rawText;
-                console.log('📝 [Frontend Debug] 拼接chunk:', {
-                  oldContent: oldContent,
-                  newChunk: chunk,
-                  resultContent: currentContentRef.current
-                });
+                currentContentRef.current += chunk;
               }
+              
               
               setMessages(prev => prev.map(msg => 
                 msg.id === aiResponseId 
                   ? { 
                       ...msg, 
-                      content: enhancedFormatAIResponse(currentContentRef.current), // 使用增强格式化
+                      content: currentContentRef.current, // Streamdown会自动处理markdown格式
                       isThinking: false  // 收到内容后取消思考状态
                     }
                   : msg
               ));
               if (isFirstChunk) isFirstChunk = false;
-            } else {
-              console.log('⚠️ [Frontend Debug] 跳过chunk (null或undefined):', chunk);
             }
           },
           () => {
-            setIsLoading(false);
+            // 流式完成时，确保最终状态同步
+            setTimeout(() => {
+              setIsLoading(false);
+            }, 100);
           }
         );
       } else {
@@ -945,7 +894,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           msg.id === aiResponseId 
             ? { 
                 ...msg, 
-                content: enhancedFormatAIResponse(response.content || response.response || '抱歉，我暂时无法回复。'), // 使用增强格式化
+                content: response.content || response.response || '抱歉，我暂时无法回复。', // 直接使用原始内容
                 isThinking: false
               }
             : msg
@@ -958,7 +907,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: enhancedFormatAIResponse(`抱歉，AI服务暂时不可用: ${error.message}`), // 使用增强格式化
+              content: `抱歉，AI服务暂时不可用: ${error.message}`, // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1033,7 +982,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: enhancedFormatAIResponse(response.content || response.suggestions || response.optimized_content || '操作完成'), // 使用增强格式化
+              content: response.content || response.suggestions || response.optimized_content || '操作完成', // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1044,7 +993,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: enhancedFormatAIResponse(`${action} 操作失败: ${error.message}`), // 使用增强格式化
+              content: `${action} 操作失败: ${error.message}`, // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1229,26 +1178,26 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                       </>
                     ) : message.role === 'assistant' ? (
                       <div className="ai-chat-markdown">
-                        {/* 调试信息：显示最终要渲染的消息内容 */}
-                        {console.log('🎨 [Render Debug] 渲染AI消息:', {
-                          messageId: message.id,
-                          messageContent: message.content,
-                          contentLength: message.content?.length || 0,
-                          containsNewline: message.content?.includes('\n') || false,
-                          contentPreview: message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : ''),
-                          charCodes: message.content ? [...message.content.substring(0, 50)].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
-                        })}
-                        <EnhancedMarkdown
-                          content={message.content}
-                          isStreaming={false}
-                          enableSmoothStream={false} // 在聊天中禁用平滑渲染以免影响用户体验
-                          enableMath={true}
-                          enableCodeHighlight={true}
-                          enableTables={true}
-                          enableQuotes={true}
-                          className="ai-chat-content"
-                          debug={false}
-                        />
+                        <Streamdown 
+                          key={message.id}
+                          parseIncompleteMarkdown={true}
+                          className="ai-chat-content streamdown-chat"
+                          shikiTheme="github-light"
+                        >
+                          {(() => {
+                            let content = message.content || '';
+                            
+                            // 修复流式传输导致的不完整代码块标记
+                            const codeBlockCount = (content.match(/```/g) || []).length;
+                            
+                            // 如果代码块标记是奇数个，自动补全结束标记
+                            if (codeBlockCount % 2 === 1) {
+                              content = content + '\n```';
+                            }
+                            
+                            return content;
+                          })()}
+                        </Streamdown>
                       </div>
                     ) : (
                       <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
