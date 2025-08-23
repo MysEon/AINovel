@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+知识库(仅供参考，不是本项目的代码)/
 __pycache__/
 *.pyc
 .env
@@ -270,3 +271,5 @@ build/
 *.tmp
 *.temp
 ainovel-poc/python_modules/*
+problems/image.png
+problems/image.png

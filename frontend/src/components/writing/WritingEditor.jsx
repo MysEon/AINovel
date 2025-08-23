@@ -5,11 +5,8 @@ import { getChapters, updateChapter, publishChapter, createChapter, getChapter, 
 import { aiService, getAvailableModelConfigs } from '../../services/aiService';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
 import { Layout, Button, Space, Select, Tag, Tooltip, Spin, Input, Card, Row, Col, Divider, Avatar, Dropdown, Menu } from 'antd';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github.css'; // 代码高亮样式
+// 使用官方Streamdown组件 - 修正导入方式
+import { Streamdown } from 'streamdown';
 import './WritingEditorSimple.css';
 import useWritingPersistentState from '../../hooks/useWritingPersistentState';
 import { useAIModelConfig } from '../../hooks/useAIModelConfig';
@@ -17,93 +14,6 @@ import { useAIModelConfig } from '../../hooks/useAIModelConfig';
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
 const { Option } = Select;
-
-// 智能分段处理函数：识别Markdown语法并添加换行
-const formatAIResponse = (text) => {
-  if (!text || typeof text !== 'string') return text;
-  
-  let formatted = text;
-  
-  // 1. 处理特殊标记（如"---### "），提取纯标题
-  // 清理标题前的装饰符号，只保留标题标记
-  formatted = formatted.replace(/[-*=_]{1,}\s*(#{1,6}\s+)/g, '$1');
-  
-  // 2. 在标题块前后添加换行 (##、### 等)
-  // 修复：确保标题完整匹配，避免分割
-  formatted = formatted.replace(/(^|[^#\n])(#{1,6}\s+[^\n]+)/gm, '$1\n\n$2\n\n');
-  // 处理开头就是标题的情况
-  formatted = formatted.replace(/^(#{1,6}\s+[^\n]+)/gm, '\n\n$1\n\n');
-  
-  // 3. 在加粗文本前后添加适当换行 (**文本** 格式)
-  formatted = formatted.replace(/([^*\n])(\*\*[^*]+\*\*)([^*\n])/g, '$1\n\n$2\n\n$3');
-  
-  // 4. 处理列表项（包括·、-、*、+等符号），确保不在符号和内容间分行
-  // 在句子结束后遇到列表项时添加换行，但保持列表项完整性
-  formatted = formatted.replace(/([.!?。！？])\s*([\-*+·•]\s+[^\n]+)/g, '$1\n\n$2');
-  // 在普通文字后遇到列表项时添加换行
-  formatted = formatted.replace(/(^|\n)([^\-*+·•\n][^\n]*[^\-*+·•:\s\n])\s*([\-*+·•]\s+)/gm, '$1$2\n\n$3');
-  
-  // 5. 处理数字列表，确保"1."和内容保持在同一行
-  // 在句子结束后遇到数字列表时添加换行
-  formatted = formatted.replace(/([.!?。！？])\s*(\d+\.\s+[^\n]+)/g, '$1\n\n$2');
-  // 在普通文字后遇到数字列表时添加换行，但不分割数字列表本身
-  formatted = formatted.replace(/(^|\n)([^\d\n][^\n]*[^\d:\s\n])\s*(\d+\.\s+)/gm, '$1$2\n\n$3');
-  
-  // 6. 在重要标记前添加换行（如"核心思路："、"第一步："等）
-  formatted = formatted.replace(/([.!?。！？])\s*([^:\n]*[：:])/g, '$1\n\n$2');
-  formatted = formatted.replace(/(^|\n)([^:\n]*[：:]\s*$)/gm, '\n\n$2\n');
-  
-  // 7. 在代码块前后添加换行
-  formatted = formatted.replace(/(```[^`]*```)/g, '\n\n$1\n\n');
-  
-  // 8. 在引用块前添加换行
-  formatted = formatted.replace(/(^|\n)(\s*)(>\s+)/gm, '\n\n$2$3');
-  
-  // 9. 在感叹句后添加换行（针对"太棒了！短发飒爽..."这种情况）
-  formatted = formatted.replace(/([!！])\s*([^\s!！\n][^:\n]{10,})/g, '$1\n\n$2');
-  
-  // 10. 在句号后如果紧跟非空格的大写字母、中文或特殊标记，添加换行
-  formatted = formatted.replace(/([.。])\s*([A-Z\u4e00-\u9fff\*][^:\n]{10,})/g, '$1\n\n$2');
-  
-  // 11. 清理多余的连续换行（超过3个换行符的压缩为2个）
-  formatted = formatted.replace(/\n{4,}/g, '\n\n\n');
-  
-  // 12. 去掉开头和结尾的多余换行
-  formatted = formatted.trim();
-  
-  console.log('🔧 [Format Debug] AI回复格式化:', {
-    originalLength: text.length,
-    formattedLength: formatted.length,
-    originalPreview: text.substring(0, 150),
-    formattedPreview: formatted.substring(0, 150),
-    hasNewlines: formatted.includes('\n'),
-    newlineCount: (formatted.match(/\n/g) || []).length,
-    // 显示标题和列表识别情况
-    hasHeaders: /#{1,6}\s+/.test(formatted),
-    headerMatches: formatted.match(/#{1,6}\s+[^\n]+/g) || [],
-    listItems: formatted.match(/[\-*+·•]\s+[^\n]+/g) || [],
-    numberedItems: formatted.match(/\d+\.\s+[^\n]+/g) || []
-  });
-  
-  return formatted;
-};
-const safeConcatChineseText = (existingText, newText) => {
-  // 如果现有文本为空，直接返回新文本
-  if (!existingText) return newText;
-  
-  // 检查现有文本末尾是否有可能被截断的中文字符
-  // UTF-8中文字符通常占用3个字节，检查最后一个字符是否完整
-  const lastChar = existingText.slice(-1);
-  
-  // 如果最后一个字符是中文（Unicode范围），检查是否完整
-  if (/[\u4e00-\u9fff]/.test(lastChar)) {
-    return existingText + newText;
-  }
-  
-  // 如果现有文本以不完整的字节序列结尾，可能会影响拼接
-  // 这里采用保守的方法，直接拼接
-  return existingText + newText;
-};
 
 const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProjectsChange }) => {
   // 先声明基本状态
@@ -947,53 +857,33 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           userInputContent,  // 传入用户当前输入的内容
           newMessages,  // 传入包含用户新消息的聊天历史
           (chunk) => {
-            // 调试信息：显示前端接收到的chunk数据
-            console.log('🎯 [Frontend Debug] 前端接收chunk:', {
-              rawChunk: chunk,
-              chunkType: typeof chunk,
-              chunkLength: chunk?.length || 0,
-              containsNewline: chunk?.includes('\n') || false,
-              containsCarriageReturn: chunk?.includes('\r') || false,
-              hasWhitespace: chunk ? /\s/.test(chunk) : false,
-              isNull: chunk === null,
-              isUndefined: chunk === undefined,
-              isEmpty: chunk === '',
-              charCodes: chunk ? [...chunk].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
-            });
-            
-            // 只过滤null和undefined，保留所有有效内容包括空字符串和换行符
-            // 这对于正确显示AI回复中的段落分隔很重要
+            // 只过滤null和undefined，保留所有有效内容
             if (chunk !== null && chunk !== undefined) {
-              // 更新消息内容 - 使用ref避免状态竞争
+              // 直接拼接文本，不做任何额外处理，完全依赖Streamdown
               if (isFirstChunk) {
                 currentContentRef.current = chunk;
-                console.log('✅ [Frontend Debug] 设置第一个chunk:', chunk);
               } else {
-                const oldContent = currentContentRef.current;
-                currentContentRef.current = safeConcatChineseText(currentContentRef.current, chunk);
-                console.log('📝 [Frontend Debug] 拼接chunk:', {
-                  oldContent: oldContent,
-                  newChunk: chunk,
-                  resultContent: currentContentRef.current
-                });
+                currentContentRef.current += chunk;
               }
+              
               
               setMessages(prev => prev.map(msg => 
                 msg.id === aiResponseId 
                   ? { 
                       ...msg, 
-                      content: formatAIResponse(currentContentRef.current), // 应用智能分段格式化
+                      content: currentContentRef.current, // Streamdown会自动处理markdown格式
                       isThinking: false  // 收到内容后取消思考状态
                     }
                   : msg
               ));
               if (isFirstChunk) isFirstChunk = false;
-            } else {
-              console.log('⚠️ [Frontend Debug] 跳过chunk (null或undefined):', chunk);
             }
           },
           () => {
-            setIsLoading(false);
+            // 流式完成时，确保最终状态同步
+            setTimeout(() => {
+              setIsLoading(false);
+            }, 100);
           }
         );
       } else {
@@ -1004,7 +894,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           msg.id === aiResponseId 
             ? { 
                 ...msg, 
-                content: formatAIResponse(response.content || response.response || '抱歉，我暂时无法回复。'), // 应用智能分段格式化
+                content: response.content || response.response || '抱歉，我暂时无法回复。', // 直接使用原始内容
                 isThinking: false
               }
             : msg
@@ -1017,7 +907,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: formatAIResponse(`抱歉，AI服务暂时不可用: ${error.message}`), // 应用智能分段格式化
+              content: `抱歉，AI服务暂时不可用: ${error.message}`, // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1092,7 +982,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: formatAIResponse(response.content || response.suggestions || response.optimized_content || '操作完成'), // 应用智能分段格式化
+              content: response.content || response.suggestions || response.optimized_content || '操作完成', // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1103,7 +993,7 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
         msg.id === aiResponseId 
           ? { 
               ...msg, 
-              content: formatAIResponse(`${action} 操作失败: ${error.message}`), // 应用智能分段格式化
+              content: `${action} 操作失败: ${error.message}`, // 直接使用原始内容
               isThinking: false
             }
           : msg
@@ -1288,71 +1178,26 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                       </>
                     ) : message.role === 'assistant' ? (
                       <div className="ai-chat-markdown">
-                        {/* 调试信息：显示最终要渲染的消息内容 */}
-                        {console.log('🎨 [Render Debug] 渲染AI消息:', {
-                          messageId: message.id,
-                          messageContent: message.content,
-                          contentLength: message.content?.length || 0,
-                          containsNewline: message.content?.includes('\n') || false,
-                          contentPreview: message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : ''),
-                          charCodes: message.content ? [...message.content.substring(0, 50)].map(c => `${c}(${c.charCodeAt(0)})`).join(', ') : 'N/A'
-                        })}
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkBreaks]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={{
-                            // 自定义组件样式以适配聊天气泡，确保换行符正确显示
-                            p: ({ children }) => <p style={{ margin: '0.5em 0', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{children}</p>,
-                            h1: ({ children }) => <h1 style={{ fontSize: '1.2em', margin: '0.5em 0', fontWeight: 'bold' }}>{children}</h1>,
-                            h2: ({ children }) => <h2 style={{ fontSize: '1.1em', margin: '0.4em 0', fontWeight: 'bold' }}>{children}</h2>,
-                            h3: ({ children }) => <h3 style={{ fontSize: '1.05em', margin: '0.3em 0', fontWeight: 'bold' }}>{children}</h3>,
-                            ul: ({ children }) => <ul style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ul>,
-                            ol: ({ children }) => <ol style={{ margin: '0.5em 0', paddingLeft: '1.5em' }}>{children}</ol>,
-                            li: ({ children }) => <li style={{ margin: '0.2em 0' }}>{children}</li>,
-                            code: ({ inline, children }) => inline ? 
-                              <code style={{ 
-                                backgroundColor: 'rgba(0,0,0,0.05)', 
-                                padding: '2px 4px', 
-                                borderRadius: '3px',
-                                fontSize: '0.9em',
-                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
-                              }}>{children}</code> : 
-                              <code style={{ fontSize: '0.9em' }}>{children}</code>,
-                            pre: ({ children }) => (
-                              <pre style={{ 
-                                backgroundColor: 'rgba(0,0,0,0.05)', 
-                                padding: '12px', 
-                                borderRadius: '6px',
-                                margin: '0.5em 0',
-                                overflow: 'auto',
-                                fontSize: '0.9em',
-                                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
-                              }}>
-                                {children}
-                              </pre>
-                            ),
-                            blockquote: ({ children }) => (
-                              <blockquote style={{
-                                borderLeft: '4px solid #1890ff',
-                                paddingLeft: '12px',
-                                margin: '0.5em 0',
-                                fontStyle: 'italic',
-                                opacity: 0.8
-                              }}>
-                                {children}
-                              </blockquote>
-                            ),
-                            strong: ({ children }) => <strong style={{ fontWeight: 'bold' }}>{children}</strong>,
-                            em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
-                            a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', textDecoration: 'underline' }}>
-                                {children}
-                              </a>
-                            )
-                          }}
+                        <Streamdown 
+                          key={message.id}
+                          parseIncompleteMarkdown={true}
+                          className="ai-chat-content streamdown-chat"
+                          shikiTheme="github-light"
                         >
-                          {message.content}
-                        </ReactMarkdown>
+                          {(() => {
+                            let content = message.content || '';
+                            
+                            // 修复流式传输导致的不完整代码块标记
+                            const codeBlockCount = (content.match(/```/g) || []).length;
+                            
+                            // 如果代码块标记是奇数个，自动补全结束标记
+                            if (codeBlockCount % 2 === 1) {
+                              content = content + '\n```';
+                            }
+                            
+                            return content;
+                          })()}
+                        </Streamdown>
                       </div>
                     ) : (
                       <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>

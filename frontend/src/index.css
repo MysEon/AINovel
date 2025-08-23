@@ -1,4 +1,10 @@
 @import 'antd/dist/reset.css';
+@import 'katex/dist/katex.min.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@source "../node_modules/streamdown/dist/index.js";
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
