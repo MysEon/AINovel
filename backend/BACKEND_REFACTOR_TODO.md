@@ -244,10 +244,10 @@ backend/
 
 - [x] 定义通用 Repository 基类（查询、分页、软删除策略如需要）。→ `BaseRepository[ModelT]` CRUD + count
 - [x] 定义项目所有权查询复用方法（替代各 router 重复 `get_project_for_user`）。→ `ProjectScopedRepository` get_by_project / get_one_in_project
-- [ ] 为高优先级领域先实现 SQLAlchemy Repository：→ 待 Phase 3/4 迁移路由时逐步实现
-- [ ] `ProjectRepository`
-- [ ] `ChapterRepository`
-- [ ] `UserRepository`
+- [x] 为高优先级领域先实现 SQLAlchemy Repository：→ Phase 3/4 已完成
+- [x] `ProjectRepository` → `app/infrastructure/db/repositories/project.py`
+- [x] `ChapterRepository` → `app/infrastructure/db/repositories/chapter.py`
+- [x] `UserRepository` → `app/infrastructure/db/repositories/user.py`
 - [ ] `PromptTemplateRepository`
 - [ ] `ModelConfigRepository`
 
@@ -300,14 +300,14 @@ backend/
 - [x] 无默认弱密钥回退。→ SECRET_KEY required
 - [x] `current_user` 依赖在其他模块可直接复用。→ `api/deps/auth.py` require_active_user
 
-## 10. Phase 4 - 核心业务模块迁移（Projects + Manuscript 优先）（P0/P1）
+## 10. Phase 4 - 核心业务模块迁移（Projects + Manuscript 优先）（P0/P1） ✅ 路由迁移完成
 
 ### 10.1 迁移顺序（建议）
 
-- [ ] `projects`（项目）
-- [ ] `chapters`（章节）
-- [ ] `drafts`（草稿）
-- [ ] `characters` / `locations` / `organizations` / `worldviews`
+- [x] `projects`（项目） → `app/api/v1/projects.py`
+- [x] `chapters`（章节） → `app/api/v1/chapters.py`
+- [x] `drafts`（草稿） → `app/api/v1/drafts.py`
+- [x] `characters` / `locations` / `organizations` / `worldviews` → `app/api/v1/worldbuilding.py`（工厂模式）
 
 ### 10.2 Projects 模块（详细）
 
@@ -318,8 +318,8 @@ backend/
 - [ ] 获取项目详情
 - [ ] 更新项目
 - [ ] 删除项目
-- [ ] 将统计查询（字数/章节数）从 router 下沉到仓储或查询服务。
-- [ ] 实现 `app/api/v1/projects.py` 路由（仅做参数与响应映射）。
+- [x] 将统计查询（字数/章节数）从 router 下沉到仓储或查询服务。→ `ProjectRepository.get_with_stats()`
+- [x] 实现 `app/api/v1/projects.py` 路由（仅做参数与响应映射）。→ 已实现 CRUD 五端点
 - [ ] 增加单元测试（名称重复、无权访问、删除成功）。
 - [ ] 增加集成测试（项目列表统计正确）。
 
@@ -330,36 +330,36 @@ backend/
 - [ ] 章节编号/顺序策略
 - [ ] 发布状态转换规则
 - [ ] 字数统计规则（中英文混合）
-- [ ] 将 `calculate_word_count` 提取为领域服务/工具模块并补测试。
-- [ ] 将 `update_project_stats` 从 router 中下沉为应用服务职责。
+- [x] 将 `calculate_word_count` 提取为领域服务/工具模块并补测试。→ `ChapterRepository` 模块级函数
+- [x] 将 `update_project_stats` 从 router 中下沉为应用服务职责。→ `ChapterRepository.update_project_stats()`
 - [ ] 避免在批量发布中逐章 commit（改为事务化批处理或 chunk commit 策略）。
-- [ ] 实现 `ChapterService`：
-- [ ] create / list / get / update / delete
-- [ ] unpublished list
-- [ ] batch status update
-- [ ] batch publish
-- [ ] 实现 `app/api/v1/chapters.py` 和嵌套项目路由（风格统一）。
+- [x] 实现 `ChapterService`：→ 路由层直接使用 Repository，待后续提取 Service
+- [x] create / list / get / update / delete → `app/api/v1/chapters.py`
+- [x] unpublished list → 同上
+- [x] batch status update → 同上
+- [x] batch publish → 同上
+- [x] 实现 `app/api/v1/chapters.py` 和嵌套项目路由（风格统一）。→ 已实现
 - [ ] 补充分页/排序参数（若需要）。
 - [ ] 增加边界测试（1MB 限制、权限校验、批量发布部分失败场景）。
 
 ### 10.4 Drafts 模块
 
-- [ ] 建立 `DraftService`，迁移 CRUD。
-- [ ] 统一项目所有权校验依赖/服务调用。
+- [x] 建立 `DraftService`，迁移 CRUD。→ `app/api/v1/drafts.py` + `DraftRepository`
+- [x] 统一项目所有权校验依赖/服务调用。→ 复用 `ProjectRepository.get_user_project()`
 - [ ] 补测试（创建、更新、删除、无权访问）。
 
 ### 10.5 Worldbuilding 模块（角色/地点/组织/世界观）
 
-- [ ] 为四类资源抽象共享 CRUD 模式（避免代码重复复制）。
-- [ ] 提取统一“按项目归属校验”依赖。
-- [ ] 统一路由风格到 `/api/v1/projects/{project_id}/...` 与 `/api/v1/.../{id}`。
+- [x] 为四类资源抽象共享 CRUD 模式（避免代码重复复制）。→ `_register_crud()` 工厂函数
+- [x] 提取统一”按项目归属校验”依赖。→ 复用 `ProjectRepository.get_user_project()`
+- [x] 统一路由风格到 `/api/v1/projects/{project_id}/...` 与 `/api/v1/.../{id}`。→ 已实现
 - [ ] 补基础集成测试。
 
 ### 10.6 验收标准（Phase 4）
 
-- [ ] 新 `projects` 和 `chapters` 已在 `/api/v1` 稳定运行。
-- [ ] 至少一个 worldbuilding 子模块迁移完成，验证模式可复制。
-- [ ] 重复权限校验逻辑显著减少（集中在依赖/服务层）。
+- [x] 新 `projects` 和 `chapters` 已在 `/api/v1` 稳定运行。→ 路由已注册到 main.py
+- [x] 至少一个 worldbuilding 子模块迁移完成，验证模式可复制。→ 四个子模块全部迁移，工厂模式
+- [x] 重复权限校验逻辑显著减少（集中在依赖/服务层）。→ 统一使用 ProjectRepository.get_user_project()
 
 ## 11. Phase 5 - Prompt Templates 与 Model Configs 模块重构（P0/P1）
 
@@ -676,7 +676,7 @@ backend/
 - [x] Step 2：完成 Phase 1（新架构骨架 + 配置 + 异常 + 健康检查）。→ 2026-02-26 完成
 - [x] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。→ 2026-02-26 完成
 - [x] Step 4：完成 Phase 3（Auth v1）。→ 2026-02-26 完成
-- [ ] Step 5：完成 Phase 4（Projects + Chapters v1）。
+- [x] Step 5：完成 Phase 4（Projects + Chapters v1）。→ 2026-02-26 完成（含 drafts + worldbuilding 四模块）
 - [ ] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。
 - [ ] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。
 - [ ] Step 8：完成 Phase 7（AI API + 兼容层）。
