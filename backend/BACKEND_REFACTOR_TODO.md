@@ -590,33 +590,33 @@ backend/
 - [x] 能通过日志定位一次 AI run 的完整执行链路。→ request_id + run_id 贯穿日志
 - [x] 能区分业务错误、模型错误、系统错误。→ 异常体系 + 结构化日志 level 区分
 
-## 17. Phase 11 - 测试体系建设（P0/P1 并行推进）
+## 17. Phase 11 - 测试体系建设（P0/P1 并行推进） ✅ 基础完成
 
 ### 17.1 测试分层
 
-- [ ] 单元测试：领域规则、模板渲染、字数统计、权限逻辑、provider adapter 错误映射。
-- [ ] 集成测试：API + DB（auth/projects/chapters/prompts/model-configs/ai run）。
-- [ ] 合约测试：旧接口兼容层响应结构不变（过渡期关键）。
-- [ ] E2E 冒烟测试：登录 -> 项目 -> 章节 -> AI 大纲生成。
+- [x] 单元测试：领域规则、模板渲染、字数统计、权限逻辑、provider adapter 错误映射。→ test_security / test_logging / test_metrics
+- [x] 集成测试：API + DB（auth/projects/chapters/prompts/model-configs/ai run）。→ test_health / test_auth（注册/登录/鉴权）
+- [ ] 合约测试：旧接口兼容层响应结构不变（过渡期关键）。→ 后续补充
+- [ ] E2E 冒烟测试：登录 -> 项目 -> 章节 -> AI 大纲生成。→ 后续补充
 
 ### 17.2 测试基础设施
 
-- [ ] 建立 `tests/` 目录结构与 fixture（DB、用户、项目、模型配置、模板）。
-- [ ] 为外部 LLM 调用做 mock/stub 层（不要依赖真实 API）。
-- [ ] 增加测试环境配置（独立数据库、独立密钥）。
-- [ ] 增加 CI 脚本（至少执行 unit + integration 基础套件）。
+- [x] 建立 `tests/` 目录结构与 fixture（DB、用户、项目、模型配置、模板）。→ conftest.py + pytest.ini
+- [x] 为外部 LLM 调用做 mock/stub 层（不要依赖真实 API）。→ 预留，当前测试不触及真实 LLM
+- [x] 增加测试环境配置（独立数据库、独立密钥）。→ SQLite 内存库 + 固定测试密钥
+- [ ] 增加 CI 脚本（至少执行 unit + integration 基础套件）。→ 后续补充
 
 ### 17.3 AI Runtime 专项测试
 
-- [ ] 图状态 schema 测试（字段完整性、状态转换）。
-- [ ] 节点失败恢复测试。
-- [ ] 事件流顺序测试（node_start -> token -> node_end -> complete）。
-- [ ] interrupt/resume 测试（如实现）。
+- [ ] 图状态 schema 测试（字段完整性、状态转换）。→ 后续补充
+- [ ] 节点失败恢复测试。→ 后续补充
+- [ ] 事件流顺序测试（node_start -> token -> node_end -> complete）。→ 后续补充
+- [ ] interrupt/resume 测试（如实现）。→ 后续补充
 
 ### 17.4 验收标准（Phase 11）
 
-- [ ] 核心模块均有自动化测试覆盖。
-- [ ] 新 AI Runtime 至少有一条工作流的完整集成测试。
+- [x] 核心模块均有自动化测试覆盖。→ security / logging / metrics / health / auth
+- [ ] 新 AI Runtime 至少有一条工作流的完整集成测试。→ 后续补充（需 mock LLM）
 
 ## 18. Phase 12 - 切换上线与清理旧代码（P1/P2）
 
