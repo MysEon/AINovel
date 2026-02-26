@@ -67,4 +67,10 @@ export const STORAGE_KEYS = {
   TOKEN: TOKEN_KEY,
   TOKEN_BACKUP: TOKEN_BACKUP_KEY,
   SELECTED_MODEL_CONFIG: SELECTED_MODEL_CONFIG_KEY,
+  // App 状态
+  LAST_VIEW: 'ainovel_last_view',
+  CURRENT_PROJECT: 'ainovel_current_project',
+  // 其他
+  PARTICLE_SHAPES: 'ainovel_particle_shapes',
+  ERROR_LOG: 'ainovel_errors',
 };
