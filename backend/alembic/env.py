@@ -19,7 +19,9 @@ if config.config_file_name is not None:
 import sys
 import os
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
-from models import Base
+
+# 导入新架构模型（触发所有模型注册到 Base.metadata）
+from app.infrastructure.db.models import Base  # noqa: F401
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

@@ -217,34 +217,34 @@ backend/
 - [x] 配置、日志、异常处理中间件已生效。→ Pydantic Settings + setup_logging + register_exception_handlers + RequestIDMiddleware
 - [x] 未迁移业务前，仍不影响旧后端运行（并行开发状态）。→ 新 app/ 独立于旧 main.py
 
-## 8. Phase 2 - 数据库与持久化层重构（P0）
+## 8. Phase 2 - 数据库与持久化层重构（P0） ✅ 基础完成
 
 ### 8.1 数据库会话与事务边界
 
-- [ ] 新建 `app/infrastructure/db/session.py`，统一 `engine`、`sessionmaker`、依赖注入。
-- [ ] 明确 sync/async 策略（建议业务接口统一 async）。
-- [ ] 移除旧 `database.py` 中 `create_tables()` 在生产路径的使用。
-- [ ] 增加事务辅助工具（应用服务层控制提交/回滚边界）。
+- [x] 新建 `app/infrastructure/db/session.py`，统一 `engine`、`sessionmaker`、依赖注入。→ 已实现
+- [x] 明确 sync/async 策略（建议业务接口统一 async）。→ 业务用 async，Alembic 用 sync
+- [x] 移除旧 `database.py` 中 `create_tables()` 在生产路径的使用。→ 新架构 lifespan 无建表逻辑
+- [x] 增加事务辅助工具（应用服务层控制提交/回滚边界）。→ Repository flush 模式，commit 由调用方控制
 
 ### 8.2 ORM 模型拆分
 
-- [ ] 将 `models.py` 按领域拆分到 `app/infrastructure/db/models/`。
-- [ ] 建立统一 `Base` 与 metadata 注册入口。
-- [ ] 确保模型间关系定义完整且不依赖“运行时动态补关系”。
-- [ ] 处理知识库扩展模型与主模型关系的正式集成（不再使用脆弱的后置 monkey patch 风格）。
+- [x] 将 `models.py` 按领域拆分到 `app/infrastructure/db/models/`。→ 7个文件：auth/projects/manuscript/worldbuilding/model_configs/prompts/ai_runtime
+- [x] 建立统一 `Base` 与 metadata 注册入口。→ `base.py` DeclarativeBase + TimestampMixin，`__init__.py` 聚合
+- [x] 确保模型间关系定义完整且不依赖”运行时动态补关系”。→ 所有 relationship 在模型文件中声明
+- [ ] 处理知识库扩展模型与主模型关系的正式集成。→ 待 Phase 6 知识库迁移时处理
 
 ### 8.3 Alembic 统一管理
 
-- [ ] 更新 Alembic `target_metadata` 指向新模型聚合入口。
-- [ ] 添加迁移规范文档：任何 schema 变更必须通过 Alembic 脚本。
-- [ ] 删除/禁用所有启动时自动建表逻辑。
-- [ ] 增加 Alembic 验证脚本（检查模型与迁移版本一致性）。
+- [x] 更新 Alembic `target_metadata` 指向新模型聚合入口。→ env.py 已改为 `from app.infrastructure.db.models import Base`
+- [ ] 添加迁移规范文档：任何 schema 变更必须通过 Alembic 脚本。→ 待补充
+- [x] 删除/禁用所有启动时自动建表逻辑。→ 新架构 lifespan 无 create_all
+- [ ] 增加 Alembic 验证脚本（检查模型与迁移版本一致性）。→ 低优先级
 
 ### 8.4 Repository 层（先做通用）
 
-- [ ] 定义通用 Repository 基类（查询、分页、软删除策略如需要）。
-- [ ] 定义项目所有权查询复用方法（替代各 router 重复 `get_project_for_user`）。
-- [ ] 为高优先级领域先实现 SQLAlchemy Repository：
+- [x] 定义通用 Repository 基类（查询、分页、软删除策略如需要）。→ `BaseRepository[ModelT]` CRUD + count
+- [x] 定义项目所有权查询复用方法（替代各 router 重复 `get_project_for_user`）。→ `ProjectScopedRepository` get_by_project / get_one_in_project
+- [ ] 为高优先级领域先实现 SQLAlchemy Repository：→ 待 Phase 3/4 迁移路由时逐步实现
 - [ ] `ProjectRepository`
 - [ ] `ChapterRepository`
 - [ ] `UserRepository`
@@ -674,7 +674,7 @@ backend/
 
 - [x] Step 1：完成 Phase 0（基线清单 + 风险清单 + 技术决策确认）。→ 2026-02-26 完成
 - [x] Step 2：完成 Phase 1（新架构骨架 + 配置 + 异常 + 健康检查）。→ 2026-02-26 完成
-- [ ] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。
+- [x] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。→ 2026-02-26 完成
 - [ ] Step 4：完成 Phase 3（Auth v1）。
 - [ ] Step 5：完成 Phase 4（Projects + Chapters v1）。
 - [ ] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。

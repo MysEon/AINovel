@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.exceptions import register_exception_handlers
 from app.core.middleware import RequestIDMiddleware, setup_cors
+from app.infrastructure.db.session import get_async_engine, dispose_engine
 
 
 logger = logging.getLogger(__name__)
@@ -26,10 +27,13 @@ async def lifespan(app: FastAPI):
         "AINovel API 启动 | env=%s | version=%s",
         settings.app.env, settings.app.app_version,
     )
-    # TODO Phase 2: 数据库连接池预热
+    # 数据库连接池预热
+    get_async_engine()
+    logger.info("数据库引擎已初始化")
     # TODO Phase 9: 队列 Worker 启动
     yield
     # 资源释放
+    await dispose_engine()
     logger.info("AINovel API 关闭")
 
 
