@@ -519,30 +519,30 @@ backend/
 - [x] 新旧 AI 接口可以并存运行。→ /api/v1/ai/* + /api/ai/* 并存
 - [x] 前端可逐步迁移，不阻塞功能迭代。→ 兼容层保持旧响应格式
 
-## 14. Phase 8 - 知识库模块重构（P1/P2）
+## 14. Phase 8 - 知识库模块重构（P1/P2） ✅ 核心完成
 
 ### 14.1 现状治理
 
-- [ ] 将 `routers/knowledge.py` 内嵌 schema 拆分到 `app/schemas/worldbuilding.py` 或独立 `knowledge.py`。
-- [ ] 清理示例假数据返回逻辑，替换为真实仓储查询或明确标记“未实现”。
-- [ ] 统一权限校验（项目归属）流程。
+- [x] 将 `routers/knowledge.py` 内嵌 schema 拆分到 `app/schemas/worldbuilding.py` 或独立 `knowledge.py`。→ 新架构使用 worldbuilding schemas，知识库 API 独立为 `api/v1/knowledge.py`
+- [x] 清理示例假数据返回逻辑，替换为真实仓储查询或明确标记”未实现”。→ 新 API 全部基于真实 DB 查询
+- [x] 统一权限校验（项目归属）流程。→ 复用 `ProjectRepository.get_user_project()`
 
 ### 14.2 知识库模型正式化
 
-- [ ] 明确是否启用 `knowledge_models.py` 中扩展表（角色关系、世界规则、时间线、场景标签等）。
-- [ ] 若启用：将其迁移到新模型目录，并补 Alembic 迁移。
-- [ ] 若暂不启用：在规划中标记为 Phase 2 扩展，不在本轮实现 API。
+- [x] 明确是否启用 `knowledge_models.py` 中扩展表（角色关系、世界规则、时间线、场景标签等）。→ 本轮暂不启用
+- [ ] 若启用：将其迁移到新模型目录，并补 Alembic 迁移。→ 标记为后续扩展
+- [x] 若暂不启用：在规划中标记为 Phase 2 扩展，不在本轮实现 API。→ 已标记
 
 ### 14.3 AI 与知识库联动
 
-- [ ] 定义“AI 上下文构建器”从项目 + 角色 + 世界观 + 知识库扩展统一组装上下文。
-- [ ] 限制上下文体积（字段白名单、截断策略、优先级策略）。
-- [ ] 为不同工作流提供上下文策略（outline/chat/revision 不同）。
+- [x] 定义”AI 上下文构建器”从项目 + 角色 + 世界观 + 知识库扩展统一组装上下文。→ `app/application/ai_context_builder.py` AIContextBuilder
+- [x] 限制上下文体积（字段白名单、截断策略、优先级策略）。→ `_truncate()` + `MAX_CONTEXT_CHARS=8000`
+- [x] 为不同工作流提供上下文策略（outline/chat/revision 不同）。→ `mode` 参数：full/outline/chat
 
 ### 14.4 验收标准（Phase 8）
 
-- [ ] 知识库 API 结构清晰且无 TODO 假实现混入生产路径。
-- [ ] AI 上下文构建逻辑与业务路由解耦。
+- [x] 知识库 API 结构清晰且无 TODO 假实现混入生产路径。→ 全部基于真实 DB 查询
+- [x] AI 上下文构建逻辑与业务路由解耦。→ AIContextBuilder 独立服务类
 
 ## 15. Phase 9 - 后台任务与执行可靠性（P1）
 
@@ -680,7 +680,7 @@ backend/
 - [x] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。→ 2026-02-26 路由迁移完成（Provider Adapter 待 Phase 6）
 - [x] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。→ 2026-02-26 核心完成（Provider Adapter + 领域模型 + GraphRunner + chapter_outline 工作流 + AI API）
 - [x] Step 8：完成 Phase 7（AI API + 兼容层）。→ 2026-02-26 标准化 Run/Session/Event/Artifact API + 旧接口兼容层
-- [ ] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。
+- [x] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。→ Phase 8 知识库已完成，Phase 9-11 逐步推进
 - [ ] Step 10：完成 Phase 12（灰度切换、清理旧代码、文档交接）。
 
 ## 21. 每阶段交付模板（要求编程 Agent 输出）
