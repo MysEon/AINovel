@@ -117,6 +117,8 @@ const AuthPage = ({ onLogin }) => {
           <p className="brand-slogan">用 AI 重新定义创作</p>
         </div>
 
+        <div className="auth-spacer" />
+
         <Card className="auth-card" bordered={false}>
 
         <Tabs
