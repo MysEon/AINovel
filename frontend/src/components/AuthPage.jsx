@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Space, Alert, Spin } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, GlobalOutlined, BulbOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import './AuthPage.css';
 
 const { TabPane } = Tabs;
 
@@ -12,15 +13,8 @@ const AuthPage = ({ onLogin }) => {
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [language, setLanguage] = useState('zh');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    // 检查系统主题
-    const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(darkMode);
-  }, []);
 
   const calculatePasswordStrength = (password) => {
     if (!password) return 0;
@@ -37,10 +31,6 @@ const AuthPage = ({ onLogin }) => {
   const handlePasswordChange = (e) => {
     const password = e.target.value;
     setPasswordStrength(calculatePasswordStrength(password));
-  };
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
   };
 
   const toggleLanguage = () => {
@@ -149,25 +139,26 @@ const AuthPage = ({ onLogin }) => {
               name="login"
               onFinish={handleLogin}
               autoComplete="off"
-              layout="vertical"
               className="auth-form"
             >
               <Form.Item
                 name="username"
                 rules={[{ required: true, message: '请输入用户名' }]}
+                className="auth-input"
               >
                 <Input
                   prefix={<UserOutlined />}
                   placeholder="用户名"
                   size="large"
                   disabled={isLoginLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
               <Form.Item
                 name="password"
                 rules={[{ required: true, message: '请输入密码' }]}
+                className="auth-input"
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -175,7 +166,7 @@ const AuthPage = ({ onLogin }) => {
                   size="large"
                   disabled={isLoginLoading}
                   iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
@@ -190,7 +181,7 @@ const AuthPage = ({ onLogin }) => {
                   <Button 
                     type="link" 
                     onClick={handleForgotPassword}
-                    style={{ padding: 0, height: 'auto' }}
+                    style={{ padding: 0, height: 'auto', color: 'white' }}
                   >
                     忘记密码？
                   </Button>
@@ -215,7 +206,6 @@ const AuthPage = ({ onLogin }) => {
               name="register"
               onFinish={handleRegister}
               autoComplete="off"
-              layout="vertical"
               className="auth-form"
             >
               <Form.Item
@@ -225,13 +215,14 @@ const AuthPage = ({ onLogin }) => {
                   { min: 3, message: '用户名至少需要3个字符' },
                   { max: 50, message: '用户名不能超过50个字符' }
                 ]}
+                className="auth-input"
               >
                 <Input
                   prefix={<UserOutlined />}
                   placeholder="用户名"
                   size="large"
                   disabled={isRegisterLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
@@ -241,13 +232,14 @@ const AuthPage = ({ onLogin }) => {
                   { required: true, message: '请输入电子邮箱' },
                   { type: 'email', message: '请输入有效的邮箱地址' }
                 ]}
+                className="auth-input"
               >
                 <Input
                   prefix={<MailOutlined />}
                   placeholder="电子邮箱"
                   size="large"
                   disabled={isRegisterLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
@@ -258,6 +250,7 @@ const AuthPage = ({ onLogin }) => {
                   { min: 6, message: '密码至少需要6个字符' },
                   { max: 50, message: '密码不能超过50个字符' }
                 ]}
+                className="auth-input"
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -265,8 +258,8 @@ const AuthPage = ({ onLogin }) => {
                   size="large"
                   disabled={isRegisterLoading}
                   iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  className="auth-input"
                   onChange={handlePasswordChange}
+                  bordered={false}
                 />
               </Form.Item>
               
@@ -315,10 +308,8 @@ const AuthPage = ({ onLogin }) => {
           </TabPane>
         </Tabs>
         
-        {/* 第三方登录 */}
-        <div style={{ marginTop: '24px' }}>
-          <Divider>或</Divider>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <Divider style={{ color: 'rgba(255,255,255,0.8)', borderTopColor: 'rgba(255,255,255,0.3)' }}>或</Divider>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <Button
               icon={<GithubOutlined />}
               onClick={() => handleSocialLogin('GitHub')}
@@ -336,31 +327,20 @@ const AuthPage = ({ onLogin }) => {
               微信
             </Button>
           </div>
-        </div>
         
         </Card>
       
-      {/* 页面底部信息 */}
-      <div style={{ position: 'absolute', bottom: '20px', left: '0', right: '0', textAlign: 'center', color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>
-        <div style={{ marginBottom: '8px' }}>
+      <div className="auth-footer">
+        <div>
           AINovel v1.0.0 | AI驱动的小说创作平台
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '8px' }}>
           <Button
             type="text"
             icon={<GlobalOutlined />}
             onClick={toggleLanguage}
-            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
           >
             {language === 'zh' ? 'English' : '中文'}
-          </Button>
-          <Button
-            type="text"
-            icon={isDarkMode ? '☀️' : '🌙'}
-            onClick={toggleTheme}
-            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
-          >
-            {isDarkMode ? '亮色主题' : '暗色主题'}
           </Button>
         </div>
       </div>
