@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, GlobalOutlined, BulbOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined } from '@ant-design/icons';
 import ParticleBackground from './ParticleBackground';
 import './AuthPage.css';
 
@@ -13,9 +13,7 @@ const AuthPage = ({ onLogin }) => {
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [language, setLanguage] = useState('zh');
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [error, setError] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const calculatePasswordStrength = (password) => {
@@ -33,10 +31,6 @@ const AuthPage = ({ onLogin }) => {
   const handlePasswordChange = (e) => {
     const password = e.target.value;
     setPasswordStrength(calculatePasswordStrength(password));
-  };
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'zh' ? 'en' : 'zh');
   };
 
   const handleSocialLogin = (provider) => {
@@ -116,22 +110,14 @@ const AuthPage = ({ onLogin }) => {
     <div className={containerClass}>
       <ParticleBackground isDarkMode={isDarkMode} />
       <div className="auth-wrapper">
-      <Card className="auth-card" bordered={false}>
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            onClose={() => setError(null)}
-            style={{ marginBottom: '24px' }}
-          />
-        )}
-        
-        <div className="auth-header">
-          <h1>AINovel</h1>
-          <p className="auth-subtitle">AI驱动的小说创作平台</p>
+
+        <div className="auth-brand">
+          <div className="brand-icon">✦</div>
+          <h1 className="brand-title">AINovel</h1>
+          <p className="brand-slogan">用 AI 重新定义创作</p>
         </div>
+
+        <Card className="auth-card" bordered={false}>
 
         <Tabs
           activeKey={activeTab}
@@ -177,15 +163,15 @@ const AuthPage = ({ onLogin }) => {
               </Form.Item>
 
               <Form.Item>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <Checkbox 
+                <div className="auth-meta">
+                  <Checkbox
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   >
                     记住我
                   </Checkbox>
-                  <Button 
-                    type="link" 
+                  <Button
+                    type="link"
                     onClick={handleForgotPassword}
                   >
                     忘记密码？
@@ -269,31 +255,16 @@ const AuthPage = ({ onLogin }) => {
               </Form.Item>
               
               {passwordStrength > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', marginRight: '8px' }}>
-                      密码强度: 
-                    </span>
-                    <div style={{ 
-                      flex: 1, 
-                      height: '4px', 
-                      background: '#f0f0f0', 
-                      borderRadius: '2px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: `${passwordStrength}%`, 
-                        height: '100%', 
-                        background: passwordStrength < 40 ? '#ff4d4f' : 
+                <div className="pwd-strength">
+                  <span>密码强度</span>
+                  <div className="pwd-strength-bar">
+                    <div className="pwd-strength-fill" style={{
+                      width: `${passwordStrength}%`,
+                      background: passwordStrength < 40 ? '#ff4d4f' :
                                  passwordStrength < 70 ? '#faad14' : '#52c41a',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <span style={{ fontSize: '12px', marginLeft: '8px' }}>
-                      {passwordStrength < 40 ? '弱' : 
-                       passwordStrength < 70 ? '中' : '强'}
-                    </span>
+                    }} />
                   </div>
+                  <span>{passwordStrength < 40 ? '弱' : passwordStrength < 70 ? '中' : '强'}</span>
                 </div>
               )}
 
@@ -313,13 +284,12 @@ const AuthPage = ({ onLogin }) => {
           </TabPane>
         </Tabs>
         
-        <Divider>或</Divider>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <Divider className="auth-divider">或</Divider>
+        <div className="auth-social">
             <Button
               icon={<GithubOutlined />}
               onClick={() => handleSocialLogin('GitHub')}
               size="large"
-              style={{ flex: 1 }}
             >
               GitHub
             </Button>
@@ -327,7 +297,6 @@ const AuthPage = ({ onLogin }) => {
               icon={<WechatOutlined />}
               onClick={() => handleSocialLogin('微信')}
               size="large"
-              style={{ flex: 1, background: '#07C160', borderColor: '#07C160', color: 'white' }}
             >
               微信
             </Button>
@@ -336,21 +305,8 @@ const AuthPage = ({ onLogin }) => {
         </Card>
       
       <div className="auth-footer">
-        <div>
-          <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
-        </div>
-        <div style={{marginTop: '8px'}}>
-          AINovel v1.0.0 | AI驱动的小说创作平台
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '8px' }}>
-          <Button
-            type="text"
-            icon={<GlobalOutlined />}
-            onClick={toggleLanguage}
-          >
-            {language === 'zh' ? 'English' : '中文'}
-          </Button>
-        </div>
+        <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
+        <div style={{marginTop: '8px'}}>AINovel v1.0.0</div>
       </div>
       </div>
     </div>
