@@ -25,12 +25,15 @@ def get_password_hash(password: str) -> str:
 def create_access_token(
     subject: str,
     expires_delta: Optional[timedelta] = None,
+    extra_claims: Optional[dict] = None,
 ) -> str:
     """创建JWT访问令牌"""
     settings = get_settings()
     now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=settings.auth.access_token_expire_minutes))
     payload = {"sub": subject, "iat": now, "exp": expire}
+    if extra_claims:
+        payload.update(extra_claims)
     return jwt.encode(payload, settings.auth.secret_key, algorithm=settings.auth.algorithm)
 
 

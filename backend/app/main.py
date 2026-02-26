@@ -69,11 +69,14 @@ def create_app() -> FastAPI:
 def _register_routers(app: FastAPI) -> None:
     """集中注册所有路由"""
     from app.api.v1 import health
+    from app.api.v1 import auth
 
     # 健康检查（无前缀）
     app.include_router(health.router)
 
-    # TODO Phase 3: auth 路由
+    # 认证
+    app.include_router(auth.router)
+
     # TODO Phase 4: projects / chapters 路由
     # TODO Phase 5: prompts / model-configs 路由
     # TODO Phase 7: ai 路由

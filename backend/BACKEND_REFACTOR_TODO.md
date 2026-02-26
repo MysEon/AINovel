@@ -265,40 +265,40 @@ backend/
 - [ ] 项目/章节等核心仓储已可查询。
 - [ ] 启动过程不再自动建表。
 
-## 9. Phase 3 - 认证与安全模块重构（P0）
+## 9. Phase 3 - 认证与安全模块重构（P0） ✅ 已完成
 
 ### 9.1 认证设计确认
 
-- [ ] 明确 Token 策略（仅 access token / access + refresh token）。
-- [ ] 明确过期时间、刷新策略、撤销策略（可先简化，但要留接口）。
-- [ ] 明确 JWT Claims 结构（sub, user_id, iat, exp, jti, scopes 可选）。
+- [x] 明确 Token 策略（仅 access token / access + refresh token）。→ 单 access token + /refresh 续签
+- [x] 明确过期时间、刷新策略、撤销策略（可先简化，但要留接口）。→ AUTH_ACCESS_TOKEN_EXPIRE_MINUTES 可配置
+- [x] 明确 JWT Claims 结构（sub, user_id, iat, exp, jti, scopes 可选）。→ sub=username, user_id, iat, exp
 
 ### 9.2 安全实现重构
 
-- [ ] 将密码哈希与 JWT 工具迁移到 `app/core/security.py`。
-- [ ] 强制 `SECRET_KEY` 从配置加载，生产环境禁止默认值。
-- [ ] 明确密码哈希算法（bcrypt/argon2，建议支持升级策略）。
-- [ ] 将 `get_current_user` / `require_active_user` 设计为标准依赖函数。
+- [x] 将密码哈希与 JWT 工具迁移到 `app/core/security.py`。→ 已实现
+- [x] 强制 `SECRET_KEY` 从配置加载，生产环境禁止默认值。→ AuthSettings required + min_length=32
+- [x] 明确密码哈希算法（bcrypt/argon2，建议支持升级策略）。→ bcrypt via passlib
+- [x] 将 `get_current_user` / `require_active_user` 设计为标准依赖函数。→ `api/deps/auth.py`
 
 ### 9.3 Auth API 重构（v1）
 
-- [ ] 实现 `/api/v1/auth/register`
-- [ ] 实现 `/api/v1/auth/login`
-- [ ] 实现 `/api/v1/auth/me`
-- [ ] 实现 `/api/v1/auth/refresh`（如采用 refresh token）
-- [ ] 统一错误码与响应结构
+- [x] 实现 `/api/v1/auth/register` → `api/v1/auth.py`
+- [x] 实现 `/api/v1/auth/login` → 同上
+- [x] 实现 `/api/v1/auth/me` → 同上
+- [x] 实现 `/api/v1/auth/refresh`（如采用 refresh token） → 同上，复用 require_active_user
+- [x] 统一错误码与响应结构 → 使用 AppException 体系
 
 ### 9.4 安全增强（至少留 TODO）
 
-- [ ] 登录失败限速/锁定策略（可后续实现，但先设计接口/中间件挂点）。
-- [ ] 审计日志（登录成功/失败、refresh、异常 token）。
-- [ ] CORS 白名单配置按环境区分。
+- [ ] 登录失败限速/锁定策略（可后续实现，但先设计接口/中间件挂点）。→ 待后续
+- [ ] 审计日志（登录成功/失败、refresh、异常 token）。→ 待后续
+- [x] CORS 白名单配置按环境区分。→ Phase 1 已实现 CORSSettings
 
 ### 9.5 验收标准（Phase 3）
 
-- [ ] 新 Auth API 可替代旧 API（功能等价或更严格）。
-- [ ] 无默认弱密钥回退。
-- [ ] `current_user` 依赖在其他模块可直接复用。
+- [x] 新 Auth API 可替代旧 API（功能等价或更严格）。→ register/login/me/refresh 四端点完整
+- [x] 无默认弱密钥回退。→ SECRET_KEY required
+- [x] `current_user` 依赖在其他模块可直接复用。→ `api/deps/auth.py` require_active_user
 
 ## 10. Phase 4 - 核心业务模块迁移（Projects + Manuscript 优先）（P0/P1）
 
@@ -675,7 +675,7 @@ backend/
 - [x] Step 1：完成 Phase 0（基线清单 + 风险清单 + 技术决策确认）。→ 2026-02-26 完成
 - [x] Step 2：完成 Phase 1（新架构骨架 + 配置 + 异常 + 健康检查）。→ 2026-02-26 完成
 - [x] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。→ 2026-02-26 完成
-- [ ] Step 4：完成 Phase 3（Auth v1）。
+- [x] Step 4：完成 Phase 3（Auth v1）。→ 2026-02-26 完成
 - [ ] Step 5：完成 Phase 4（Projects + Chapters v1）。
 - [ ] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。
 - [ ] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。
