@@ -20,3 +20,7 @@ export const updateCharacter = (characterId, data) =>
 // 删除角色
 export const deleteCharacter = (characterId) =>
   api.delete(`/characters/${characterId}`);
+
+// 获取角色面板模板（基础模板 + 题材增量）
+export const getCharacterTemplates = () =>
+  api.get('/character-templates');

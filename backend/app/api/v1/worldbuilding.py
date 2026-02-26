@@ -16,8 +16,22 @@ from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
 from app.infrastructure.db.repositories.project import ProjectRepository
 from app.api.deps.auth import require_active_user
+from app.core.character_templates import build_character_template_registry
 
 router = APIRouter()
+
+
+@router.get(
+    "/api/v1/character-templates",
+    tags=["小说元素：角色"],
+    name="get_character_templates",
+)
+async def get_character_templates(
+    user: User = Depends(require_active_user),
+):
+    # 预留 user / project 级模板扩展，当前返回系统模板注册表。
+    _ = user
+    return build_character_template_registry()
 
 
 def _register_crud(

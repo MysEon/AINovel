@@ -27,6 +27,7 @@ class CharacterCreate(BaseModel):
     dimensions: Optional[str] = None      # JSON 字符串
     abilities: Optional[str] = None
     weaknesses: Optional[str] = None
+    extra_attributes: Optional[str] = None   # JSON 字符串（题材增量字段）
 
 
 class CharacterUpdate(BaseModel):
@@ -47,6 +48,7 @@ class CharacterUpdate(BaseModel):
     dimensions: Optional[str] = None
     abilities: Optional[str] = None
     weaknesses: Optional[str] = None
+    extra_attributes: Optional[str] = None
 
 
 class CharacterResponse(BaseModel):
@@ -69,6 +71,7 @@ class CharacterResponse(BaseModel):
     dimensions: Optional[str] = None
     abilities: Optional[str] = None
     weaknesses: Optional[str] = None
+    extra_attributes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

@@ -246,6 +246,26 @@
   flex-shrink: 0;
 }
 
+/* Gender journey editor */
+.gender-transition-card .ant-card-head {
+  min-height: 40px;
+}
+
+.gender-transition-card .ant-card-head-title {
+  padding: 8px 0;
+}
+
+.gender-transition-card .ant-card-extra {
+  padding: 4px 0;
+}
+
+.gender-journey-preview {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
 /* ── Dark Theme ── */
 .dark-theme .character-manager-header h4 {
   color: #e0e0e0;
@@ -287,4 +307,8 @@
 
 .dark-theme .dim-val {
   color: #aaa;
+}
+
+.dark-theme .gender-journey-preview {
+  background: rgba(255, 255, 255, 0.06);
 }

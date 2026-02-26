@@ -29,6 +29,7 @@ class Character(Base, TimestampMixin):
     dimensions = Column(Text)            # 三维属性 JSON，如 {"智力":80,"体力":60,"魅力":90}
     abilities = Column(Text)             # 能力 / 技能
     weaknesses = Column(Text)            # 弱点 / 缺陷
+    extra_attributes = Column(Text)      # 扩展属性 JSON（题材模板增量 / 自定义字段）
 
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
 
