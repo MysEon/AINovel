@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Space, Alert, Spin } from 'antd';
+import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, GlobalOutlined, BulbOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import ParticleBackground from './ParticleBackground';
 import './AuthPage.css';
 
 const { TabPane } = Tabs;
@@ -15,6 +16,7 @@ const AuthPage = ({ onLogin }) => {
   const [language, setLanguage] = useState('zh');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [error, setError] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const calculatePasswordStrength = (password) => {
     if (!password) return 0;
@@ -108,8 +110,12 @@ const AuthPage = ({ onLogin }) => {
     }
   };
 
+  const containerClass = isDarkMode ? "auth-container dark" : "auth-container light";
+
   return (
-    <div className="auth-container">
+    <div className={containerClass}>
+      <ParticleBackground isDarkMode={isDarkMode} />
+      <div className="auth-wrapper">
       <Card className="auth-card" bordered={false}>
         {error && (
           <Alert
@@ -181,7 +187,6 @@ const AuthPage = ({ onLogin }) => {
                   <Button 
                     type="link" 
                     onClick={handleForgotPassword}
-                    style={{ padding: 0, height: 'auto', color: 'white' }}
                   >
                     忘记密码？
                   </Button>
@@ -308,7 +313,7 @@ const AuthPage = ({ onLogin }) => {
           </TabPane>
         </Tabs>
         
-        <Divider style={{ color: 'rgba(255,255,255,0.8)', borderTopColor: 'rgba(255,255,255,0.3)' }}>或</Divider>
+        <Divider>或</Divider>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <Button
               icon={<GithubOutlined />}
@@ -332,6 +337,9 @@ const AuthPage = ({ onLogin }) => {
       
       <div className="auth-footer">
         <div>
+          <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
+        </div>
+        <div style={{marginTop: '8px'}}>
           AINovel v1.0.0 | AI驱动的小说创作平台
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '8px' }}>
@@ -343,6 +351,7 @@ const AuthPage = ({ onLogin }) => {
             {language === 'zh' ? 'English' : '中文'}
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );
