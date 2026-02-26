@@ -84,10 +84,12 @@ def setup_logging(env: str = "dev", level: Optional[str] = None) -> None:
     root.filters.clear()
 
     # 全局 Filter：自动注入 request_id / run_id
-    root.addFilter(ContextFilter())
+    ctx_filter = ContextFilter()
+    root.addFilter(ctx_filter)
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(log_level)
+    handler.addFilter(ctx_filter)  # 也加到 handler，防止第三方库绕过 root filter
 
     if env == "prod":
         handler.setFormatter(JSONFormatter())

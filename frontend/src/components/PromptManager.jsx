@@ -174,7 +174,6 @@ const PromptManager = ({ onSelectTemplate }) => {
     }
     message.success('模板已选择，可以在AI助手中使用');
   };
-  };
 
   const columns = [
     {
