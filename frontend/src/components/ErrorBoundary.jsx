@@ -1,4 +1,5 @@
 import React from 'react';
+import { STORAGE_KEYS } from '../services/core/authStorage';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -42,13 +43,13 @@ class ErrorBoundary extends React.Component {
     
     // 保存到本地存储以便调试
     try {
-      const existingErrors = JSON.parse(localStorage.getItem('ainovel_errors') || '[]');
+      const existingErrors = JSON.parse(localStorage.getItem(STORAGE_KEYS.ERROR_LOG) || '[]');
       existingErrors.push(errorData);
       // 只保留最近10个错误
       if (existingErrors.length > 10) {
         existingErrors.splice(0, existingErrors.length - 10);
       }
-      localStorage.setItem('ainovel_errors', JSON.stringify(existingErrors));
+      localStorage.setItem(STORAGE_KEYS.ERROR_LOG, JSON.stringify(existingErrors));
     } catch (e) {
       console.warn('Failed to save error to localStorage:', e);
     }

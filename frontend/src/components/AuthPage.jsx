@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } f
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
 import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
 import { login, register } from '../services/authService';
+import { STORAGE_KEYS } from '../services/core/authStorage';
 import './AuthPage.css';
 
 const { TabPane } = Tabs;
@@ -19,7 +20,7 @@ const AuthPage = ({ onLogin }) => {
   const [showShapeSettings, setShowShapeSettings] = useState(false);
   const [enabledShapes, setEnabledShapes] = useState(() => {
     try {
-      const saved = localStorage.getItem('ainovel_particle_shapes');
+      const saved = localStorage.getItem(STORAGE_KEYS.PARTICLE_SHAPES);
       return saved ? JSON.parse(saved) : SHAPE_LIST.map(s => s.key);
     } catch { return SHAPE_LIST.map(s => s.key); }
   });
@@ -28,7 +29,7 @@ const AuthPage = ({ onLogin }) => {
     setEnabledShapes(prev => {
       const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
       const result = next.length === 0 ? [key] : next; // at least one
-      localStorage.setItem('ainovel_particle_shapes', JSON.stringify(result));
+      localStorage.setItem(STORAGE_KEYS.PARTICLE_SHAPES, JSON.stringify(result));
       return result;
     });
   };

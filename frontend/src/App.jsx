@@ -7,17 +7,17 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { NotificationProvider, useNotification } from './components/NotificationManager';
 import { createProject as createProjectAPI, getUserProjects, deleteProject, getProject } from './services/projectService';
 import { getCurrentUser, logout as authLogout } from './services/authService';
-import { getToken, setToken, clearToken } from './services/core/authStorage';
+import { getToken, setToken, clearToken, STORAGE_KEYS } from './services/core/authStorage';
 import { onUnauthorized } from './services/core/apiClient';
 import usePersistentState from './hooks/usePersistentState';
 import './App.css';
 
 function AppContent() {
   // 应用状态（使用持久化状态）
-  const [currentView, setCurrentView] = usePersistentState('ainovel_last_view', 'auth'); // 'auth' | 'dashboard' | 'editor'
+  const [currentView, setCurrentView] = usePersistentState(STORAGE_KEYS.LAST_VIEW, 'auth'); // 'auth' | 'dashboard' | 'editor'
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [currentProject, setCurrentProject] = usePersistentState('ainovel_current_project', null);
+  const [currentProject, setCurrentProject] = usePersistentState(STORAGE_KEYS.CURRENT_PROJECT, null);
   const [isInitializing, setIsInitializing] = useState(true); // 初始为 true，避免闪烁
   const [isRestoring, setIsRestoring] = useState(true); // 新增：状态恢复中
   
