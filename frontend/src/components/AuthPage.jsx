@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined } from '@ant-design/icons';
-import ParticleBackground from './ParticleBackground';
+import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
+import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
 import './AuthPage.css';
 
 const { TabPane } = Tabs;
@@ -15,6 +15,22 @@ const AuthPage = ({ onLogin }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showShapeSettings, setShowShapeSettings] = useState(false);
+  const [enabledShapes, setEnabledShapes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ainovel_particle_shapes');
+      return saved ? JSON.parse(saved) : SHAPE_LIST.map(s => s.key);
+    } catch { return SHAPE_LIST.map(s => s.key); }
+  });
+
+  const toggleShape = (key) => {
+    setEnabledShapes(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      const result = next.length === 0 ? [key] : next; // at least one
+      localStorage.setItem('ainovel_particle_shapes', JSON.stringify(result));
+      return result;
+    });
+  };
 
   const calculatePasswordStrength = (password) => {
     if (!password) return 0;
@@ -108,7 +124,7 @@ const AuthPage = ({ onLogin }) => {
 
   return (
     <div className={containerClass}>
-      <ParticleBackground isDarkMode={isDarkMode} />
+      <ParticleBackground isDarkMode={isDarkMode} enabledShapes={enabledShapes} />
       <div className="auth-wrapper">
 
         <div className="auth-brand">
@@ -309,6 +325,31 @@ const AuthPage = ({ onLogin }) => {
       <div className="auth-footer">
         <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
         <div style={{marginTop: '8px'}}>AINovel v1.0.0</div>
+      </div>
+
+      <div className="shape-settings">
+        <button
+          className="shape-settings-trigger"
+          onClick={() => setShowShapeSettings(v => !v)}
+          title="粒子形状设置"
+        >
+          <SettingOutlined spin={showShapeSettings} />
+        </button>
+        {showShapeSettings && (
+          <div className="shape-settings-panel">
+            <div className="shape-settings-title">粒子形状</div>
+            {SHAPE_LIST.map(s => (
+              <label key={s.key} className="shape-settings-item">
+                <input
+                  type="checkbox"
+                  checked={enabledShapes.includes(s.key)}
+                  onChange={() => toggleShape(s.key)}
+                />
+                <span>{s.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
       </div>
     </div>

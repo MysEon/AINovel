@@ -299,6 +299,103 @@
 }
 
 /* ============ Responsive ============ */
+/* ============ Shape Settings ============ */
+.shape-settings {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+.shape-settings-trigger {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  opacity: 0.35;
+}
+
+.shape-settings-trigger:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+.light .shape-settings-trigger {
+  background: rgba(0, 0, 0, 0.06);
+  color: #1a1a2e;
+}
+
+.dark .shape-settings-trigger {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e8ed;
+}
+
+.shape-settings-panel {
+  position: absolute;
+  bottom: 44px;
+  left: 0;
+  min-width: 140px;
+  border-radius: 14px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  padding: 14px 16px;
+  animation: shapeSettingsFadeIn 0.2s ease;
+}
+
+@keyframes shapeSettingsFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.light .shape-settings-panel {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.dark .shape-settings-panel {
+  background: rgba(30, 30, 40, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.shape-settings-title {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.45;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.shape-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  opacity: 0.7;
+}
+
+.shape-settings-item:hover {
+  opacity: 1;
+}
+
+.shape-settings-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #666;
+  cursor: pointer;
+}
+
+/* ============ Responsive ============ */
 @media (max-width: 768px) {
   .auth-wrapper {
     flex-direction: column;

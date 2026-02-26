@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 
 // ============ Constants ============
-const PARTICLE_COUNT = 100;
+const PARTICLE_COUNT = 150;
 const TIMINGS = { FREE: 5000, FORMING: 2000, HOLDING: 4000, DISSOLVING: 1500 };
 
 // ============ Easing ============
@@ -126,11 +126,91 @@ function genDiamond(n, S) {
   return distributeOnEdges(v, e, n);
 }
 
-const SHAPES = [genCube, genSphere, genTetrahedron, genOctahedron, genTorus, genHelix, genDiamond];
+function genIcosahedron(n, S) {
+  const t = (1 + Math.sqrt(5)) / 2; // golden ratio
+  const s = S / Math.sqrt(1 + t * t); // normalize to fit in S
+  const v = [
+    { x: -s, y: t * s, z: 0 }, { x: s, y: t * s, z: 0 },
+    { x: -s, y: -t * s, z: 0 }, { x: s, y: -t * s, z: 0 },
+    { x: 0, y: -s, z: t * s }, { x: 0, y: s, z: t * s },
+    { x: 0, y: -s, z: -t * s }, { x: 0, y: s, z: -t * s },
+    { x: t * s, y: 0, z: -s }, { x: t * s, y: 0, z: s },
+    { x: -t * s, y: 0, z: -s }, { x: -t * s, y: 0, z: s },
+  ];
+  const e = [
+    [0,1],[0,5],[0,7],[0,10],[0,11],[1,5],[1,7],[1,8],[1,9],
+    [2,3],[2,4],[2,6],[2,10],[2,11],[3,4],[3,6],[3,8],[3,9],
+    [4,5],[4,9],[4,11],[5,9],[5,11],[6,7],[6,8],[6,10],
+    [7,8],[7,10],[8,9],[10,11],
+  ];
+  return distributeOnEdges(v, e, n);
+}
+
+function genMobius(n, S) {
+  const points = [];
+  const R = S * 0.8;
+  for (let i = 0; i < n; i++) {
+    const u = (i / n) * Math.PI * 2;
+    const v = ((i * 7) % n) / n - 0.5; // pseudo-random spread across width
+    const half = u / 2;
+    const w = v * S * 0.4;
+    points.push({
+      x: (R + w * Math.cos(half)) * Math.cos(u),
+      y: (R + w * Math.cos(half)) * Math.sin(u) * 0.3,
+      z: w * Math.sin(half),
+    });
+  }
+  return points;
+}
+
+function genTrefoilKnot(n, S) {
+  const points = [];
+  const r = S * 0.6;
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    points.push({
+      x: (Math.sin(t) + 2 * Math.sin(2 * t)) * r * 0.45,
+      y: (Math.cos(t) - 2 * Math.cos(2 * t)) * r * 0.45,
+      z: -Math.sin(3 * t) * r * 0.5,
+    });
+  }
+  return points;
+}
+
+function genHeart(n, S) {
+  const points = [];
+  const scale = S * 0.065;
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+    const z = (Math.sin(t * 3) + Math.cos(t * 2)) * 2;
+    points.push({ x: x * scale, y: y * scale, z: z * scale });
+  }
+  return points;
+}
+
+export const SHAPE_LIST = [
+  { key: 'cube', name: '立方体', gen: genCube },
+  { key: 'sphere', name: '球体', gen: genSphere },
+  { key: 'tetrahedron', name: '四面体', gen: genTetrahedron },
+  { key: 'octahedron', name: '八面体', gen: genOctahedron },
+  { key: 'torus', name: '圆环', gen: genTorus },
+  { key: 'helix', name: '螺旋', gen: genHelix },
+  { key: 'diamond', name: '钻石', gen: genDiamond },
+  { key: 'icosahedron', name: '二十面体', gen: genIcosahedron },
+  { key: 'mobius', name: '莫比乌斯环', gen: genMobius },
+  { key: 'trefoil', name: '三叶结', gen: genTrefoilKnot },
+  { key: 'heart', name: '心形', gen: genHeart },
+];
+
+const ALL_GENS = SHAPE_LIST.map(s => s.gen);
 
 // ============ Component ============
-const ParticleBackground = ({ isDarkMode }) => {
+const ParticleBackground = ({ isDarkMode, enabledShapes }) => {
   const canvasRef = useRef(null);
+  const enabledRef = useRef(enabledShapes);
+  enabledRef.current = enabledShapes;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -172,7 +252,14 @@ const ParticleBackground = ({ isDarkMode }) => {
 
     // State machine
     let state = "FREE", stateTimer = 0, lastTime = 0;
-    let shapeIdx = Math.floor(Math.random() * SHAPES.length);
+    const getActiveGens = () => {
+      const keys = enabledRef.current;
+      if (!keys || keys.length === 0) return ALL_GENS;
+      const filtered = SHAPE_LIST.filter(s => keys.includes(s.key)).map(s => s.gen);
+      return filtered.length > 0 ? filtered : ALL_GENS;
+    };
+    let activeGens = getActiveGens();
+    let shapeIdx = Math.floor(Math.random() * activeGens.length);
     let targets = [];
     let connections = []; // precomputed pairs based on 3D distance
     let rotX = 0, rotY = 0;
@@ -196,7 +283,9 @@ const ParticleBackground = ({ isDarkMode }) => {
         state = "FORMING";
         stateTimer = 0;
         const scale = Math.min(width, height) * 0.35;
-        targets = SHAPES[shapeIdx](PARTICLE_COUNT, scale);
+        activeGens = getActiveGens();
+        shapeIdx = shapeIdx % activeGens.length;
+        targets = activeGens[shapeIdx](PARTICLE_COUNT, scale);
         // Precompute connections using 3D distance (stable across rotation)
         connections = [];
         const connDist3D = scale * 0.7;
@@ -226,7 +315,7 @@ const ParticleBackground = ({ isDarkMode }) => {
       } else if (state === "DISSOLVING" && stateTimer >= TIMINGS.DISSOLVING) {
         state = "FREE";
         stateTimer = 0;
-        shapeIdx = (shapeIdx + 1) % SHAPES.length;
+        shapeIdx = (shapeIdx + 1) % getActiveGens().length;
       }
 
       // Update particles based on state
