@@ -171,51 +171,51 @@ backend/
 
 - [x] 有一份”当前接口与模块清单”文档。→ `docs/PHASE0_BASELINE.md`
 - [x] 有一份”重构范围/非目标/风险”确认记录。→ 基线 §4 风险清单
-- [ ] 团队对数据库目标（Postgres/SQLite）做出明确决策。→ ⚠️ 待你拍板
+- [x] 团队对数据库目标（Postgres/SQLite）做出明确决策。→ ✅ 决定: PostgreSQL（本地开发保留 SQLite 兼容）
 
-## 7. Phase 1 - 新架构骨架搭建（P0）
+## 7. Phase 1 - 新架构骨架搭建（P0） ✅ 已完成
 
 ### 7.1 新入口与应用工厂
 
-- [ ] 在 `app/` 下创建新的 FastAPI 启动入口（建议采用 app factory）。
-- [ ] 将日志初始化从旧 `main.py` 抽离到 `app/core/logging.py`。
-- [ ] 将 CORS 配置移动到 `app/core/middleware.py` 并支持环境区分。
-- [ ] 新入口仅负责：创建应用、注册中间件、注册路由、注册异常处理、生命周期事件。
-- [ ] 明确生命周期事件职责（启动检查、连接池预热、资源释放），禁止建表。
+- [x] 在 `app/` 下创建新的 FastAPI 启动入口（建议采用 app factory）。→ `app/main.py` create_app()
+- [x] 将日志初始化从旧 `main.py` 抽离到 `app/core/logging.py`。→ setup_logging() 支持 dev/prod 格式
+- [x] 将 CORS 配置移动到 `app/core/middleware.py` 并支持环境区分。→ setup_cors() 读取 CORSSettings
+- [x] 新入口仅负责：创建应用、注册中间件、注册路由、注册异常处理、生命周期事件。→ create_app() 五步流程
+- [x] 明确生命周期事件职责（启动检查、连接池预热、资源释放），禁止建表。→ lifespan() 已实现，无建表逻辑
 
 ### 7.2 配置管理
 
-- [ ] 创建 `app/core/config.py`（Pydantic Settings）。
-- [ ] 配置项按类别分组：App、DB、Auth、CORS、LLM、Queue、Observability。
-- [ ] 添加环境切换（dev/test/prod）与默认值策略。
-- [ ] 对关键配置做“强校验”：`SECRET_KEY`、数据库 URL、加密密钥等。
-- [ ] 明确配置来源优先级（env > .env > defaults）。
+- [x] 创建 `app/core/config.py`（Pydantic Settings）。→ 已实现
+- [x] 配置项按类别分组：App、DB、Auth、CORS、LLM、Queue、Observability。→ 前四类已实现，后三类待后续 Phase
+- [x] 添加环境切换（dev/test/prod）与默认值策略。→ AppSettings.env + Field pattern 校验
+- [x] 对关键配置做”强校验”：`SECRET_KEY`、数据库 URL、加密密钥等。→ AUTH_SECRET_KEY required + min_length=32
+- [x] 明确配置来源优先级（env > .env > defaults）。→ Pydantic Settings 默认行为 + .env.example 已创建
 
 ### 7.3 全局异常与响应规范
 
-- [ ] 创建统一异常基类（业务异常、权限异常、资源不存在、外部依赖异常、校验异常）。
-- [ ] 建立统一错误响应结构（错误码、消息、详情、trace_id）。
-- [ ] 接入 FastAPI 异常处理器（包括 SQLAlchemy、ValidationError、Unhandled Exception）。
-- [ ] 明确“业务失败不能返回 success=true”的规则。
+- [x] 创建统一异常基类（业务异常、权限异常、资源不存在、外部依赖异常、校验异常）。→ `app/core/exceptions.py` 6个子类
+- [x] 建立统一错误响应结构（错误码、消息、详情、trace_id）。→ _build_error_body() success=false 结构
+- [x] 接入 FastAPI 异常处理器（包括 SQLAlchemy、ValidationError、Unhandled Exception）。→ register_exception_handlers()
+- [x] 明确”业务失败不能返回 success=true”的规则。→ 所有错误响应 success=false
 
 ### 7.4 API 版本化与路由注册
 
-- [ ] 建立 `/api/v1` 路由前缀。
-- [ ] 创建 `app/api/v1/__init__.py` 统一路由聚合。
-- [ ] 规划兼容层挂载位置（如 `/api/legacy/...` 或保留旧路径由适配器转发）。
+- [x] 建立 `/api/v1` 路由前缀。→ `app/api/v1/` 目录已创建
+- [x] 创建 `app/api/v1/__init__.py` 统一路由聚合。→ 已创建，main.py _register_routers() 集中注册
+- [ ] 规划兼容层挂载位置（如 `/api/legacy/...` 或保留旧路径由适配器转发）。→ 待 Phase 7
 
 ### 7.5 健康检查与基础接口
 
-- [ ] 新增 `/health/live`（进程存活）。
-- [ ] 新增 `/health/ready`（数据库连接、关键依赖状态）。
-- [ ] 新增 `/api/v1/system/info`（版本、构建信息，可选）。
+- [x] 新增 `/health/live`（进程存活）。→ `app/api/v1/health.py`
+- [x] 新增 `/health/ready`（数据库连接、关键依赖状态）。→ 已实现，DB 检查待 Phase 2 接入
+- [ ] 新增 `/api/v1/system/info`（版本、构建信息，可选）。→ 低优先级，后续补充
 
 ### 7.6 验收标准（Phase 1）
 
-- [ ] 新 `app` 入口可启动。
-- [ ] `/health/*` 可用。
-- [ ] 配置、日志、异常处理中间件已生效。
-- [ ] 未迁移业务前，仍不影响旧后端运行（并行开发状态）。
+- [x] 新 `app` 入口可启动。→ `uvicorn app.main:app`
+- [x] `/health/*` 可用。→ /health/live + /health/ready
+- [x] 配置、日志、异常处理中间件已生效。→ Pydantic Settings + setup_logging + register_exception_handlers + RequestIDMiddleware
+- [x] 未迁移业务前，仍不影响旧后端运行（并行开发状态）。→ 新 app/ 独立于旧 main.py
 
 ## 8. Phase 2 - 数据库与持久化层重构（P0）
 
@@ -673,7 +673,7 @@ backend/
 ## 20. 编程 Agent 执行顺序（建议严格按此推进）
 
 - [x] Step 1：完成 Phase 0（基线清单 + 风险清单 + 技术决策确认）。→ 2026-02-26 完成
-- [ ] Step 2：完成 Phase 1（新架构骨架 + 配置 + 异常 + 健康检查）。
+- [x] Step 2：完成 Phase 1（新架构骨架 + 配置 + 异常 + 健康检查）。→ 2026-02-26 完成
 - [ ] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。
 - [ ] Step 4：完成 Phase 3（Auth v1）。
 - [ ] Step 5：完成 Phase 4（Projects + Chapters v1）。

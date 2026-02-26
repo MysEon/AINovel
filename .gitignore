@@ -172,6 +172,8 @@ config.ini
 settings.ini
 local_settings.ini
 .env*
+!.env.example
+!backend/.env.example
 
 # Development databases
 *.db-journal
