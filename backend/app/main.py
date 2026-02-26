@@ -21,20 +21,46 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期：启动检查 / 资源释放"""
+    """应用生命周期：启动自检 / 资源预热 / 资源释放"""
     settings = get_settings()
     logger.info(
         "AINovel API 启动 | env=%s | version=%s",
         settings.app.env, settings.app.app_version,
     )
+
+    # ── 启动配置自检 ──
+    _startup_checks(settings)
+
     # 数据库连接池预热
     get_async_engine()
     logger.info("数据库引擎已初始化")
-    # TODO Phase 9: 队列 Worker 启动
+
     yield
+
     # 资源释放
     await dispose_engine()
     logger.info("AINovel API 关闭")
+
+
+def _startup_checks(settings) -> None:
+    """启动时校验关键配置，缺失则 fail-fast"""
+    errors = []
+
+    # JWT 密钥长度
+    if len(settings.auth.secret_key) < 32:
+        errors.append("AUTH_SECRET_KEY 长度不足 32 字符")
+
+    # 生产环境额外检查
+    if settings.is_prod:
+        if settings.app.debug:
+            errors.append("生产环境不应开启 debug 模式")
+        if "sqlite" in settings.db.url.lower():
+            errors.append("生产环境不应使用 SQLite")
+
+    if errors:
+        for e in errors:
+            logger.error("启动自检失败: %s", e)
+        raise RuntimeError(f"启动自检失败: {'; '.join(errors)}")
 
 
 def create_app() -> FastAPI:

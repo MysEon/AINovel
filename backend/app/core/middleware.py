@@ -1,22 +1,23 @@
 """
 中间件模块
-- RequestID 中间件：为每个请求生成唯一 trace id
+- RequestID 中间件：为每个请求生成唯一 trace id，写入 ContextVar
 - CORS 配置：按环境区分白名单
 """
 
 import uuid
 import time
 import logging
-from contextvars import ContextVar
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.logging import request_id_var
+
 logger = logging.getLogger(__name__)
 
-# 请求级上下文变量，供日志 / 异常处理引用
-request_id_ctx: ContextVar[str] = ContextVar("request_id", default="")
+# 向后兼容：旧代码若 import request_id_ctx 仍可用
+request_id_ctx = request_id_var
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -24,7 +25,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:16]
-        request_id_ctx.set(rid)
+        request_id_var.set(rid)
 
         start = time.perf_counter()
         response = await call_next(request)

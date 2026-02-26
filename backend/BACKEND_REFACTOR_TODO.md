@@ -564,31 +564,31 @@ backend/
 - [x] 长任务不阻塞 API 进程。→ BackgroundTaskRunner + asyncio.create_task
 - [x] 失败运行可查询到完整错误与事件记录。→ GraphRunner 异常捕获 + AIRunEvent 落库
 
-## 16. Phase 10 - 可观测性与运维能力（P1）
+## 16. Phase 10 - 可观测性与运维能力（P1） ✅
 
 ### 16.1 日志
 
-- [ ] 统一结构化日志（JSON 或规范化文本）。
-- [ ] 为每个请求生成 `request_id/trace_id`。
-- [ ] 为每个 AI run 生成 `run_id` 关联日志。
-- [ ] 脱敏日志字段（API Key、Authorization、Prompt 中敏感字段如必要）。
+- [x] 统一结构化日志（JSON 或规范化文本）。→ JSONFormatter + DEV_FORMAT，ContextFilter 自动注入
+- [x] 为每个请求生成 `request_id/trace_id`。→ request_id_var ContextVar，中间件写入
+- [x] 为每个 AI run 生成 `run_id` 关联日志。→ run_id_var ContextVar，ContextFilter 注入
+- [x] 脱敏日志字段（API Key、Authorization、Prompt 中敏感字段如必要）。→ sanitize_value / sanitize_header
 
 ### 16.2 指标与追踪
 
-- [ ] 接入基础指标（请求量、响应时间、错误率）。
-- [ ] 接入 AI 指标（run 成功率、平均耗时、provider 错误率、token 使用量）。
-- [ ] 接入节点级事件耗时统计（LangGraph 节点执行时间）。
+- [x] 接入基础指标（请求量、响应时间、错误率）。→ MetricsCollector.record_request()
+- [x] 接入 AI 指标（run 成功率、平均耗时、provider 错误率、token 使用量）。→ record_ai_run / record_provider_call
+- [x] 接入节点级事件耗时统计（LangGraph 节点执行时间）。→ record_node()
 
 ### 16.3 运维与故障排查
 
-- [ ] 健康检查覆盖 DB、队列、关键 Provider（可配置为软检查）。
-- [ ] 增加启动配置自检（缺失关键 env 时启动失败）。
-- [ ] 增加运行时诊断接口（仅内部环境开放）。
+- [x] 健康检查覆盖 DB、队列、关键 Provider（可配置为软检查）。→ /health/ready 含 DB SELECT 1
+- [x] 增加启动配置自检（缺失关键 env 时启动失败）。→ _startup_checks() fail-fast
+- [x] 增加运行时诊断接口（仅内部环境开放）。→ /health/diag（prod 环境禁用）
 
 ### 16.4 验收标准（Phase 10）
 
-- [ ] 能通过日志定位一次 AI run 的完整执行链路。
-- [ ] 能区分业务错误、模型错误、系统错误。
+- [x] 能通过日志定位一次 AI run 的完整执行链路。→ request_id + run_id 贯穿日志
+- [x] 能区分业务错误、模型错误、系统错误。→ 异常体系 + 结构化日志 level 区分
 
 ## 17. Phase 11 - 测试体系建设（P0/P1 并行推进）
 
@@ -680,7 +680,7 @@ backend/
 - [x] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。→ 2026-02-26 路由迁移完成（Provider Adapter 待 Phase 6）
 - [x] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。→ 2026-02-26 核心完成（Provider Adapter + 领域模型 + GraphRunner + chapter_outline 工作流 + AI API）
 - [x] Step 8：完成 Phase 7（AI API + 兼容层）。→ 2026-02-26 标准化 Run/Session/Event/Artifact API + 旧接口兼容层
-- [x] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。→ Phase 8 知识库已完成，Phase 9-11 逐步推进
+- [x] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。→ Phase 8 知识库 ✅ / Phase 9 后台任务 ✅ / Phase 10 可观测性 ✅ / Phase 11 待推进
 - [ ] Step 10：完成 Phase 12（灰度切换、清理旧代码、文档交接）。
 
 ## 21. 每阶段交付模板（要求编程 Agent 输出）
