@@ -187,6 +187,8 @@ local_settings.ini
 !POC_ARCHITECTURE.md
 !POC_VALIDATION_REPORT.md
 !WORK_PLAN.md
+!BACKEND_REFACTOR_TODO.md
+!backend/docs/*.md
 TODO.md
 check_db.py
 test_db_insert.py
