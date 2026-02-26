@@ -245,7 +245,6 @@ function AppContent() {
           <div style={{ marginTop: '20px' }}>
             <button 
               onClick={() => {
-                console.log('Manual reset triggered by user');
                 setIsRestoring(false);
                 setIsInitializing(false);
                 setCurrentView('auth');

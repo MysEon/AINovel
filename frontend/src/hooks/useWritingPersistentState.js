@@ -85,8 +85,6 @@ const useWritingPersistentState = (projectId, chapterId) => {
       // 如果存储失败，尝试清理一些旧数据
       if (error.name === 'QuotaExceededError') {
         const cleanupResult = storageCleanup.handleQuotaExceeded();
-        console.log('Emergency cleanup result:', cleanupResult);
-        
         // 再次尝试存储
         try {
           localStorage.setItem(key, JSON.stringify(value));
@@ -104,7 +102,6 @@ const useWritingPersistentState = (projectId, chapterId) => {
    */
   const cleanupExpiredData = useCallback(() => {
     const result = storageCleanup.cleanupExpiredData();
-    console.log(`Cleaned up ${result.cleanedCount} expired items, freed ${result.cleanedSizeMB.toFixed(2)}MB`);
     return result;
   }, []);
 

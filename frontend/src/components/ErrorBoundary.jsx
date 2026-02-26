@@ -40,8 +40,6 @@ class ErrorBoundary extends React.Component {
       url: window.location.href
     };
     
-    console.log('Error logged:', errorData);
-    
     // 保存到本地存储以便调试
     try {
       const existingErrors = JSON.parse(localStorage.getItem('ainovel_errors') || '[]');

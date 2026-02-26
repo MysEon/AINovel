@@ -215,9 +215,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const fetchModelConfigs = async () => {
     setIsLoadingConfigs(true);
     try {
-      console.log('WritingEditor: 开始获取模型配置...');
       const configs = await getAvailableModelConfigs();
-      console.log('WritingEditor: 获取到的模型配置:', configs);
       setModelConfigs(configs);
       
       // 如果有配置，优先使用全局持久化的配置
@@ -233,7 +231,6 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         }
         
         if (configToSelect) {
-          console.log('WritingEditor: 选择模型配置:', configToSelect);
           setSelectedModelConfig(configToSelect);
           aiService.setSelectedModelConfigId(configToSelect.id);
           
@@ -285,9 +282,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
 
   const fetchChapters = async () => {
     try {
-      console.log('Fetching chapters for projectId:', projectId);
       const chaptersData = await getChapters(projectId);
-      console.log('Received chapters data:', chaptersData);
       setChapters(chaptersData);
 
       let chapterToSet = null;
@@ -322,7 +317,6 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
         }
       }
       
-      console.log('Setting current chapter:', chapterToSet);
       setCurrentChapter(chapterToSet);
 
     } catch (error) {
