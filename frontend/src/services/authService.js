@@ -30,3 +30,12 @@ export const getCurrentUser = () =>
 export const logout = () => {
   clearToken();
 };
+
+// 刷新 token
+export const refreshToken = async () => {
+  const data = await api.post('/auth/refresh');
+  if (data.access_token) {
+    setToken(data.access_token);
+  }
+  return data;
+};

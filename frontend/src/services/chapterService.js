@@ -33,27 +33,24 @@ export const unpublishChapter = (chapterId) =>
 export const batchUpdateChapterStatus = (updateData) =>
   api.post('/chapters/batch_update_status', updateData);
 
-// 批量发布章节（逐章发布，带进度回调）
+// 批量发布章节（使用后端批量接口）
 export const batchPublishChapters = async (projectId, chapterIds, onProgress) => {
-  const totalChapters = chapterIds.length;
-  let successCount = 0;
-  let errorCount = 0;
-  const results = [];
-
-  for (let i = 0; i < chapterIds.length; i++) {
-    const chapterId = chapterIds[i];
-    try {
-      const chapter = await api.put(`/chapters/${chapterId}`, { status: 'published' });
-      results.push({ chapterId, success: true, chapter });
-      successCount++;
-    } catch (error) {
-      results.push({ chapterId, success: false, error: error.message || '发布失败' });
-      errorCount++;
-    }
-    if (onProgress) onProgress({ current: i + 1, total: totalChapters });
-  }
-
-  return { successCount, errorCount, totalChapters, results };
+  if (onProgress) onProgress({ current: 0, total: chapterIds.length });
+  const result = await api.post('/chapters/batch-publish', {
+    project_id: projectId,
+    chapter_ids: chapterIds,
+  });
+  if (onProgress) onProgress({ current: chapterIds.length, total: chapterIds.length });
+  // 适配返回格式：后端返回 BatchPublishResponse
+  return {
+    successCount: result.success_count ?? 0,
+    errorCount: (result.total_count ?? 0) - (result.success_count ?? 0),
+    totalChapters: result.total_count ?? chapterIds.length,
+    results: [
+      ...(result.published_chapters || []).map(c => ({ chapterId: c.id, success: true, chapter: c })),
+      ...(result.failed_chapters || []).map(c => ({ chapterId: c.id, success: false, error: c.reason })),
+    ],
+  };
 };
 
 // 获取未发布章节列表
