@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
 import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
+import { login, register } from '../services/authService';
 import './AuthPage.css';
 
 const { TabPane } = Tabs;
@@ -60,24 +61,11 @@ const AuthPage = ({ onLogin }) => {
   const handleLogin = async (values) => {
     setIsLoginLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('登录成功');
-        onLogin(data.access_token);
-      } else {
-        message.error(data.detail || '登录失败');
-      }
+      const data = await login(values);
+      message.success('登录成功');
+      onLogin(data.access_token);
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '登录失败');
     } finally {
       setIsLoginLoading(false);
     }
@@ -86,35 +74,12 @@ const AuthPage = ({ onLogin }) => {
   const handleRegister = async (values) => {
     setIsRegisterLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('注册成功！请登录您的账户。');
-        registerForm.resetFields();
-        setActiveTab('login');
-      } else {
-        let errorMessage = '注册失败';
-        if (data.detail) {
-          if (typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (Array.isArray(data.detail)) {
-            errorMessage = data.detail[0]?.msg || errorMessage;
-          } else if (typeof data.detail === 'object') {
-            errorMessage = data.detail.msg || JSON.stringify(data.detail);
-          }
-        }
-        message.error(errorMessage);
-      }
+      await register(values);
+      message.success('注册成功！请登录您的账户。');
+      registerForm.resetFields();
+      setActiveTab('login');
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '注册失败');
     } finally {
       setIsRegisterLoading(false);
     }

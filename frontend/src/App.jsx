@@ -6,6 +6,8 @@ import ProjectEditor from './components/ProjectEditor';
 import ErrorBoundary from './components/ErrorBoundary';
 import { NotificationProvider, useNotification } from './components/NotificationManager';
 import { createProject as createProjectAPI, getUserProjects, deleteProject, getProject } from './services/projectService';
+import { getCurrentUser } from './services/authService';
+import { getToken } from './services/core/authStorage';
 import usePersistentState from './hooks/usePersistentState';
 import storageHealthCheck from './utils/storageHealthCheck';
 import './App.css';
@@ -43,51 +45,19 @@ function AppContent() {
 
   // 验证Token是否有效的辅助函数
   const validateToken = async (token) => {
-    if (!token) {
-      console.log('No token to validate');
+    if (!token || typeof token !== 'string' || token.length < 10) {
       return false;
     }
-    
-    console.log('Validating token format...');
-    // 检查token格式是否合理
-    if (typeof token !== 'string' || token.length < 10) {
-      console.log('Token format is invalid');
-      return false;
-    }
-    
+
     try {
-      console.log('Testing token with /api/auth/me...');
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      console.log('Token validation response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        console.log('Token is valid, user data:', userData);
-        return userData;
-      } else {
-        console.log('Token validation failed');
-        if (response.status === 401) {
-          console.log('Token is expired or invalid');
-        }
+      const userData = await getCurrentUser();
+      return userData;
+    } catch (error) {
+      if (error.status === 401) {
         return false;
       }
-    } catch (error) {
-      console.error('Token validation error:', error);
-      // 如果网络错误，可能是后端服务未启动，此时应该保留登录状态
+      // 网络错误时保留登录状态
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        console.log('Network error - backend might be down, preserving login state');
-        // 返回一个模拟的用户数据，保持登录状态
         return { id: 'temp', username: 'temp_user', is_temp: true };
       }
       return false;

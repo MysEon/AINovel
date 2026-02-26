@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Table, Input, Select, Tag, Space, Popconfirm, message, Tooltip, Card, Row, Col, Typography } from 'antd';
-import { 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  CopyOutlined, 
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined,
   EyeOutlined,
   SearchOutlined,
   BulbOutlined,
   SettingOutlined
 } from '@ant-design/icons';
+import { promptService } from '../services/promptService';
 import './PromptManager.css';
 
 const { Search } = Input;
@@ -45,26 +46,15 @@ const PromptManager = ({ onSelectTemplate }) => {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchText) params.append('search', searchText);
-      if (selectedCategory) params.append('category', selectedCategory);
-      params.append('include_system', includeSystem);
-      params.append('only_active', true);
-
-      const response = await fetch(`/api/prompt-templates/?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
+      const data = await promptService.getTemplates({
+        search: searchText,
+        category: selectedCategory,
+        include_system: includeSystem,
+        only_active: true,
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTemplates(data);
-      } else {
-        message.error('获取提示词模板失败');
-      }
+      setTemplates(data);
     } catch (error) {
-      message.error('网络错误');
+      message.error(error.message || '获取提示词模板失败');
     } finally {
       setLoading(false);
     }
@@ -73,38 +63,20 @@ const PromptManager = ({ onSelectTemplate }) => {
   // 获取分类列表
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/prompt-templates/categories', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
-      }
+      const data = await promptService.getCategories();
+      setCategories(data);
     } catch (error) {
       console.error('获取分类失败:', error);
     }
   };
 
-  // 初始化系统模板
   const initializeSystemTemplates = async () => {
     try {
-      const response = await fetch('/api/prompt-templates/initialize-system-templates', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        message.success(data.message);
-        fetchTemplates();
-      }
+      const data = await promptService.initializeSystemTemplates();
+      message.success(data.message);
+      fetchTemplates();
     } catch (error) {
-      message.error('初始化系统模板失败');
+      message.error(error.message || '初始化系统模板失败');
     }
   };
 
@@ -144,119 +116,64 @@ const PromptManager = ({ onSelectTemplate }) => {
   // 保存模板
   const handleSave = async () => {
     try {
-      const url = currentTemplate 
-        ? `/api/prompt-templates/${currentTemplate.id}`
-        : '/api/prompt-templates/';
-      const method = currentTemplate ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        message.success(currentTemplate ? '模板更新成功' : '模板创建成功');
-        setEditModalVisible(false);
-        fetchTemplates();
+      if (currentTemplate) {
+        await promptService.updateTemplate(currentTemplate.id, formData);
       } else {
-        const errorData = await response.json();
-        message.error(errorData.detail || '操作失败');
+        await promptService.createTemplate(formData);
       }
+      message.success(currentTemplate ? '模板更新成功' : '模板创建成功');
+      setEditModalVisible(false);
+      fetchTemplates();
     } catch (error) {
-      message.error('网络错误');
+      message.error(error.message || '操作失败');
     }
   };
 
   // 复制模板
   const handleCopy = async (template) => {
     try {
-      const response = await fetch(`/api/prompt-templates/${template.id}/copy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-
-      if (response.ok) {
-        message.success('模板复制成功');
-        fetchTemplates();
-      } else {
-        const errorData = await response.json();
-        message.error(errorData.detail || '复制失败');
-      }
+      await promptService.copyTemplate(template.id);
+      message.success('模板复制成功');
+      fetchTemplates();
     } catch (error) {
-      message.error('网络错误');
+      message.error(error.message || '复制失败');
     }
   };
 
-  // 删除模板
   const handleDelete = async (template) => {
     try {
-      const response = await fetch(`/api/prompt-templates/${template.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-
-      if (response.ok) {
-        message.success('模板删除成功');
-        fetchTemplates();
-      } else {
-        const errorData = await response.json();
-        message.error(errorData.detail || '删除失败');
-      }
+      await promptService.deleteTemplate(template.id);
+      message.success('模板删除成功');
+      fetchTemplates();
     } catch (error) {
-      message.error('网络错误');
+      message.error(error.message || '删除失败');
     }
   };
 
   // 预览模板
   const handlePreview = async (template) => {
     try {
-      const response = await fetch(`/api/prompt-templates/${template.id}/preview`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewData(data);
-        setCurrentTemplate(template);
-        setPreviewModalVisible(true);
-      }
+      const data = await promptService.previewTemplate(template.id);
+      setPreviewData(data);
+      setCurrentTemplate(template);
+      setPreviewModalVisible(true);
     } catch (error) {
-      message.error('预览失败');
+      message.error(error.message || '预览失败');
     }
   };
 
   // 使用模板
   const handleUseTemplate = async (template) => {
     try {
-      // 记录使用次数
-      await fetch(`/api/prompt-templates/${template.id}/use`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('ainovel_token')}`
-        }
-      });
-
-      if (onSelectTemplate) {
-        onSelectTemplate(template);
-      }
-      message.success('模板已选择，可以在AI助手中使用');
-    } catch (error) {
+      await promptService.useTemplate(template.id);
+    } catch {
       // 即使记录失败也继续使用模板
-      if (onSelectTemplate) {
-        onSelectTemplate(template);
-      }
-      message.success('模板已选择，可以在AI助手中使用');
     }
+    if (onSelectTemplate) {
+      onSelectTemplate(template);
+    }
+    message.success('模板已选择，可以在AI助手中使用');
+  };
   };
 
   const columns = [

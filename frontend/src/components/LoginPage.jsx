@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { FaPenNib, FaWandMagicSparkles, FaBookOpen } from 'react-icons/fa6';
+import { login } from '../services/authService';
 import './LoginPage.css';
 
 const LoginPage = ({ onLogin, onNavigate }) => {
@@ -10,26 +11,12 @@ const LoginPage = ({ onLogin, onNavigate }) => {
 
   const onFinish = async (values) => {
     setIsLoading(true);
-    
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('登录成功');
-        onLogin(data.access_token);
-      } else {
-        message.error(data.detail || '登录失败');
-      }
+      const data = await login(values);
+      message.success('登录成功');
+      onLogin(data.access_token);
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '登录失败');
     } finally {
       setIsLoading(false);
     }
