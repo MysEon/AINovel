@@ -1,6 +1,13 @@
 // AI服务层 - 连接LangChain/LangGraph API
 import { api, rawFetch } from './core/apiClient.js';
+import { API_FLAGS } from './core/apiFlags.js';
 import { getSelectedModelConfigId, setSelectedModelConfigId } from './core/authStorage.js';
+
+/**
+ * Legacy AI 端点走 /api/ai/* (compat 层)，不走 /api/v1 前缀。
+ * 新 AI Runtime 端点走 /api/v1/ai/* (标准 v1 路由)。
+ */
+const LEGACY_AI_OPTS = { baseURL: '/api' };
 
 // 获取用户的默认模型配置
 const getDefaultModelConfig = async () => {
@@ -97,7 +104,7 @@ class AIService {
       chapter_number: chapterData.chapter_number || 1,
       user_requirements: chapterData.user_requirements || chapterData.current_content || '',
     });
-    return api.post('/ai/chapter-outline', body);
+    return api.post('/ai/chapter-outline', body, LEGACY_AI_OPTS);
   }
 
   // 章节草稿生成
@@ -106,7 +113,7 @@ class AIService {
       project_id: projectId,
       chapter_outline: outline,
     });
-    return api.post('/ai/chapter-draft', body);
+    return api.post('/ai/chapter-draft', body, LEGACY_AI_OPTS);
   }
 
   // 角色对话生成
@@ -116,7 +123,7 @@ class AIService {
       character_names: characters,
       situation: context,
     });
-    return api.post('/ai/character-dialogue', body);
+    return api.post('/ai/character-dialogue', body, LEGACY_AI_OPTS);
   }
 
   // 情节发展建议
@@ -125,7 +132,7 @@ class AIService {
       project_id: projectId,
       current_chapter_content: currentChapter.content || currentChapter || '',
     });
-    return api.post('/ai/plot-suggestions', body);
+    return api.post('/ai/plot-suggestions', body, LEGACY_AI_OPTS);
   }
 
   // AI智能体对话
@@ -136,7 +143,7 @@ class AIService {
       history,
     });
     if (promptTemplateId) body.prompt_template_id = promptTemplateId;
-    return api.post('/ai/chat', body);
+    return api.post('/ai/chat', body, LEGACY_AI_OPTS);
   }
 
   // AI智能体对话 - 流式输出
@@ -148,7 +155,7 @@ class AIService {
     });
     if (promptTemplateId) body.prompt_template_id = promptTemplateId;
 
-    const response = await rawFetch('/ai/chat-stream', { method: 'POST', body });
+    const response = await rawFetch('/ai/chat-stream', { method: 'POST', body, ...LEGACY_AI_OPTS });
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
@@ -198,7 +205,7 @@ class AIService {
     const body = await this._withModelConfig({
       project_id: projectId, content, optimization_type: optimizationType,
     });
-    return api.post('/ai/optimize-content', body);
+    return api.post('/ai/optimize-content', body, LEGACY_AI_OPTS);
   }
 
   // 创意生成
@@ -206,80 +213,80 @@ class AIService {
     const body = await this._withModelConfig({
       project_id: projectId, prompt, category,
     });
-    return api.post('/ai/creative-ideas', body);
+    return api.post('/ai/creative-ideas', body, LEGACY_AI_OPTS);
   }
 
   // 文本风格转换
   transformStyle(projectId, content, targetStyle) {
     return api.post('/ai/transform-style', {
       project_id: projectId, content, target_style: targetStyle,
-    });
+    }, LEGACY_AI_OPTS);
   }
 
   // 知识库分析
   analyzeKnowledgeBase(projectId, analysisType = 'comprehensive') {
     return api.post('/ai/analyze-knowledge-base', {
       project_id: projectId, analysis_type: analysisType,
-    });
+    }, LEGACY_AI_OPTS);
   }
 
   // 写作建议
   getWritingSuggestions(projectId, content, context = {}) {
     return api.post('/ai/writing-suggestions', {
       project_id: projectId, content, context,
-    });
+    }, LEGACY_AI_OPTS);
   }
 
   // 角色关系分析
   analyzeCharacterRelationships(projectId) {
-    return api.post('/ai/analyze-character-relationships', { project_id: projectId });
+    return api.post('/ai/analyze-character-relationships', { project_id: projectId }, LEGACY_AI_OPTS);
   }
 
   // 世界观一致性检查
   checkWorldviewConsistency(projectId, content) {
-    return api.post('/ai/check-worldview-consistency', { project_id: projectId, content });
+    return api.post('/ai/check-worldview-consistency', { project_id: projectId, content }, LEGACY_AI_OPTS);
   }
 
   // 情节连贯性分析
   analyzePlotCoherence(projectId) {
-    return api.post('/ai/analyze-plot-coherence', { project_id: projectId });
+    return api.post('/ai/analyze-plot-coherence', { project_id: projectId }, LEGACY_AI_OPTS);
   }
 
   // 情感分析
   analyzeEmotionalTone(content) {
-    return api.post('/ai/analyze-emotional-tone', { content });
+    return api.post('/ai/analyze-emotional-tone', { content }, LEGACY_AI_OPTS);
   }
 
   // 阅读难度分析
   analyzeReadability(content) {
-    return api.post('/ai/analyze-readability', { content });
+    return api.post('/ai/analyze-readability', { content }, LEGACY_AI_OPTS);
   }
 
   // 批量内容生成
   batchGenerateContent(projectId, requests) {
-    return api.post('/ai/batch-generate', { project_id: projectId, requests });
+    return api.post('/ai/batch-generate', { project_id: projectId, requests }, LEGACY_AI_OPTS);
   }
 
   // AI工作流执行
   executeWorkflow(projectId, workflowId, parameters = {}) {
     return api.post('/ai/execute-workflow', {
       project_id: projectId, workflow_id: workflowId, parameters,
-    });
+    }, LEGACY_AI_OPTS);
   }
 
   // 获取AI模型状态
   getModelStatus() {
-    return api.get('/ai/model-status');
+    return api.get('/ai/model-status', LEGACY_AI_OPTS);
   }
 
   // 获取可用的工作流列表
   getAvailableWorkflows() {
-    return api.get('/ai/workflows');
+    return api.get('/ai/workflows', LEGACY_AI_OPTS);
   }
 
   // 获取AI使用统计
   getUsageStats(projectId) {
-    return api.get(`/ai/usage-stats/${projectId}`);
+    return api.get(`/ai/usage-stats/${projectId}`, LEGACY_AI_OPTS);
   }
 }
 
