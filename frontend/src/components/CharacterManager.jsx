@@ -63,10 +63,14 @@ const GENDER_TRANSITION_ADVANCED_OPTIONS = [
 
 const GENDER_TRANSITION_METHOD_OPTIONS = [
   '魔法式完全转变',
+  '存在转变',
+  '魔法式存在转变',
   '现代医疗式外观重塑',
   '神秘力量完全转变',
+  '神秘力量存在转变',
   '神秘力量外表转变',
   '科技改造完全转变',
+  '科技改造存在转变',
   '科技改造外表转变',
 ];
 
@@ -74,6 +78,13 @@ const EXTERNAL_CHANGE_METHODS = new Set([
   '现代医疗式外观重塑',
   '神秘力量外表转变',
   '科技改造外表转变',
+]);
+
+const EXISTENCE_CHANGE_METHODS = new Set([
+  '魔法式存在转变',
+  '神秘力量存在转变',
+  '科技改造存在转变',
+  '存在转变',
 ]);
 
 const GENITAL_RETENTION_OPTIONS = [
@@ -270,7 +281,9 @@ function sanitizeGenderTransitionStep(step) {
 
   const toGender = normalizeSingleTagValue(step.to_gender);
   const method = normalizeSingleTagValue(step.method);
-  const appearanceOnly = Boolean(step.appearance_only);
+  const appearanceOnly = isExistenceGenderTransitionMethod(method)
+    ? false
+    : Boolean(step.appearance_only);
   const notes = normalizeStringValue(step.notes);
   const genitalRetention = normalizeStringValue(step.retain_original_genitals);
   const chestSize = normalizeSingleTagValue(step.chest_size);
@@ -433,7 +446,14 @@ function isNoOpGenderTransition(profile, index, nextTargetGender) {
 function shouldShowGenitalRetentionField(step) {
   if (!step || typeof step !== 'object') return false;
   const method = normalizeSingleTagValue(step.method);
+  if (isExistenceGenderTransitionMethod(method)) return false;
   return Boolean(step.appearance_only) || (method && EXTERNAL_CHANGE_METHODS.has(method));
+}
+
+function isExistenceGenderTransitionMethod(methodValue) {
+  const method = normalizeSingleTagValue(methodValue);
+  if (!method) return false;
+  return EXISTENCE_CHANGE_METHODS.has(method);
 }
 
 function isMaleGenderValue(value) {
@@ -811,6 +831,21 @@ const GenderJourneyEditor = ({ form }) => {
                       </Form.Item>
                     </Col>
                   </Row>
+
+                  <Form.Item noStyle shouldUpdate>
+                    {() => {
+                      const stepValue = form.getFieldValue(['__gender_profile', 'transitions', field.name]);
+                      if (!isExistenceGenderTransitionMethod(stepValue?.method)) return null;
+
+                      return (
+                        <div style={{ marginBottom: 12 }}>
+                          <Text type="secondary">
+                            存在转变：除身体完全转变外，还包含概念级改写（如他人记忆、社会记录、身份认知同步为转变后性别）。
+                          </Text>
+                        </div>
+                      );
+                    }}
+                  </Form.Item>
 
                   <Form.Item noStyle shouldUpdate>
                     {() => {
@@ -1447,6 +1482,9 @@ const CharacterCard = ({ character, templateRegistry, expanded, onToggleExpand, 
                       <Text className="param-value">
                         {[
                           step.method,
+                          isExistenceGenderTransitionMethod(step.method)
+                            ? '存在转变（概念级改写：他人记忆/记录/身份认知同步）'
+                            : null,
                           step.appearance_only ? '仅外观/体表转变' : null,
                           step.retain_original_genitals
                             ? ({
