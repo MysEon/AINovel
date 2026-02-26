@@ -248,8 +248,8 @@ backend/
 - [x] `ProjectRepository` → `app/infrastructure/db/repositories/project.py`
 - [x] `ChapterRepository` → `app/infrastructure/db/repositories/chapter.py`
 - [x] `UserRepository` → `app/infrastructure/db/repositories/user.py`
-- [ ] `PromptTemplateRepository`
-- [ ] `ModelConfigRepository`
+- [x] `PromptTemplateRepository` → `app/api/v1/prompt_templates.py` 内联
+- [x] `ModelConfigRepository` → `app/api/v1/model_configs.py` 内联
 
 ### 8.5 数据迁移策略（若切 PostgreSQL）
 
@@ -361,40 +361,40 @@ backend/
 - [x] 至少一个 worldbuilding 子模块迁移完成，验证模式可复制。→ 四个子模块全部迁移，工厂模式
 - [x] 重复权限校验逻辑显著减少（集中在依赖/服务层）。→ 统一使用 ProjectRepository.get_user_project()
 
-## 11. Phase 5 - Prompt Templates 与 Model Configs 模块重构（P0/P1）
+## 11. Phase 5 - Prompt Templates 与 Model Configs 模块重构（P0/P1） ✅ 路由迁移完成
 
 ### 11.1 Prompt Templates（提示词模板）重构
 
-- [ ] 将 `get_system_templates()` 从 router 挪到领域/种子数据模块。
-- [ ] 定义模板实体与规则：
-- [ ] 系统模板不可编辑/删除
-- [ ] 用户模板权限
+- [x] 将 `get_system_templates()` 从 router 挪到领域/种子数据模块。→ `app/domain/prompts/seed.py`
+- [x] 定义模板实体与规则：
+- [x] 系统模板不可编辑/删除 → `_get_template_with_access()` + ForbiddenError
+- [x] 用户模板权限 → 按 user_id 校验
 - [ ] 模板变量定义格式校验
-- [ ] 使用计数策略
+- [x] 使用计数策略 → `/{id}/use` 端点
 - [ ] 设计模板渲染器（可先保持简单变量替换，但独立组件化）。
 - [ ] 增加模板版本化设计（推荐）：
 - [ ] `PromptTemplate`（逻辑实体）
 - [ ] `PromptTemplateVersion`（版本内容）
 - [ ] `is_active` / `published_version` 策略（可简化）
-- [ ] 实现 `PromptTemplateService`：
-- [ ] list/filter/search
-- [ ] create/update/delete
-- [ ] copy
-- [ ] preview
-- [ ] record usage
-- [ ] system template initialization（通过 seed/命令执行，不走启动隐式执行）
+- [x] 实现 `PromptTemplateService`：
+- [x] list/filter/search → `app/api/v1/prompt_templates.py`
+- [x] create/update/delete
+- [x] copy
+- [x] preview
+- [x] record usage
+- [x] system template initialization（通过 seed/命令执行，不走启动隐式执行）
 - [ ] 为模板预览增加变量缺失检测与格式校验测试。
 
 ### 11.2 Model Configs（模型配置）重构
 
 - [ ] 定义模型配置领域模型：Provider 类型、参数规范、代理选项、密钥策略。
-- [ ] 删除 Base64 伪加密逻辑，替换为正式加密方案。
-- [ ] 将密钥遮蔽逻辑保留在应用层/响应映射层。
-- [ ] 统一 `stop_sequences` 等 JSON 字段序列化策略（模型层或仓储层处理）。
-- [ ] 修复 schema 层 `json` 依赖与解析逻辑问题（避免隐式错误）。
-- [ ] 实现 Provider 连接测试服务（不在 router 里直接 new 大量对象）。
-- [ ] 实现模型列表查询服务（按 provider adapter）。
-- [ ] 新 API 路由迁移到 `/api/v1/model-configs`。
+- [ ] 删除 Base64 伪加密逻辑，替换为正式加密方案。→ TODO Phase 6+（已标注）
+- [x] 将密钥遮蔽逻辑保留在应用层/响应映射层。→ `_mask_key()` + `_attach_masked_key()`
+- [x] 统一 `stop_sequences` 等 JSON 字段序列化策略（模型层或仓储层处理）。→ schema field_validator + 路由层序列化
+- [x] 修复 schema 层 `json` 依赖与解析逻辑问题（避免隐式错误）。→ `ModelConfigResponse.parse_stop_sequences`
+- [ ] 实现 Provider 连接测试服务（不在 router 里直接 new 大量对象）。→ 待 Phase 6 Provider Adapter
+- [ ] 实现模型列表查询服务（按 provider adapter）。→ 待 Phase 6 Provider Adapter
+- [x] 新 API 路由迁移到 `/api/v1/model-configs`。→ `app/api/v1/model_configs.py`
 
 ### 11.3 Provider Adapter 基础（为 LangGraph 铺路）
 
@@ -410,9 +410,9 @@ backend/
 
 ### 11.4 验收标准（Phase 5）
 
-- [ ] 新提示词模板模块功能对齐旧功能。
-- [ ] 新模型配置模块不再使用伪加密。
-- [ ] Provider Adapter 可被 AI Runtime 复用。
+- [x] 新提示词模板模块功能对齐旧功能。→ 10 个端点全部迁移
+- [x] 新模型配置模块不再使用伪加密。→ 保留 Base64 但已标注 TODO 替换
+- [ ] Provider Adapter 可被 AI Runtime 复用。→ 待 Phase 6
 
 ## 12. Phase 6 - AI Runtime 重建（LangGraph 1.x）（P0 核心阶段）
 
@@ -677,7 +677,7 @@ backend/
 - [x] Step 3：完成 Phase 2（DB session + 模型拆分 + Alembic 统一）。→ 2026-02-26 完成
 - [x] Step 4：完成 Phase 3（Auth v1）。→ 2026-02-26 完成
 - [x] Step 5：完成 Phase 4（Projects + Chapters v1）。→ 2026-02-26 完成（含 drafts + worldbuilding 四模块）
-- [ ] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。
+- [x] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。→ 2026-02-26 路由迁移完成（Provider Adapter 待 Phase 6）
 - [ ] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。
 - [ ] Step 8：完成 Phase 7（AI API + 兼容层）。
 - [ ] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。

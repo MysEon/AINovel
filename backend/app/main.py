@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
 def _register_routers(app: FastAPI) -> None:
     """集中注册所有路由"""
     from app.api.v1 import health, auth, projects, chapters, worldbuilding, drafts
+    from app.api.v1 import prompt_templates, model_configs
 
     # 健康检查（无前缀）
     app.include_router(health.router)
@@ -82,7 +83,10 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(worldbuilding.router)
     app.include_router(drafts.router)
 
-    # TODO Phase 5: prompts / model-configs 路由
+    # AI 辅助
+    app.include_router(prompt_templates.router)
+    app.include_router(model_configs.router)
+
     # TODO Phase 7: ai 路由
 
 
