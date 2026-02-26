@@ -990,19 +990,18 @@
   color: white;
 }
 
-.dark-theme .chat-input-container {
-  background-color: #3d3d3d;
-  border-top: 1px solid #4d4d4d;
+.dark-theme .chat-input-wrapper {
+  background-color: #3a3a3a;
+  border-color: #4d4d4d;
 }
 
-.dark-theme .chat-input {
-  background-color: #4d4d4d;
-  color: #ffffff;
-  border: 1px solid #5d5d5d;
+.dark-theme .chat-input-wrapper:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.dark-theme .send-button {
-  background-color: #007bff;
+.dark-theme .chat-send-btn.active {
+  background: #6366f1;
 }
 
 .dark-theme .content-editor {
@@ -2054,47 +2053,109 @@
   box-shadow: 0 4px 14px rgba(17, 24, 39, 0.08);
 }
 
+/* ── 输入区域 ── */
 .chat-input-area {
   background: var(--studio-surface) !important;
   border-top: 1px solid var(--studio-border) !important;
-  padding: 0.9rem !important;
+  padding: 0.75rem 0.9rem 0.5rem !important;
 }
 
-.chat-input-row {
+/* 统一输入容器：textarea + 发送按钮 */
+.chat-input-wrapper {
+  display: flex;
   align-items: flex-end;
+  gap: 0;
+  background: var(--studio-surface-muted);
+  border: 1.5px solid var(--studio-border);
+  border-radius: 18px;
+  padding: 6px 6px 6px 14px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
-.chat-input-textarea.ant-input {
-  border-radius: 14px !important;
-  border-color: var(--studio-border) !important;
-  background: var(--studio-surface-muted) !important;
+.chat-input-wrapper:focus-within {
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, var(--studio-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--studio-primary) 10%, transparent);
+}
+
+.chat-input-wrapper.has-content {
+  border-color: color-mix(in srgb, var(--studio-primary) 35%, var(--studio-border));
+}
+
+.chat-input-wrapper.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* textarea 内嵌样式 */
+.chat-input-wrapper .chat-input-textarea.ant-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
   color: var(--studio-text) !important;
   box-shadow: none !important;
-  padding: 0.7rem 0.8rem !important;
-  transition: border-color 160ms ease, box-shadow 160ms ease !important;
+  padding: 6px 4px !important;
+  resize: none !important;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 22px;
+  max-height: 120px;
 }
 
-.chat-input-textarea.ant-input:focus,
-.chat-input-textarea.ant-input-focused {
-  border-color: color-mix(in srgb, var(--studio-primary) 45%, var(--studio-border)) !important;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--studio-primary) 12%, transparent) !important;
+.chat-input-wrapper .chat-input-textarea.ant-input:focus {
+  box-shadow: none !important;
 }
 
-.chat-send-button.ant-btn {
-  border-radius: 14px !important;
-  height: 76px !important;
-  width: 88px !important;
-  border: 1px solid var(--studio-primary) !important;
-  background: var(--studio-primary) !important;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.18) !important;
-  font-weight: 600 !important;
-  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease !important;
+/* 圆形发送按钮 */
+.chat-send-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--studio-border);
+  color: var(--studio-text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
+  font-size: 14px;
+  transition: background 200ms ease, color 200ms ease, transform 160ms ease, box-shadow 200ms ease;
 }
 
-.chat-send-button.ant-btn:hover:not(:disabled) {
-  background: #4338ca !important;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.22) !important;
+.chat-send-btn.active {
+  background: var(--studio-primary);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.chat-send-btn.active:hover {
+  background: #4338ca;
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.32);
+}
+
+.chat-send-btn.active:active {
+  transform: scale(0.95);
+}
+
+/* 加载旋转动画 */
+.send-spinner {
+  animation: spinSend 800ms linear infinite;
+}
+
+@keyframes spinSend {
+  to { transform: rotate(360deg); }
+}
+
+/* 底部快捷键提示 */
+.chat-input-hint {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--studio-text-soft);
+  opacity: 0.6;
+  user-select: none;
 }
 
 .editor-canvas-pane {
@@ -2571,13 +2632,15 @@
     max-width: calc(100% - 44px);
   }
 
-  .chat-input-row {
-    flex-direction: column;
+  .chat-input-wrapper {
+    border-radius: 14px;
+    padding: 4px 4px 4px 10px;
   }
 
-  .chat-send-button.ant-btn {
-    width: 100% !important;
-    height: 44px !important;
+  .chat-send-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 
   .editor-completion-bar {

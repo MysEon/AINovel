@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog, FaFileAlt, FaBold, FaItalic } from 'react-icons/fa';
+import { FaRobot, FaFont, FaSave, FaUpload, FaBook, FaPlus, FaLockOpen, FaLayerGroup, FaSpinner, FaMagic, FaLightbulb, FaUsers, FaExchangeAlt, FaUser, FaCog, FaFileAlt, FaBold, FaItalic, FaPaperPlane } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { getChapters, updateChapter, publishChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../../services/chapterService';
 import { aiService, getAvailableModelConfigs } from '../../services/aiService';
@@ -1517,15 +1517,8 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
           </div>
 
           {/* 输入框区域 - 固定在底部 */}
-          <div 
-            className="chat-input-area"
-            style={{ 
-              padding: '16px', 
-              borderTop: '1px solid #f0f0f0',
-              flexShrink: 0,
-              backgroundColor: '#fff'
-            }}>
-            <div className="chat-input-row" style={{ display: 'flex', gap: '8px', width: '100%' }}>
+          <div className="chat-input-area" style={{ flexShrink: 0 }}>
+            <div className={`chat-input-wrapper${input.trim() ? ' has-content' : ''}${isLoading ? ' is-loading' : ''}`}>
               <TextArea
                 ref={chatInputRef}
                 className="chat-input-textarea"
@@ -1533,28 +1526,20 @@ const AiWritingInterface = ({ content, onContentChange, readOnly, projectId, cur
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="与AI助手对话，获取写作建议..."
-                rows={3}
+                autoSize={{ minRows: 1, maxRows: 5 }}
                 disabled={isLoading}
-                style={{ 
-                  resize: 'none',
-                  flex: 1,
-                  minHeight: '76px'
-                }}
               />
-              <Button 
-                type="primary"
-                className="chat-send-button"
+              <button
+                className={`chat-send-btn${input.trim() && !isLoading ? ' active' : ''}`}
                 onClick={handleSend}
-                disabled={isLoading || input.trim() === ''}
-                loading={isLoading}
-                style={{ 
-                  height: '76px',
-                  width: '80px',
-                  alignSelf: 'flex-end'
-                }}
+                disabled={isLoading || !input.trim()}
+                title="发送 (Enter)"
               >
-                发送
-              </Button>
+                {isLoading ? <FaSpinner className="send-spinner" /> : <FaPaperPlane />}
+              </button>
+            </div>
+            <div className="chat-input-hint">
+              <span>Enter 发送 · Shift+Enter 换行</span>
             </div>
           </div>
         </Card>
