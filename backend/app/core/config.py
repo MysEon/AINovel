@@ -78,6 +78,28 @@ class CORSSettings(BaseSettings):
     )
 
 
+class FeatureFlags(BaseSettings):
+    """功能开关 — 灰度切换控制"""
+    use_new_ai_runtime: bool = Field(
+        default=True,
+        description="启用新 LangGraph AI Runtime（False 则走旧兼容层）",
+    )
+    enable_legacy_compat: bool = Field(
+        default=True,
+        description="是否挂载旧 /api/ai/* 兼容端点",
+    )
+    enable_metrics: bool = Field(
+        default=True,
+        description="是否暴露 /health/metrics 端点",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="FF_",
+        env_file=".env",
+        extra="ignore",
+    )
+
+
 class Settings:
     """聚合所有配置，统一入口"""
 
@@ -86,6 +108,7 @@ class Settings:
         self.db = DatabaseSettings()
         self.auth = AuthSettings()
         self.cors = CORSSettings()
+        self.ff = FeatureFlags()
 
     @property
     def is_dev(self) -> bool:

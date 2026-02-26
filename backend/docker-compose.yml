@@ -1,0 +1,34 @@
+# AINovel Backend — 本地开发 / 部署编排
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ainovel
+      POSTGRES_USER: ainovel
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ainovel"]
+      interval: 5s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      DB_URL: postgresql+asyncpg://ainovel:${DB_PASSWORD:-changeme}@db:5432/ainovel
+      DB_SYNC_URL: postgresql://ainovel:${DB_PASSWORD:-changeme}@db:5432/ainovel
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

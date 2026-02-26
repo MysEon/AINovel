@@ -93,11 +93,12 @@ def create_app() -> FastAPI:
 
 
 def _register_routers(app: FastAPI) -> None:
-    """集中注册所有路由"""
+    """集中注册所有路由（受 FeatureFlags 控制）"""
+    settings = get_settings()
+
     from app.api.v1 import health, auth, projects, chapters, worldbuilding, drafts
     from app.api.v1 import prompt_templates, model_configs
     from app.api.v1 import ai
-    from app.api.v1 import ai_compat
     from app.api.v1 import knowledge
 
     # 健康检查（无前缀）
@@ -120,8 +121,13 @@ def _register_routers(app: FastAPI) -> None:
     # 知识库
     app.include_router(knowledge.router)
 
-    # 旧接口兼容层（过渡期）
-    app.include_router(ai_compat.router)
+    # 旧接口兼容层（受 Feature Flag 控制）
+    if settings.ff.enable_legacy_compat:
+        from app.api.v1 import ai_compat
+        app.include_router(ai_compat.router)
+        logger.info("旧接口兼容层已挂载（FF_ENABLE_LEGACY_COMPAT=true）")
+    else:
+        logger.info("旧接口兼容层已禁用")
 
 
 # uvicorn 入口: uvicorn app.main:app --reload
