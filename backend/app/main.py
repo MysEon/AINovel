@@ -71,6 +71,7 @@ def _register_routers(app: FastAPI) -> None:
     from app.api.v1 import health, auth, projects, chapters, worldbuilding, drafts
     from app.api.v1 import prompt_templates, model_configs
     from app.api.v1 import ai
+    from app.api.v1 import ai_compat
 
     # 健康检查（无前缀）
     app.include_router(health.router)
@@ -88,6 +89,9 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(prompt_templates.router)
     app.include_router(model_configs.router)
     app.include_router(ai.router)
+
+    # 旧接口兼容层（过渡期）
+    app.include_router(ai_compat.router)
 
 
 # uvicorn 入口: uvicorn app.main:app --reload

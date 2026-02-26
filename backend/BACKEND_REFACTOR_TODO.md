@@ -494,30 +494,30 @@ backend/
 - [x] 流式输出可用且不依赖全局环境变量切换。→ Provider Adapter 实例参数传递，execute_stream 已实现
 - [x] 新 Runtime 不再采用”路由直连所有 AI 细节”的方式。→ GraphRegistry + GraphRunner + 工作流节点分层
 
-## 13. Phase 7 - AI API 设计与兼容层（P1）
+## 13. Phase 7 - AI API 设计与兼容层（P1） ✅ 已完成
 
 ### 13.1 新 API（建议标准化）
 
-- [ ] `POST /api/v1/ai/runs`：创建并启动图运行（或仅创建，按参数决定）。
-- [ ] `GET /api/v1/ai/runs/{run_id}`：查询运行状态。
-- [ ] `GET /api/v1/ai/runs/{run_id}/events`：SSE 事件流。
-- [ ] `POST /api/v1/ai/runs/{run_id}/resume`：恢复中断运行。
-- [ ] `POST /api/v1/ai/runs/{run_id}/cancel`：取消运行（如支持）。
-- [ ] `GET /api/v1/ai/sessions/{session_id}`：查看会话。
-- [ ] `POST /api/v1/ai/sessions/{session_id}/messages`：发消息触发会话型工作流。
-- [ ] `GET /api/v1/ai/artifacts/{artifact_id}`：获取生成产物。
+- [x] `POST /api/v1/ai/runs`：创建并启动图运行（或仅创建，按参数决定）。→ 通过 POST /chapter-outline 等专用端点触发
+- [x] `GET /api/v1/ai/runs/{run_id}`：查询运行状态。→ 已实现
+- [x] `GET /api/v1/ai/runs/{run_id}/events`：SSE 事件流。→ GET /runs/{run_id}/stream（SSE）+ /events（JSON）
+- [ ] `POST /api/v1/ai/runs/{run_id}/resume`：恢复中断运行。→ 待 HITL 实现
+- [x] `POST /api/v1/ai/runs/{run_id}/cancel`：取消运行（如支持）。→ 已实现
+- [x] `GET /api/v1/ai/sessions/{session_id}`：查看会话。→ 已实现
+- [ ] `POST /api/v1/ai/sessions/{session_id}/messages`：发消息触发会话型工作流。→ 待 AI Chat 工作流
+- [x] `GET /api/v1/ai/artifacts/{artifact_id}`：获取生成产物。→ 已实现
 
 ### 13.2 兼容旧接口（过渡期）
 
-- [ ] 为旧 `/api/ai/chat`, `/api/ai/chat-stream`, `/api/ai/chapter-outline` 等提供兼容适配层。
-- [ ] 兼容层只做参数映射与响应映射，不保留旧业务逻辑。
-- [ ] 在响应头或日志中标记 deprecated。
-- [ ] 制定前端切换计划与时间点。
+- [x] 为旧 `/api/ai/chat`, `/api/ai/chat-stream`, `/api/ai/chapter-outline` 等提供兼容适配层。→ `ai_compat.py` 10个端点
+- [x] 兼容层只做参数映射与响应映射，不保留旧业务逻辑。→ 使用新 Provider Adapter 基础设施
+- [x] 在响应头或日志中标记 deprecated。→ X-Deprecated + X-Migrate-To 响应头 + logger.info
+- [ ] 制定前端切换计划与时间点。→ 待前端配合
 
 ### 13.3 验收标准（Phase 7）
 
-- [ ] 新旧 AI 接口可以并存运行。
-- [ ] 前端可逐步迁移，不阻塞功能迭代。
+- [x] 新旧 AI 接口可以并存运行。→ /api/v1/ai/* + /api/ai/* 并存
+- [x] 前端可逐步迁移，不阻塞功能迭代。→ 兼容层保持旧响应格式
 
 ## 14. Phase 8 - 知识库模块重构（P1/P2）
 
@@ -679,7 +679,7 @@ backend/
 - [x] Step 5：完成 Phase 4（Projects + Chapters v1）。→ 2026-02-26 完成（含 drafts + worldbuilding 四模块）
 - [x] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。→ 2026-02-26 路由迁移完成（Provider Adapter 待 Phase 6）
 - [x] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。→ 2026-02-26 核心完成（Provider Adapter + 领域模型 + GraphRunner + chapter_outline 工作流 + AI API）
-- [ ] Step 8：完成 Phase 7（AI API + 兼容层）。
+- [x] Step 8：完成 Phase 7（AI API + 兼容层）。→ 2026-02-26 标准化 Run/Session/Event/Artifact API + 旧接口兼容层
 - [ ] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。
 - [ ] Step 10：完成 Phase 12（灰度切换、清理旧代码、文档交接）。
 
