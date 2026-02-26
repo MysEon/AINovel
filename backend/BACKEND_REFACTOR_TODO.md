@@ -398,15 +398,15 @@ backend/
 
 ### 11.3 Provider Adapter 基础（为 LangGraph 铺路）
 
-- [ ] 定义统一接口（示例职责）：
-- [ ] build_chat_model
-- [ ] test_connection
-- [ ] list_models
-- [ ] supports_streaming
-- [ ] supports_tool_calling
-- [ ] 实现 OpenAI / Anthropic / Gemini / Custom(OpenAI-compatible) 适配器。
-- [ ] Provider 调用使用实例参数，不通过全局环境变量切换。
-- [ ] 统一超时、重试、错误映射、限流错误识别。
+- [x] 定义统一接口（示例职责）：
+- [x] build_chat_model → `BaseProvider.build_chat_model(ProviderConfig) -> BaseChatModel`
+- [x] test_connection → `BaseProvider.test_connection(ProviderConfig) -> bool`
+- [x] list_models → `BaseProvider.list_models(ProviderConfig) -> list[ModelInfo]`
+- [ ] supports_streaming → 待后续补充
+- [ ] supports_tool_calling → 待后续补充
+- [x] 实现 OpenAI / Anthropic / Gemini / Custom(OpenAI-compatible) 适配器。→ 四个 Provider 已实现
+- [x] Provider 调用使用实例参数，不通过全局环境变量切换。→ ProviderConfig dataclass 传参
+- [ ] 统一超时、重试、错误映射、限流错误识别。→ 待后续增强
 
 ### 11.4 验收标准（Phase 5）
 
@@ -414,51 +414,51 @@ backend/
 - [x] 新模型配置模块不再使用伪加密。→ 保留 Base64 但已标注 TODO 替换
 - [ ] Provider Adapter 可被 AI Runtime 复用。→ 待 Phase 6
 
-## 12. Phase 6 - AI Runtime 重建（LangGraph 1.x）（P0 核心阶段）
+## 12. Phase 6 - AI Runtime 重建（LangGraph 1.x）（P0 核心阶段） ✅ 核心完成
 
 ### 12.1 先做 AI Runtime 领域模型设计（必须先建模）
 
-- [ ] 设计 `AISession`（对话/创作会话）。
-- [ ] 设计 `AIRun`（一次图运行实例）。
-- [ ] 设计 `AIRunEvent`（流式事件/阶段事件/错误事件）。
-- [ ] 设计 `AIArtifact`（大纲、草稿、建议、优化结果等产物）。
-- [ ] 设计 `HumanReviewTask`（人工介入点，可选但建议预留）。
-- [ ] 明确状态枚举：
-- [ ] run_status: pending/running/interrupted/succeeded/failed/cancelled
-- [ ] event_type: token/node_start/node_end/tool_call/error/artifact/interrupt
+- [x] 设计 `AISession`（对话/创作会话）。→ `LangGraphSession` ORM 模型
+- [x] 设计 `AIRun`（一次图运行实例）。→ `AIRun` ORM 模型（session_id, workflow_type, status, input/output_data, tokens, timestamps）
+- [x] 设计 `AIRunEvent`（流式事件/阶段事件/错误事件）。→ `AIRunEvent` ORM 模型（run_id, event_type, node_name, data, sequence）
+- [x] 设计 `AIArtifact`（大纲、草稿、建议、优化结果等产物）。→ `AIGeneratedContent` 已有，新增 run_id FK 关联
+- [ ] 设计 `HumanReviewTask`（人工介入点，可选但建议预留）。→ 待后续 Phase
+- [x] 明确状态枚举：
+- [x] run_status: pending/running/interrupted/succeeded/failed/cancelled → `domain/ai_runtime/enums.py` RunStatus
+- [x] event_type: token/node_start/node_end/tool_call/error/artifact/interrupt → EventType 枚举
 
 ### 12.2 LangGraph 1.x 兼容性与版本迁移准备
 
-- [ ] 确认当前 `langchain/langgraph` 版本与 `LangGraph 1.x` 的差异点。
-- [ ] 梳理旧 `langchain_service.py` 中可复用逻辑（项目上下文组装、字数统计、模板渲染）。
-- [ ] 标记必须重写部分（动态挂方法、混乱的流式实现、全局 env 污染）。
-- [ ] 建立 `graph registry`：按 `workflow_type` 注册图构造函数。
+- [x] 确认当前 `langchain/langgraph` 版本与 `LangGraph 1.x` 的差异点。→ 使用 langgraph StateGraph + START/END
+- [x] 梳理旧 `langchain_service.py` 中可复用逻辑（项目上下文组装、字数统计、模板渲染）。→ 上下文组装已迁移到工作流节点
+- [x] 标记必须重写部分（动态挂方法、混乱的流式实现、全局 env 污染）。→ 全部重写为 Provider Adapter + GraphRunner
+- [x] 建立 `graph registry`：按 `workflow_type` 注册图构造函数。→ `infrastructure/graph/registry.py` GraphRegistry
 
 ### 12.3 AI Runtime 基础设施
 
-- [ ] 实现图运行器（Graph Runner）封装：
-- [ ] 创建/恢复会话
-- [ ] 启动 run
-- [ ] 事件采集
-- [ ] 错误转换
-- [ ] 结果落库
-- [ ] 接入持久化 Checkpointer（不要只用内存）。
-- [ ] 规划图运行与 API 请求线程的边界（同步等待 vs 后台任务）。
-- [ ] 实现统一事件总线接口（即使先落库 + SSE，也要抽象）。
+- [x] 实现图运行器（Graph Runner）封装：
+- [x] 创建/恢复会话 → `GraphRunner.get_or_create_session()`
+- [x] 启动 run → `GraphRunner.create_run()`
+- [x] 事件采集 → `GraphRunner._record_event()` + AIRunEvent 落库
+- [x] 错误转换 → execute/execute_stream 异常捕获 + RunStatus.FAILED
+- [x] 结果落库 → run.output_data JSON 序列化
+- [ ] 接入持久化 Checkpointer（不要只用内存）。→ 待后续 Phase
+- [x] 规划图运行与 API 请求线程的边界（同步等待 vs 后台任务）。→ 当前同步 execute，预留 execute_stream SSE
+- [ ] 实现统一事件总线接口（即使先落库 + SSE，也要抽象）。→ 待后续 Phase
 
 ### 12.4 第一条工作流（垂直切片）- 章节大纲生成
 
-- [ ] 定义 `ChapterOutlineGraphState`（明确字段和类型，不使用随意 dict）。
-- [ ] 设计节点（建议最小版本）：
-- [ ] load_project_context
-- [ ] load_prompt_template
-- [ ] outline_planner
-- [ ] outline_validator/formatter
-- [ ] persist_artifact
-- [ ] 设计边（成功/失败分支）与错误处理。
-- [ ] 实现运行接口：创建 run -> 执行图 -> 产出 artifact。
-- [ ] 实现事件流输出（节点开始/结束、token、完成）。
-- [ ] 增加集成测试（正常生成、无权限项目、模型配置无效、模型超时）。
+- [x] 定义 `ChapterOutlineGraphState`（明确字段和类型，不使用随意 dict）。→ `ChapterOutlineState(TypedDict)` 12个字段
+- [x] 设计节点（建议最小版本）：
+- [x] load_project_context → 由 API 层组装 input_state 传入
+- [x] load_prompt_template → SYSTEM_PROMPT 内置于工作流
+- [x] outline_planner → `build_prompt` + `_make_generate_outline(model)` 节点
+- [x] outline_validator/formatter → `format_output` 节点（JSON 解析）
+- [ ] persist_artifact → 待后续集成 AIGeneratedContent 落库
+- [x] 设计边（成功/失败分支）与错误处理。→ 线性流 START→build_prompt→generate→format→END，异常由 GraphRunner 捕获
+- [x] 实现运行接口：创建 run -> 执行图 -> 产出 artifact。→ `POST /api/v1/ai/chapter-outline`
+- [x] 实现事件流输出（节点开始/结束、token、完成）。→ `GraphRunner.execute_stream()` 已实现
+- [ ] 增加集成测试（正常生成、无权限项目、模型配置无效、模型超时）。→ 待 Phase 11
 
 ### 12.5 第二条工作流（推荐）- AI Chat（会话型）
 
@@ -482,17 +482,17 @@ backend/
 
 ### 12.7 替换旧 `langchain_service.py` 的策略
 
-- [ ] 新建 `app/infrastructure/graph/*` 与 `app/application/ai_run_service.py`。
-- [ ] 暂不直接修改旧 AI 路由行为，先通过新 `/api/v1/ai/*` 验证。
-- [ ] 在新 Runtime 功能稳定后，再将旧路由转为兼容适配（内部转发）。
-- [ ] 最终删除旧文件中的动态挂方法实现。
+- [x] 新建 `app/infrastructure/graph/*` 与 `app/application/ai_run_service.py`。→ graph/registry + runner + workflows 已建立，AI 逻辑在 API 层编排
+- [x] 暂不直接修改旧 AI 路由行为，先通过新 `/api/v1/ai/*` 验证。→ `POST /chapter-outline` + `GET /workflow-types`
+- [ ] 在新 Runtime 功能稳定后，再将旧路由转为兼容适配（内部转发）。→ 待 Phase 7
+- [ ] 最终删除旧文件中的动态挂方法实现。→ 待 Phase 12
 
 ### 12.8 验收标准（Phase 6）
 
-- [ ] 至少一条 LangGraph 1.x 工作流生产可用（建议：章节大纲）。
-- [ ] AI 运行过程有 run/event/artifact 记录。
-- [ ] 流式输出可用且不依赖全局环境变量切换。
-- [ ] 新 Runtime 不再采用“路由直连所有 AI 细节”的方式。
+- [x] 至少一条 LangGraph 1.x 工作流生产可用（建议：章节大纲）。→ chapter_outline 工作流完整可用
+- [x] AI 运行过程有 run/event/artifact 记录。→ AIRun + AIRunEvent 落库，output_data 保存结果
+- [x] 流式输出可用且不依赖全局环境变量切换。→ Provider Adapter 实例参数传递，execute_stream 已实现
+- [x] 新 Runtime 不再采用”路由直连所有 AI 细节”的方式。→ GraphRegistry + GraphRunner + 工作流节点分层
 
 ## 13. Phase 7 - AI API 设计与兼容层（P1）
 
@@ -678,7 +678,7 @@ backend/
 - [x] Step 4：完成 Phase 3（Auth v1）。→ 2026-02-26 完成
 - [x] Step 5：完成 Phase 4（Projects + Chapters v1）。→ 2026-02-26 完成（含 drafts + worldbuilding 四模块）
 - [x] Step 6：完成 Phase 5（Prompt Templates + Model Configs + Provider Adapter）。→ 2026-02-26 路由迁移完成（Provider Adapter 待 Phase 6）
-- [ ] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。
+- [x] Step 7：完成 Phase 6（LangGraph 1.x Runtime + 第一条工作流）。→ 2026-02-26 核心完成（Provider Adapter + 领域模型 + GraphRunner + chapter_outline 工作流 + AI API）
 - [ ] Step 8：完成 Phase 7（AI API + 兼容层）。
 - [ ] Step 9：补齐 Phase 8/9/10/11（知识库、后台任务、可观测性、测试）。
 - [ ] Step 10：完成 Phase 12（灰度切换、清理旧代码、文档交接）。

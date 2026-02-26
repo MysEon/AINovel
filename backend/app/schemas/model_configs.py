@@ -81,3 +81,29 @@ class ModelConfigResponse(BaseModel):
         return v or []
 
     model_config = {"from_attributes": True}
+
+
+class TestConnectionRequest(BaseModel):
+    api_key: str = Field(..., min_length=1, max_length=500)
+    model_type: str = Field(..., min_length=1, max_length=50)
+    model_name: Optional[str] = Field(None, max_length=100)
+    api_url: Optional[str] = Field(None, max_length=500)
+    proxy_url: Optional[str] = Field(None, max_length=500)
+
+
+class TestConnectionResponse(BaseModel):
+    success: bool
+    message: str
+    details: Optional[dict] = None
+
+
+class ListModelsRequest(BaseModel):
+    api_key: str = Field(..., min_length=1, max_length=500)
+    model_type: str = Field(..., min_length=1, max_length=50)
+    api_url: Optional[str] = Field(None, max_length=500)
+    proxy_url: Optional[str] = Field(None, max_length=500)
+
+
+class ModelInfoResponse(BaseModel):
+    value: str
+    label: str

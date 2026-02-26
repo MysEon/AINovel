@@ -13,7 +13,11 @@ from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.repositories.base import BaseRepository
-from app.schemas.model_configs import ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse
+from app.schemas.model_configs import (
+    ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse,
+    TestConnectionRequest, TestConnectionResponse,
+    ListModelsRequest, ModelInfoResponse,
+)
 from app.api.deps.auth import require_active_user
 
 router = APIRouter(prefix="/api/v1/model-configs", tags=["AI辅助：模型配置"])
@@ -156,42 +160,112 @@ async def delete_config(
     return {"message": f"模型配置 '{cfg.name}' 已成功删除"}
 
 
-# ---------- 连接测试 & 模型列表（Phase 6 Provider Adapter 后实现） ----------
+# ---------- 连接测试 & 模型列表 ----------
 
 
-@router.post("/test-connection")
+def _build_provider_config(
+    api_key: str, model_type: str,
+    model_name: str | None = None,
+    api_url: str | None = None,
+    proxy_url: str | None = None,
+):
+    """从请求参数构建 ProviderConfig"""
+    from app.infrastructure.llm.provider_adapters import ProviderConfig
+    return ProviderConfig(
+        api_key=api_key,
+        model_name=model_name or "",
+        api_url=api_url,
+        proxy_url=proxy_url,
+    )
+
+
+@router.post("/test-connection", response_model=TestConnectionResponse)
 async def test_connection(
+    body: TestConnectionRequest,
     user: User = Depends(require_active_user),
 ):
-    """测试模型连接（待 Phase 6 Provider Adapter 实现）"""
-    raise NotFoundError("此功能将在 Provider Adapter 完成后启用")
+    """测试模型连接"""
+    from app.infrastructure.llm.provider_adapters import get_provider
+
+    try:
+        provider = get_provider(body.model_type)
+        cfg = _build_provider_config(
+            body.api_key, body.model_type, body.model_name,
+            body.api_url, body.proxy_url,
+        )
+        await provider.test_connection(cfg)
+        return TestConnectionResponse(
+            success=True,
+            message=f"{body.model_type} 模型连接测试成功",
+            details={"model": body.model_name or "default", "provider": body.model_type},
+        )
+    except Exception as e:
+        return TestConnectionResponse(success=False, message=f"连接测试失败: {e}")
 
 
-@router.post("/{config_id}/test")
+@router.post("/{config_id}/test", response_model=TestConnectionResponse)
 async def test_saved_config(
     config_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):
-    """测试已保存配置的连接（待 Phase 6 Provider Adapter 实现）"""
-    _ = await _get_user_config(config_id, user.id, db)
-    raise NotFoundError("此功能将在 Provider Adapter 完成后启用")
+    """测试已保存配置的连接"""
+    from app.infrastructure.llm.provider_adapters import get_provider
+
+    cfg = await _get_user_config(config_id, user.id, db)
+    if not cfg.api_key:
+        return TestConnectionResponse(success=False, message="该配置没有保存 API 密钥")
+
+    try:
+        provider = get_provider(cfg.model_type)
+        pcfg = _build_provider_config(
+            _decrypt_key(cfg.api_key), cfg.model_type, cfg.model_name,
+            cfg.api_url, cfg.proxy_url if cfg.enable_proxy else None,
+        )
+        await provider.test_connection(pcfg)
+        return TestConnectionResponse(
+            success=True,
+            message=f"{cfg.model_type} 模型连接测试成功",
+            details={"model": cfg.model_name or "default", "provider": cfg.model_type},
+        )
+    except Exception as e:
+        return TestConnectionResponse(success=False, message=f"连接测试失败: {e}")
 
 
-@router.post("/list-models")
+@router.post("/list-models", response_model=List[ModelInfoResponse])
 async def list_available_models(
+    body: ListModelsRequest,
     user: User = Depends(require_active_user),
 ):
-    """获取可用模型列表（待 Phase 6 Provider Adapter 实现）"""
-    raise NotFoundError("此功能将在 Provider Adapter 完成后启用")
+    """获取可用模型列表"""
+    from app.infrastructure.llm.provider_adapters import get_provider
+
+    provider = get_provider(body.model_type)
+    cfg = _build_provider_config(
+        body.api_key, body.model_type,
+        api_url=body.api_url, proxy_url=body.proxy_url,
+    )
+    models = await provider.list_models(cfg)
+    return [ModelInfoResponse(value=m.value, label=m.label) for m in models]
 
 
-@router.post("/{config_id}/list-models")
+@router.post("/{config_id}/list-models", response_model=List[ModelInfoResponse])
 async def list_models_by_config(
     config_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):
-    """使用已保存配置获取模型列表（待 Phase 6 Provider Adapter 实现）"""
-    _ = await _get_user_config(config_id, user.id, db)
-    raise NotFoundError("此功能将在 Provider Adapter 完成后启用")
+    """使用已保存配置获取模型列表"""
+    from app.infrastructure.llm.provider_adapters import get_provider
+
+    cfg = await _get_user_config(config_id, user.id, db)
+    if not cfg.api_key:
+        return []
+
+    provider = get_provider(cfg.model_type)
+    pcfg = _build_provider_config(
+        _decrypt_key(cfg.api_key), cfg.model_type, cfg.model_name,
+        cfg.api_url, cfg.proxy_url if cfg.enable_proxy else None,
+    )
+    models = await provider.list_models(pcfg)
+    return [ModelInfoResponse(value=m.value, label=m.label) for m in models]
