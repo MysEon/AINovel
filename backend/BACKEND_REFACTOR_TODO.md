@@ -544,25 +544,25 @@ backend/
 - [x] 知识库 API 结构清晰且无 TODO 假实现混入生产路径。→ 全部基于真实 DB 查询
 - [x] AI 上下文构建逻辑与业务路由解耦。→ AIContextBuilder 独立服务类
 
-## 15. Phase 9 - 后台任务与执行可靠性（P1）
+## 15. Phase 9 - 后台任务与执行可靠性（P1） ✅ 基础完成
 
 ### 15.1 任务执行模式
 
-- [ ] 决策：同步短任务 + 异步长任务并存。
-- [ ] 为长耗时图运行引入 Worker（队列选型需先拍板）。
-- [ ] 定义任务负载内容（run_id / session_id / user_id / request snapshot）。
+- [x] 决策：同步短任务 + 异步长任务并存。→ GraphRunner.execute（同步）+ BackgroundTaskRunner.submit（异步）
+- [x] 为长耗时图运行引入 Worker（队列选型需先拍板）。→ 当前 asyncio 轻量方案，预留队列升级接口
+- [x] 定义任务负载内容（run_id / session_id / user_id / request snapshot）。→ TaskInfo(run_id, task, timeout)
 
 ### 15.2 可靠性机制
 
-- [ ] 任务重试策略（只对幂等步骤重试）。
-- [ ] 超时与取消策略（模型调用超时、整体 run 超时）。
-- [ ] 幂等控制（重复提交同一 run request 时的处理）。
-- [ ] 失败恢复策略（从 checkpointer 恢复 or 重新执行）。
+- [ ] 任务重试策略（只对幂等步骤重试）。→ 待后续增强
+- [x] 超时与取消策略（模型调用超时、整体 run 超时）。→ asyncio.wait_for + task.cancel()
+- [x] 幂等控制（重复提交同一 run request 时的处理）。→ submit() 检查已有运行任务
+- [ ] 失败恢复策略（从 checkpointer 恢复 or 重新执行）。→ 待 Checkpointer 集成
 
 ### 15.3 验收标准（Phase 9）
 
-- [ ] 长任务不阻塞 API 进程。
-- [ ] 失败运行可查询到完整错误与事件记录。
+- [x] 长任务不阻塞 API 进程。→ BackgroundTaskRunner + asyncio.create_task
+- [x] 失败运行可查询到完整错误与事件记录。→ GraphRunner 异常捕获 + AIRunEvent 落库
 
 ## 16. Phase 10 - 可观测性与运维能力（P1）
 
