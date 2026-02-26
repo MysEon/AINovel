@@ -14,6 +14,19 @@ class CharacterCreate(BaseModel):
     personality: Optional[str] = None
     background: Optional[str] = None
     appearance: Optional[str] = None
+    # 角色参数
+    gender: Optional[str] = Field(None, max_length=50)
+    age: Optional[str] = Field(None, max_length=50)
+    height: Optional[str] = Field(None, max_length=30)
+    weight: Optional[str] = Field(None, max_length=30)
+    birthday: Optional[str] = Field(None, max_length=50)
+    blood_type: Optional[str] = Field(None, max_length=20)
+    species: Optional[str] = Field(None, max_length=50)
+    alignment: Optional[str] = Field(None, max_length=50)
+    organization_id: Optional[int] = None
+    dimensions: Optional[str] = None      # JSON 字符串
+    abilities: Optional[str] = None
+    weaknesses: Optional[str] = None
 
 
 class CharacterUpdate(BaseModel):
@@ -22,6 +35,18 @@ class CharacterUpdate(BaseModel):
     personality: Optional[str] = None
     background: Optional[str] = None
     appearance: Optional[str] = None
+    gender: Optional[str] = Field(None, max_length=50)
+    age: Optional[str] = Field(None, max_length=50)
+    height: Optional[str] = Field(None, max_length=30)
+    weight: Optional[str] = Field(None, max_length=30)
+    birthday: Optional[str] = Field(None, max_length=50)
+    blood_type: Optional[str] = Field(None, max_length=20)
+    species: Optional[str] = Field(None, max_length=50)
+    alignment: Optional[str] = Field(None, max_length=50)
+    organization_id: Optional[int] = None
+    dimensions: Optional[str] = None
+    abilities: Optional[str] = None
+    weaknesses: Optional[str] = None
 
 
 class CharacterResponse(BaseModel):
@@ -32,6 +57,18 @@ class CharacterResponse(BaseModel):
     personality: Optional[str] = None
     background: Optional[str] = None
     appearance: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[str] = None
+    height: Optional[str] = None
+    weight: Optional[str] = None
+    birthday: Optional[str] = None
+    blood_type: Optional[str] = None
+    species: Optional[str] = None
+    alignment: Optional[str] = None
+    organization_id: Optional[int] = None
+    dimensions: Optional[str] = None
+    abilities: Optional[str] = None
+    weaknesses: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
