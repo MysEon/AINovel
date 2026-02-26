@@ -193,6 +193,7 @@ local_settings.ini
 !POC_VALIDATION_REPORT.md
 !WORK_PLAN.md
 !BACKEND_REFACTOR_TODO.md
+!frontend/INTEGRATION_CHECKLIST.md
 !backend/docs/*.md
 TODO.md
 check_db.py
