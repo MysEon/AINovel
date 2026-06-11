@@ -4,6 +4,7 @@ import httpx
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from app.core.url_safety import validate_outbound_url
 from .base import BaseProvider, ModelInfo, ProviderConfig
 
 
@@ -11,6 +12,11 @@ class GeminiProvider(BaseProvider):
     provider_type = "gemini"
 
     def build_chat_model(self, config: ProviderConfig) -> BaseChatModel:
+        if config.api_url:
+            validate_outbound_url(config.api_url)
+        if config.proxy_url:
+            validate_outbound_url(config.proxy_url)
+
         kwargs: dict = {
             "model": config.model_name or "gemini-2.0-flash",
             "google_api_key": config.api_key,

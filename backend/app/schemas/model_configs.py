@@ -6,6 +6,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.url_safety import validate_outbound_url
+
 
 class ModelConfigCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -26,6 +28,20 @@ class ModelConfigCreate(BaseModel):
     proxy_url: Optional[str] = Field(None, max_length=500)
     enable_proxy: Optional[bool] = False
 
+    @field_validator("api_url")
+    @classmethod
+    def check_api_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
+    @field_validator("proxy_url")
+    @classmethod
+    def check_proxy_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
 
 class ModelConfigUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -45,6 +61,20 @@ class ModelConfigUpdate(BaseModel):
     top_logprobs: Optional[int] = Field(None, ge=0, le=20)
     proxy_url: Optional[str] = Field(None, max_length=500)
     enable_proxy: Optional[bool] = None
+
+    @field_validator("api_url")
+    @classmethod
+    def check_api_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
+    @field_validator("proxy_url")
+    @classmethod
+    def check_proxy_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
 
 
 class ModelConfigResponse(BaseModel):
@@ -90,6 +120,20 @@ class TestConnectionRequest(BaseModel):
     api_url: Optional[str] = Field(None, max_length=500)
     proxy_url: Optional[str] = Field(None, max_length=500)
 
+    @field_validator("api_url")
+    @classmethod
+    def check_api_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
+    @field_validator("proxy_url")
+    @classmethod
+    def check_proxy_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
 
 class TestConnectionResponse(BaseModel):
     success: bool
@@ -102,6 +146,20 @@ class ListModelsRequest(BaseModel):
     model_type: str = Field(..., min_length=1, max_length=50)
     api_url: Optional[str] = Field(None, max_length=500)
     proxy_url: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("api_url")
+    @classmethod
+    def check_api_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
+
+    @field_validator("proxy_url")
+    @classmethod
+    def check_proxy_url(cls, v):
+        if v:
+            validate_outbound_url(v)
+        return v
 
 
 class ModelInfoResponse(BaseModel):

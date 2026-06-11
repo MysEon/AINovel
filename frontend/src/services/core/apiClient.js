@@ -1,9 +1,10 @@
 /**
  * 统一 API 客户端
  * 收口所有 HTTP 请求：baseURL、auth header、错误解析、401 处理
+ * M2 更新：支持 refresh token 自动续期 + 并发去重
  */
 
-import { getToken, clearToken } from './authStorage.js';
+import { getToken, getRefreshToken, setTokens, clearTokens } from './authStorage.js';
 import { API_FLAGS } from './apiFlags.js';
 
 // ── 配置 ──
@@ -85,6 +86,42 @@ export async function normalizeApiError(response) {
   return { status, message, detail, traceId, retryable: status >= 500 };
 }
 
+// ── Refresh Token 并发去重 ──
+
+let _refreshPromise = null;
+
+async function doRefresh() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error('No refresh token');
+  }
+
+  const base = getBaseURL();
+  const resp = await fetch(`${base}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!resp.ok) {
+    throw new Error('Refresh failed');
+  }
+
+  const data = await resp.json();
+  setTokens(data.access_token, data.refresh_token);
+  return data.access_token;
+}
+
+async function refreshAccessToken() {
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+  _refreshPromise = doRefresh().finally(() => {
+    _refreshPromise = null;
+  });
+  return _refreshPromise;
+}
+
 // ── 核心请求函数 ──
 
 /**
@@ -127,11 +164,26 @@ export async function request(path, options = {}) {
   const response = await fetch(url, fetchOptions);
   debugLog(method, url, response.status);
 
-  // 401 统一处理
-  if (response.status === 401) {
-    clearToken();
-    if (_onUnauthorized) _onUnauthorized();
-    throw Object.assign(new Error('Not authenticated'), { status: 401 });
+  // 401 处理：尝试 refresh token
+  if (response.status === 401 && auth) {
+    try {
+      const newToken = await refreshAccessToken();
+      headers['Authorization'] = `Bearer ${newToken}`;
+      const retryResp = await fetch(url, { ...fetchOptions, headers });
+      debugLog(method, url, retryResp.status);
+      if (retryResp.ok) {
+        if (retryResp.status === 204) return null;
+        return retryResp.json();
+      }
+      // refresh 后仍 401，清理并通知上层
+      clearTokens();
+      if (_onUnauthorized) _onUnauthorized();
+      throw Object.assign(new Error('Not authenticated'), { status: 401 });
+    } catch (refreshErr) {
+      clearTokens();
+      if (_onUnauthorized) _onUnauthorized();
+      throw Object.assign(new Error('Not authenticated'), { status: 401 });
+    }
   }
 
   if (!response.ok) {
@@ -190,7 +242,7 @@ export async function rawFetch(path, options = {}) {
   debugLog(method, url, response.status);
 
   if (response.status === 401) {
-    clearToken();
+    clearTokens();
     if (_onUnauthorized) _onUnauthorized();
     throw Object.assign(new Error('Not authenticated'), { status: 401 });
   }

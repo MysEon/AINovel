@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.exceptions import register_exception_handlers
-from app.core.middleware import RequestIDMiddleware, setup_cors
+from app.core.middleware import RequestIDMiddleware, setup_cors, limiter
 from app.infrastructure.db.session import get_async_engine, dispose_engine
 
 
@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
 def _startup_checks(settings) -> None:
     """启动时校验关键配置，缺失则 fail-fast"""
     errors = []
+    warnings = []
 
     # JWT 密钥长度
     if len(settings.auth.secret_key) < 32:
@@ -56,6 +57,15 @@ def _startup_checks(settings) -> None:
             errors.append("生产环境不应开启 debug 模式")
         if "sqlite" in settings.db.url.lower():
             errors.append("生产环境不应使用 SQLite")
+        if not settings.encryption.encryption_key:
+            warnings.append(
+                "生产环境建议显式设置 ENCRYPTION_KEY，"
+                "当前从 AUTH_SECRET_KEY 派生，若轮换 JWT 密钥将导致加密数据无法解密"
+            )
+
+    if warnings:
+        for w in warnings:
+            logger.warning("启动自检警告: %s", w)
 
     if errors:
         for e in errors:
@@ -79,14 +89,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # 3. 中间件（注册顺序：后注册先执行）
+    # 3. Rate limiter state 注入（供装饰器使用）
+    app.state.limiter = limiter
+
+    # 4. 中间件（注册顺序：后注册先执行）
+    from slowapi.middleware import SlowAPIMiddleware
+    app.add_middleware(SlowAPIMiddleware)
     setup_cors(app, settings)
     app.add_middleware(RequestIDMiddleware)
 
-    # 4. 异常处理器
+    # 5. 异常处理器
     register_exception_handlers(app)
 
-    # 5. 路由注册
+    # 6. 路由注册
     _register_routers(app)
 
     return app
@@ -100,6 +115,7 @@ def _register_routers(app: FastAPI) -> None:
     from app.api.v1 import prompt_templates, model_configs
     from app.api.v1 import ai
     from app.api.v1 import knowledge
+    from app.api.v1 import admin
 
     # 健康检查（无前缀）
     app.include_router(health.router)
@@ -120,6 +136,9 @@ def _register_routers(app: FastAPI) -> None:
 
     # 知识库
     app.include_router(knowledge.router)
+
+    # Admin
+    app.include_router(admin.router)
 
     # 旧接口兼容层（受 Feature Flag 控制）
     if settings.ff.enable_legacy_compat:

@@ -5,7 +5,6 @@
 所有响应头标记 X-Deprecated: true。
 """
 
-import base64
 import logging
 from datetime import datetime
 from typing import Optional
@@ -17,16 +16,28 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ForbiddenError
+from app.core.middleware import limiter
 from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.secrets import get_encryption_service
 from app.api.deps.auth import require_active_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ai", tags=["AI辅助：兼容层（deprecated）"])
+
+_encryption_service = get_encryption_service()
+
+
+def _user_rate_key(request: Request) -> str:
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        return f"user:{auth}"
+    from slowapi.util import get_remote_address
+    return f"ip:{get_remote_address(request)}"
 
 
 # ---------- 旧格式 Schema（仅兼容层使用） ----------
@@ -73,7 +84,7 @@ async def _get_config_and_model(
         raise ForbiddenError("该模型配置没有保存 API 密钥")
 
     provider = get_provider(cfg.model_type)
-    decrypted_key = base64.b64decode(cfg.api_key.encode()).decode()
+    decrypted_key = _encryption_service.decrypt(cfg.api_key)
     pcfg = ProviderConfig(
         api_key=decrypted_key,
         model_name=cfg.model_name or "",
@@ -93,7 +104,9 @@ def _deprecated_headers() -> dict:
 
 
 @router.post("/chat")
+@limiter.limit("10/minute", key_func=_user_rate_key)
 async def legacy_chat(
+    request: Request,
     body: _LegacyChatRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -135,7 +148,9 @@ async def legacy_chat(
 
 
 @router.post("/chat-stream")
+@limiter.limit("10/minute", key_func=_user_rate_key)
 async def legacy_chat_stream(
+    request: Request,
     body: _LegacyChatRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),

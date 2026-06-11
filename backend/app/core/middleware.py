@@ -2,6 +2,7 @@
 中间件模块
 - RequestID 中间件：为每个请求生成唯一 trace id，写入 ContextVar
 - CORS 配置：按环境区分白名单
+- Rate Limit：集成 slowapi
 """
 
 import uuid
@@ -51,3 +52,19 @@ def setup_cors(app, settings) -> None:
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
     )
+
+
+# Rate limiter 实例（全局，供各路由装饰器引用）
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+
+def _auth_key_func(request: Request) -> str:
+    """基于 Authorization header 做用户级限流 key"""
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        return f"user:{auth}"
+    return f"ip:{get_remote_address(request)}"
+
+
+limiter = Limiter(key_func=get_remote_address, config_filename='')

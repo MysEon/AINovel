@@ -1,10 +1,11 @@
 """
 安全模块
-密码哈希、JWT Token 生成与验证
+密码哈希、JWT Token 生成与验证、Refresh Token、Token 黑名单
 """
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -31,7 +32,24 @@ def create_access_token(
     settings = get_settings()
     now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=settings.auth.access_token_expire_minutes))
-    payload = {"sub": subject, "iat": now, "exp": expire}
+    jti = str(uuid4())
+    payload = {"sub": subject, "iat": now, "exp": expire, "jti": jti, "type": "access"}
+    if extra_claims:
+        payload.update(extra_claims)
+    return jwt.encode(payload, settings.auth.secret_key, algorithm=settings.auth.algorithm)
+
+
+def create_refresh_token(
+    subject: str,
+    expires_delta: Optional[timedelta] = None,
+    extra_claims: Optional[dict] = None,
+) -> str:
+    """创建JWT刷新令牌"""
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    expire = now + (expires_delta or timedelta(minutes=settings.auth.refresh_token_expire_minutes))
+    jti = str(uuid4())
+    payload = {"sub": subject, "iat": now, "exp": expire, "jti": jti, "type": "refresh"}
     if extra_claims:
         payload.update(extra_claims)
     return jwt.encode(payload, settings.auth.secret_key, algorithm=settings.auth.algorithm)
@@ -53,6 +71,16 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
+def verify_refresh_token(token: str) -> Optional[dict]:
+    """验证JWT刷新令牌，返回payload或None"""
+    payload = verify_token(token)
+    if payload is None:
+        return None
+    if payload.get("type") != "refresh":
+        return None
+    return payload
+
+
 def decode_token_unsafe(token: str) -> Optional[dict]:
     """解码JWT令牌（不验证过期），用于调试/刷新"""
     settings = get_settings()
@@ -65,3 +93,31 @@ def decode_token_unsafe(token: str) -> Optional[dict]:
         )
     except JWTError:
         return None
+
+
+async def revoke_token(jti: str, user_id: int, expires_at: datetime, db) -> None:
+    """将指定 jti 加入黑名单"""
+    from app.infrastructure.db.models.auth import TokenBlacklist
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(TokenBlacklist).where(TokenBlacklist.jti == jti)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        return
+
+    entry = TokenBlacklist(jti=jti, user_id=user_id, expires_at=expires_at)
+    db.add(entry)
+    await db.commit()
+
+
+async def is_token_revoked(jti: str, db) -> bool:
+    """检查指定 jti 是否在黑名单中"""
+    from app.infrastructure.db.models.auth import TokenBlacklist
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(TokenBlacklist).where(TokenBlacklist.jti == jti)
+    )
+    return result.scalar_one_or_none() is not None

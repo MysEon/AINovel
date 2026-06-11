@@ -1,6 +1,5 @@
 """模型配置管理 API v1"""
 
-import base64
 import json
 from typing import List, Optional
 
@@ -13,6 +12,7 @@ from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.repositories.base import BaseRepository
+from app.infrastructure.secrets import get_encryption_service
 from app.schemas.model_configs import (
     ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse,
     TestConnectionRequest, TestConnectionResponse,
@@ -28,13 +28,15 @@ class ModelConfigRepository(BaseRepository[ModelConfig]):
 
 
 # ---------- API Key 工具函数 ----------
-# TODO Phase 6+: 替换为真正的加密方案（如 Fernet / KMS）
+_encryption_service = get_encryption_service()
+
+
 def _encrypt_key(key: str) -> str:
-    return base64.b64encode(key.encode()).decode()
+    return _encryption_service.encrypt(key)
 
 
 def _decrypt_key(encrypted: str) -> str:
-    return base64.b64decode(encrypted.encode()).decode()
+    return _encryption_service.decrypt(encrypted)
 
 
 def _mask_key(api_key: str) -> str:

@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.security import verify_token
+from app.core.security import verify_token, is_token_revoked
 from app.core.exceptions import UnauthorizedError, ForbiddenError
 from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
@@ -20,7 +20,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """从 JWT 中解析并返回当前用户"""
+    """从 JWT 中解析并返回当前用户，同时校验 jti 黑名单"""
     payload = verify_token(token)
     if payload is None:
         raise UnauthorizedError("无效的认证凭据")
@@ -28,6 +28,10 @@ async def get_current_user(
     username: str = payload.get("sub")
     if not username:
         raise UnauthorizedError("Token 缺少用户标识")
+
+    jti = payload.get("jti")
+    if jti and await is_token_revoked(jti, db):
+        raise UnauthorizedError("Token 已撤销")
 
     result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()

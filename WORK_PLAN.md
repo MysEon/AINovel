@@ -404,6 +404,116 @@
 - `alembic/versions/b3e7a1c9d042_扩展character表新增角色参数字段.py`
 - `alembic/versions/d9f7c1b2e4aa_扩展character表新增extra_attributes字段.py`
 
+## M2 Fernet 加密 + Refresh Token + Rate Limit + SSRF 防护 — 2026-06-11
+
+### 完成内容
+1. **Phase 1: Fernet 加密基础设施**
+   - `requirements.txt` 增加 `cryptography>=42.0.0`、`slowapi>=0.1.9`
+   - 新建 `app/infrastructure/secrets/key_encryption_service.py`：
+     - `KeyEncryptionService` 单例，PBKDF2 派生 32 字节 key 供 Fernet 使用
+     - 方法：`encrypt`、`decrypt`、`rotate_key`
+   - `app/core/config.py` 新增 `EncryptionSettings`（`encryption_key`、`pbkdf2_iterations=480_000`）
+   - `app/core/config.py` 调整 `AuthSettings.access_token_expire_minutes=30`、`refresh_token_expire_minutes=10080`
+   - `app/main.py` 启动自检增加：生产环境未显式设置 `ENCRYPTION_KEY` 时 WARNING
+   - 替换 3 处 base64 假加密为 Fernet：
+     - `app/api/v1/model_configs.py`
+     - `app/api/v1/ai.py`
+     - `app/api/v1/ai_compat.py`
+   - 新建 `app/api/v1/admin.py`：`POST /api/v1/admin/keys/rotate`（admin 鉴权占位）
+
+2. **Phase 2: 一次性数据迁移命令**
+   - 新建 `backend/scripts/migrate_base64_keys_to_fernet.py`：
+     - CLI 参数 `--dry-run`、`--batch-size`
+     - base64 解码 → Fernet 加密 → 写回 DB
+     - 进度报告 + 日志输出到 `logs/key_migration_<timestamp>.log`
+   - 新建 `backend/scripts/README.md`
+
+3. **Phase 3: Refresh Token + 黑名单**
+   - `app/schemas/auth.py` 新增 `RefreshTokenRequest`、`RefreshTokenResponse`
+   - `app/core/security.py` 新增 `create_refresh_token`、`verify_refresh_token`、`revoke_token`、`is_token_revoked`
+   - `app/infrastructure/db/models/auth.py` 新增 `TokenBlacklist` 模型（jti unique indexed、expires_at indexed）
+   - `app/infrastructure/db/models/__init__.py` 导入 `TokenBlacklist`
+   - 新建 `alembic/versions/0004_token_blacklist.py` 迁移（`down_revision = "0003"`）
+   - `app/api/v1/auth.py` 改造：
+     - `login` 返回 `access_token + refresh_token`
+     - `refresh` 旋转 token，旧 refresh jti 加入黑名单
+     - `logout` 将当前 access token jti 加入黑名单
+   - `app/api/deps/auth.py` `verify_token` 增加 jti 黑名单校验
+
+4. **Phase 4: 前端配合**
+   - `frontend/src/services/core/authStorage.js`：
+     - 同时存 access + refresh token
+     - 新增 `setTokens`、`getRefreshToken`、`clearTokens`
+   - `frontend/src/services/core/apiClient.js`：
+     - 401 时自动调用 `/auth/refresh` 续期
+     - 并发去重（多个 401 同时触发只 refresh 一次）
+
+5. **Phase 5: SSRF URL 白名单**
+   - 新建 `app/core/url_safety.py`：
+     - 拒绝 private IP、链路本地、localhost、非 http/https scheme
+   - `app/schemas/model_configs.py`：`api_url` / `proxy_url` 加 `field_validator`
+   - `app/infrastructure/llm/provider_adapters/*.py`（4 个）请求前再校验 `api_url`
+
+6. **Phase 6: Rate Limit**
+   - `app/core/middleware.py` 集成 `Limiter`（`slowapi`）
+   - `app/main.py` 注册 `SlowAPIMiddleware`
+   - `app/core/exceptions.py` 捕获 `RateLimitExceeded` 转 429 + 统一错误结构
+   - 各端点加 `@limiter.limit(...)`：
+     - login `5/minute` per IP
+     - register `3/hour` per IP
+     - refresh `30/minute` per IP
+     - AI 端点 `10/minute` per user（Authorization header 为 key）
+
+7. **Phase 7: 测试**
+   - `tests/unit/test_key_encryption.py`（5 用例）：全部通过
+   - `tests/unit/test_url_safety.py`（8 用例）：全部通过
+   - `tests/integration/test_auth_refresh.py`（6 用例）：全部通过
+   - `tests/integration/test_rate_limit.py`（3 用例）：全部通过
+   - `tests/integration/test_migrate_base64_to_fernet.py`（4 用例）：全部通过
+   - 既有 M1 测试 29 用例 + M2 新测试 20 用例 = **76 用例全部通过**
+
+8. **Phase 8: 文档同步**
+   - `WORK_PLAN.md` 已更新 M2 章节
+   - `TODO.md` 已勾选对应项
+
+### 修改文件
+- `backend/requirements.txt`
+- `backend/app/core/config.py`
+- `backend/app/core/security.py`
+- `backend/app/core/exceptions.py`
+- `backend/app/core/middleware.py`
+- `backend/app/core/url_safety.py`（新建）
+- `backend/app/main.py`
+- `backend/app/api/v1/auth.py`
+- `backend/app/api/v1/model_configs.py`
+- `backend/app/api/v1/ai.py`
+- `backend/app/api/v1/ai_compat.py`
+- `backend/app/api/v1/admin.py`（新建）
+- `backend/app/api/deps/auth.py`
+- `backend/app/infrastructure/secrets/__init__.py`
+- `backend/app/infrastructure/secrets/key_encryption_service.py`（新建）
+- `backend/app/infrastructure/db/models/auth.py`
+- `backend/app/infrastructure/db/models/__init__.py`
+- `backend/app/infrastructure/llm/provider_adapters/openai_provider.py`
+- `backend/app/infrastructure/llm/provider_adapters/anthropic_provider.py`
+- `backend/app/infrastructure/llm/provider_adapters/gemini_provider.py`
+- `backend/app/infrastructure/llm/provider_adapters/custom_provider.py`
+- `backend/app/schemas/auth.py`
+- `backend/app/schemas/model_configs.py`
+- `backend/alembic/versions/0004_token_blacklist.py`（新建）
+- `backend/scripts/migrate_base64_keys_to_fernet.py`（新建）
+- `backend/scripts/README.md`（新建）
+- `backend/tests/conftest.py`
+- `backend/tests/unit/test_key_encryption.py`（新建）
+- `backend/tests/unit/test_url_safety.py`（新建）
+- `backend/tests/integration/test_auth_refresh.py`（新建）
+- `backend/tests/integration/test_rate_limit.py`（新建）
+- `backend/tests/integration/test_migrate_base64_to_fernet.py`（新建）
+- `frontend/src/services/core/authStorage.js`
+- `frontend/src/services/core/apiClient.js`
+- `AINovel/WORK_PLAN.md`
+- `AINovel/TODO.md`
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式

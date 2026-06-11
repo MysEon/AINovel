@@ -20,11 +20,21 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 import os
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("AUTH_SECRET_KEY", "test-secret-key-must-be-at-least-32-chars-long!!")
+os.environ.setdefault("AUTH_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+os.environ.setdefault("AUTH_REFRESH_TOKEN_EXPIRE_MINUTES", "10080")
 os.environ.setdefault("DB_URL", "sqlite+aiosqlite:///:memory:")
 
 from app.infrastructure.db.base import Base  # noqa: E402
 from app.infrastructure.db.session import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """每个测试后重置 slowapi 限流计数器，避免跨测试污染"""
+    yield
+    from app.core.middleware import limiter
+    limiter.reset()
 
 
 # ── 事件循环 ──

@@ -116,6 +116,26 @@ def register_exception_handlers(app) -> None:
             content=_build_error_body("DATABASE_ERROR", "数据库操作失败"),
         )
 
+    # Rate Limit 异常处理
+    try:
+        from slowapi.errors import RateLimitExceeded
+
+        @app.exception_handler(RateLimitExceeded)
+        async def rate_limit_handler(_req: Request, exc: RateLimitExceeded) -> JSONResponse:
+            from app.core.logging import request_id_var
+            trace_id = request_id_var.get("")
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "error_code": "RATE_LIMIT_EXCEEDED",
+                    "message": "请求过于频繁，请稍后再试",
+                    "trace_id": trace_id,
+                },
+            )
+    except ImportError:
+        pass
+
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_req: Request, exc: Exception) -> JSONResponse:
         logger.error("未处理异常: %s", exc, exc_info=True)

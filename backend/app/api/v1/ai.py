@@ -1,14 +1,14 @@
 """AI 辅助 API v1 — 工作流运行入口 + 标准化 Run/Session/Event/Artifact API"""
 
-import base64
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError, ForbiddenError
+from app.core.middleware import limiter
 from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.ai_runtime import (
@@ -17,6 +17,7 @@ from app.infrastructure.db.models.ai_runtime import (
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.secrets import get_encryption_service
 from app.schemas.ai import (
     ChapterOutlineRequest, ChapterOutlineResponse,
     CreateRunRequest, RunResponse, RunListResponse,
@@ -25,6 +26,16 @@ from app.schemas.ai import (
 from app.api.deps.auth import require_active_user
 
 router = APIRouter(prefix="/api/v1/ai", tags=["AI辅助：工作流"])
+
+_encryption_service = get_encryption_service()
+
+
+def _user_rate_key(request: Request) -> str:
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        return f"user:{auth}"
+    from slowapi.util import get_remote_address
+    return f"ip:{get_remote_address(request)}"
 
 
 async def _get_user_model_config(
@@ -49,7 +60,7 @@ def _build_model_from_config(model_cfg: ModelConfig):
     from app.infrastructure.llm.provider_adapters import get_provider, ProviderConfig
 
     provider = get_provider(model_cfg.model_type)
-    decrypted_key = base64.b64decode(model_cfg.api_key.encode()).decode()
+    decrypted_key = _encryption_service.decrypt(model_cfg.api_key)
     pcfg = ProviderConfig(
         api_key=decrypted_key,
         model_name=model_cfg.model_name or "",
@@ -79,7 +90,9 @@ async def _get_run_with_access(
 
 
 @router.post("/chapter-outline", response_model=ChapterOutlineResponse)
+@limiter.limit("10/minute", key_func=_user_rate_key)
 async def generate_chapter_outline(
+    request: Request,
     body: ChapterOutlineRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
@@ -223,7 +236,9 @@ async def list_runs(
 
 
 @router.post("/runs/{run_id}/cancel", response_model=RunResponse)
+@limiter.limit("10/minute", key_func=_user_rate_key)
 async def cancel_run(
+    request: Request,
     run_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),

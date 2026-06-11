@@ -1,7 +1,10 @@
-"""用户模型"""
+"""用户模型 + Token 黑名单模型"""
 
-from sqlalchemy import Column, Integer, String, Boolean
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.infrastructure.db.base import Base, TimestampMixin
 
@@ -19,3 +22,13 @@ class User(Base, TimestampMixin):
 
     # 关系
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+
+
+class TokenBlacklist(Base, TimestampMixin):
+    __tablename__ = "token_blacklist"
+
+    id = Column(Integer, primary_key=True, index=True)
+    jti = Column(String(36), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    revoked_at = Column(DateTime, default=func.now(), nullable=False)

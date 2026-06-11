@@ -4,6 +4,7 @@ import httpx
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
+from app.core.url_safety import validate_outbound_url
 from .base import BaseProvider, ModelInfo, ProviderConfig
 
 
@@ -15,6 +16,10 @@ class CustomProvider(BaseProvider):
     def build_chat_model(self, config: ProviderConfig) -> BaseChatModel:
         if not config.api_url:
             raise ValueError("自定义模型必须提供 api_url")
+        validate_outbound_url(config.api_url)
+        if config.proxy_url:
+            validate_outbound_url(config.proxy_url)
+
         kwargs: dict = {
             "model": config.model_name or "default",
             "api_key": config.api_key or "not-needed",
@@ -37,6 +42,11 @@ class CustomProvider(BaseProvider):
     async def list_models(self, config: ProviderConfig) -> list[ModelInfo]:
         """尝试通过 OpenAI 兼容接口获取模型列表"""
         from openai import AsyncOpenAI
+
+        if config.api_url:
+            validate_outbound_url(config.api_url)
+        if config.proxy_url:
+            validate_outbound_url(config.proxy_url)
 
         client_kwargs: dict = {
             "api_key": config.api_key or "not-needed",

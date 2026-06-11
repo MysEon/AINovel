@@ -52,11 +52,31 @@ class AuthSettings(BaseSettings):
         description="JWT签名密钥，生产环境必须配置",
     )
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 43200  # 30天
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_minutes: int = 60 * 24 * 7  # 7天
 
     model_config = SettingsConfigDict(
         env_prefix="AUTH_",
         env_file=".env",
+        extra="ignore",
+    )
+
+
+class EncryptionSettings(BaseSettings):
+    """加密配置"""
+    encryption_key: Optional[str] = Field(
+        default=None,
+        description="独立加密密钥（可选），未设置时从 AUTH_SECRET_KEY 派生",
+    )
+    pbkdf2_iterations: int = Field(
+        default=480_000,
+        description="PBKDF2 迭代次数（OWASP 2023 推荐）",
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="ENCRYPTION_",
+        env_file=".env",
+        env_file_encoding="utf-8",
         extra="ignore",
     )
 
@@ -107,6 +127,7 @@ class Settings:
         self.app = AppSettings()
         self.db = DatabaseSettings()
         self.auth = AuthSettings()
+        self.encryption = EncryptionSettings()
         self.cors = CORSSettings()
         self.ff = FeatureFlags()
 

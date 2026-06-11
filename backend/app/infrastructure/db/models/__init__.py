@@ -5,7 +5,7 @@ ORM 模型聚合入口
 
 from app.infrastructure.db.base import Base  # noqa: F401
 
-from app.infrastructure.db.models.auth import User  # noqa: F401
+from app.infrastructure.db.models.auth import User, TokenBlacklist  # noqa: F401
 from app.infrastructure.db.models.projects import Project  # noqa: F401
 from app.infrastructure.db.models.manuscript import Chapter, Draft  # noqa: F401
 from app.infrastructure.db.models.worldbuilding import (  # noqa: F401
