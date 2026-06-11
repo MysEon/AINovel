@@ -8,12 +8,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import require_active_user
+from app.application.project_service import ProjectService
 from app.core.character_templates import build_character_template_registry
 from app.core.exceptions import NotFoundError
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
-from app.infrastructure.db.repositories.project import ProjectRepository
 from app.infrastructure.db.session import get_db
 
 router = APIRouter()
@@ -63,10 +63,8 @@ def _register_crud(
         db: AsyncSession = Depends(get_db),
         user: User = Depends(require_active_user),
     ):
-        proj_repo = ProjectRepository(db)
-        project = await proj_repo.get_user_project(project_id, user.id)
-        if not project:
-            raise NotFoundError("项目不存在或您没有权限访问")
+        proj_service = ProjectService(db)
+        await proj_service.require_user_project(project_id, user.id)
 
         entity = model(**body.model_dump(), project_id=project_id)
         repo = _Repo(db)
@@ -86,10 +84,8 @@ def _register_crud(
         db: AsyncSession = Depends(get_db),
         user: User = Depends(require_active_user),
     ):
-        proj_repo = ProjectRepository(db)
-        project = await proj_repo.get_user_project(project_id, user.id)
-        if not project:
-            raise NotFoundError("项目不存在或您没有权限访问")
+        proj_service = ProjectService(db)
+        await proj_service.require_user_project(project_id, user.id)
 
         repo = _Repo(db)
         return await repo.get_by_project(project_id)

@@ -11,26 +11,13 @@
 6. 所有受保护端点通过 verify_token 校验 jti 是否在黑名单
 """
 
-from datetime import UTC
-
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import require_active_user
-from app.core.config import get_settings
-from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
+from app.application.auth_service import AuthenticationService
 from app.core.middleware import limiter
-from app.core.security import (
-    create_access_token,
-    create_refresh_token,
-    get_password_hash,
-    revoke_token,
-    verify_password,
-    verify_refresh_token,
-    verify_token,
-)
 from app.infrastructure.db.models.auth import User
-from app.infrastructure.db.repositories.user import UserRepository
 from app.infrastructure.db.session import get_db
 from app.schemas.auth import (
     RefreshTokenRequest,
@@ -50,22 +37,8 @@ async def register(
     body: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    repo = UserRepository(db)
-
-    if await repo.get_by_username(body.username):
-        raise ConflictError("用户名已存在")
-    if await repo.get_by_email(body.email):
-        raise ConflictError("邮箱已被注册")
-
-    user = User(
-        username=body.username,
-        email=body.email,
-        full_name=body.full_name,
-        password_hash=get_password_hash(body.password),
-    )
-    await repo.create(user)
-    await db.commit()
-    return user
+    service = AuthenticationService(db)
+    return await service.register(body)
 
 
 @router.post("/login", response_model=RefreshTokenResponse)
@@ -75,29 +48,8 @@ async def login(
     body: UserLogin,
     db: AsyncSession = Depends(get_db),
 ):
-    repo = UserRepository(db)
-    user = await repo.get_by_username(body.username)
-
-    if not user or not verify_password(body.password, user.password_hash):
-        raise UnauthorizedError("用户名或密码错误")
-    if not user.is_active:
-        raise ForbiddenError("账户已被禁用")
-
-    settings = get_settings()
-    access_token = create_access_token(
-        subject=user.username,
-        extra_claims={"user_id": user.id},
-    )
-    refresh_token = create_refresh_token(
-        subject=user.username,
-        extra_claims={"user_id": user.id},
-    )
-    return RefreshTokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=settings.auth.access_token_expire_minutes * 60,
-    )
+    service = AuthenticationService(db)
+    return await service.login(body)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -115,49 +67,8 @@ async def refresh_token(
     db: AsyncSession = Depends(get_db),
 ):
     """用 refresh_token 换取新的 access_token + refresh_token，旧 refresh 加入黑名单"""
-    payload = verify_refresh_token(body.refresh_token)
-    if not payload:
-        raise UnauthorizedError("无效的刷新令牌")
-
-    jti = payload.get("jti")
-    user_id = payload.get("user_id")
-    username = payload.get("sub")
-
-    if not jti or not user_id or not username:
-        raise UnauthorizedError("刷新令牌格式错误")
-
-    # 检查 refresh token 是否已被撤销
-    from app.core.security import is_token_revoked
-
-    if await is_token_revoked(jti, db):
-        raise UnauthorizedError("刷新令牌已撤销")
-
-    # 将旧 refresh token 加入黑名单
-    from datetime import datetime
-
-    expires_at = datetime.fromtimestamp(payload.get("exp", 0), tz=UTC)
-    if expires_at < datetime.now(UTC):
-        raise UnauthorizedError("刷新令牌已过期")
-
-    await revoke_token(jti, user_id, expires_at, db)
-
-    # 发放新 token 对
-    settings = get_settings()
-    new_access = create_access_token(
-        subject=username,
-        extra_claims={"user_id": user_id},
-    )
-    new_refresh = create_refresh_token(
-        subject=username,
-        extra_claims={"user_id": user_id},
-    )
-
-    return RefreshTokenResponse(
-        access_token=new_access,
-        refresh_token=new_refresh,
-        token_type="bearer",
-        expires_in=settings.auth.access_token_expire_minutes * 60,
-    )
+    service = AuthenticationService(db)
+    return await service.refresh_token(body)
 
 
 @router.post("/logout")
@@ -167,23 +78,5 @@ async def logout(
     db: AsyncSession = Depends(get_db),
 ):
     """将当前 access_token 的 jti 加入黑名单"""
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise UnauthorizedError("缺少认证凭据")
-
-    token = auth_header[7:]
-    payload = verify_token(token)
-    if not payload:
-        raise UnauthorizedError("无效的认证凭据")
-
-    jti = payload.get("jti")
-    user_id = payload.get("user_id")
-    if not jti:
-        raise UnauthorizedError("Token 缺少 jti")
-
-    from datetime import datetime
-
-    expires_at = datetime.fromtimestamp(payload.get("exp", 0), tz=UTC)
-    await revoke_token(jti, user_id, expires_at, db)
-
-    return {"message": "登出成功"}
+    service = AuthenticationService(db)
+    return await service.logout(request.headers.get("Authorization", ""))

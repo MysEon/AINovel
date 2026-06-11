@@ -11,9 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import require_active_user
 from app.application.ai_context_builder import AIContextBuilder
-from app.core.exceptions import NotFoundError
+from app.application.project_service import ProjectService
 from app.infrastructure.db.models.auth import User
-from app.infrastructure.db.repositories.project import ProjectRepository
 from app.infrastructure.db.session import get_db
 
 logger = logging.getLogger(__name__)
@@ -29,10 +28,8 @@ async def get_project_context(
     user: User = Depends(require_active_user),
 ):
     """获取项目 AI 上下文（供前端预览或工作流注入）"""
-    proj_repo = ProjectRepository(db)
-    project = await proj_repo.get_user_project(project_id, user.id)
-    if not project:
-        raise NotFoundError("项目不存在或无权访问")
+    proj_service = ProjectService(db)
+    await proj_service.require_user_project(project_id, user.id)
 
     builder = AIContextBuilder(db)
     ctx = await builder.get_project_context(project_id, mode=mode)
@@ -47,10 +44,8 @@ async def get_project_context_text(
     user: User = Depends(require_active_user),
 ):
     """获取项目上下文的纯文本格式（供 prompt 直接注入）"""
-    proj_repo = ProjectRepository(db)
-    project = await proj_repo.get_user_project(project_id, user.id)
-    if not project:
-        raise NotFoundError("项目不存在或无权访问")
+    proj_service = ProjectService(db)
+    await proj_service.require_user_project(project_id, user.id)
 
     builder = AIContextBuilder(db)
     ctx = await builder.get_project_context(project_id, mode=mode)

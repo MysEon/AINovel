@@ -1,19 +1,16 @@
 """SSE 实时流集成测试"""
 
 import asyncio
-import json
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import select
-
+from app.application.ai_workflow_service import RUN_QUEUES
+from app.domain.ai_runtime.enums import EventType, RunStatus
 from app.infrastructure.db.models.ai_runtime import (
-    LangGraphWorkflow, LangGraphSession, AIRun, AIRunEvent,
+    AIRun,
+    AIRunEvent,
+    LangGraphSession,
+    LangGraphWorkflow,
 )
-from app.infrastructure.graph.runner import GraphRunner
-from app.infrastructure.graph.registry import graph_registry
-from app.domain.ai_runtime.enums import RunStatus, EventType
-from app.api.v1.ai import RUN_QUEUES
 
 
 class MockSSEGraph:
@@ -26,7 +23,11 @@ class MockSSEGraph:
         yield {"event": "on_chain_start", "name": "build_prompt"}
         yield {"event": "on_chain_end", "name": "build_prompt"}
         yield {"event": "on_chat_model_stream", "data": {"chunk": MagicMock(content="hello")}}
-        yield {"event": "on_chat_model_end", "name": "generate_outline", "data": {"output": MagicMock(usage_metadata=None)}}
+        yield {
+            "event": "on_chat_model_end",
+            "name": "generate_outline",
+            "data": {"output": MagicMock(usage_metadata=None)},
+        }
         yield {"event": "on_chain_end", "name": "generate_outline"}
 
 
@@ -37,15 +38,21 @@ def mock_sse_graph_builder(model, **kwargs):
 class TestSSEStreaming:
     async def _create_project_and_run(self, db_session, client, auth_headers, status):
         """辅助：通过 API 创建项目，然后在 DB 中构造 workflow/session/run"""
-        proj_resp = await client.post("/api/v1/projects/", headers=auth_headers, json={
-            "name": "sse-test-project",
-        })
+        proj_resp = await client.post(
+            "/api/v1/projects/",
+            headers=auth_headers,
+            json={
+                "name": "sse-test-project",
+            },
+        )
         assert proj_resp.status_code == 201
         project_id = proj_resp.json()["id"]
 
         workflow = LangGraphWorkflow(
-            name="sse-test", workflow_type="chapter_outline",
-            project_id=project_id, model_config_id=1,
+            name="sse-test",
+            workflow_type="chapter_outline",
+            project_id=project_id,
+            model_config_id=1,
         )
         db_session.add(workflow)
         await db_session.flush()
@@ -55,7 +62,8 @@ class TestSSEStreaming:
         await db_session.flush()
 
         run = AIRun(
-            session_id=session.id, workflow_type="chapter_outline",
+            session_id=session.id,
+            workflow_type="chapter_outline",
             status=status,
         )
         db_session.add(run)
@@ -69,8 +77,10 @@ class TestSSEStreaming:
         # 插入两条历史事件
         for seq, (etype, node) in enumerate([(EventType.NODE_START, "node_a"), (EventType.NODE_END, "node_a")]):
             evt = AIRunEvent(
-                run_id=run.id, event_type=etype.value,
-                node_name=node, sequence=seq,
+                run_id=run.id,
+                event_type=etype.value,
+                node_name=node,
+                sequence=seq,
             )
             db_session.add(evt)
         await db_session.commit()

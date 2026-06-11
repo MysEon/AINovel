@@ -1,24 +1,12 @@
 """章节 Repository"""
 
-import re
 from collections.abc import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.infrastructure.db.models.manuscript import Chapter
-from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
-
-
-def calculate_word_count(content: str) -> int:
-    """计算字数（中英文混合）"""
-    if not content:
-        return 0
-    content = re.sub(r"\s+", " ", content.strip())
-    chinese = len(re.findall(r"[一-鿿　-〿＀-￯]", content))
-    english = len(re.findall(r"\b[a-zA-Z]+\b", content))
-    return chinese + english
 
 
 class ChapterRepository(ProjectScopedRepository[Chapter]):
@@ -57,25 +45,8 @@ class ChapterRepository(ProjectScopedRepository[Chapter]):
 
     async def get_with_owner_check(self, chapter_id: int, user_id: int) -> Chapter | None:
         """获取章节并校验项目所有权"""
+        from app.infrastructure.db.models.projects import Project
+
         stmt = select(Chapter).join(Project).where(Chapter.id == chapter_id, Project.user_id == user_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
-
-    async def update_project_stats(self, project_id: int) -> None:
-        """更新项目的字数和章节统计"""
-        words = await self.session.execute(
-            select(func.sum(Chapter.word_count)).where(
-                Chapter.project_id == project_id,
-                Chapter.status == "published",
-            )
-        )
-        count = await self.session.execute(
-            select(func.count(Chapter.id)).where(
-                Chapter.project_id == project_id,
-                Chapter.status == "published",
-            )
-        )
-        project = await self.session.get(Project, project_id)
-        if project:
-            project.word_count = words.scalar_one_or_none() or 0
-            project.chapter_count = count.scalar_one_or_none() or 0
