@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.lock .
-RUN pip install --no-cache-dir -r requirements.lock
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.11-slim AS runtime
 
@@ -26,7 +26,7 @@ COPY --from=base /usr/local/bin /usr/local/bin
 COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
-COPY requirements.lock .
+COPY requirements.txt .
 
 # 创建数据目录并设置权限
 RUN mkdir -p /app/data && chown -R appuser:appuser /app
