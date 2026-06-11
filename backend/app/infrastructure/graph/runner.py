@@ -5,21 +5,26 @@ Graph Runner — 执行图、采集事件、管理运行生命周期
 1. 创建/恢复会话
 2. 启动 run（调用图）
 3. 事件采集（node_start/end, token, error）
-4. 结果落库
+4. Token 回填（usage_metadata）
+5. 结果落库
 """
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Optional
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages.ai import add_usage
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.ai_runtime.enums import RunStatus, EventType
 from app.infrastructure.db.models.ai_runtime import (
     LangGraphSession, AIRun, AIRunEvent, AIGeneratedContent,
 )
+from app.core.metrics import metrics
 from .registry import graph_registry
 
 logger = logging.getLogger(__name__)
@@ -28,8 +33,15 @@ logger = logging.getLogger(__name__)
 class GraphRunner:
     """图运行器：封装 LangGraph 图的执行生命周期"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        checkpointer: Optional[BaseCheckpointSaver] = None,
+        event_queue: Optional[asyncio.Queue] = None,
+    ):
         self.db = db
+        self.checkpointer = checkpointer
+        self.event_queue = event_queue
 
     async def get_or_create_session(
         self, workflow_id: int, thread_id: str,
@@ -68,6 +80,33 @@ class GraphRunner:
         await self.db.flush()
         return run
 
+    def _make_event_payload(
+        self,
+        event_type: str,
+        node: Optional[str] = None,
+        sequence: int = 0,
+        data: Optional[dict] = None,
+        run_id: Optional[int] = None,
+    ) -> dict:
+        """构造统一的事件 payload"""
+        payload = {
+            "type": event_type,
+            "node": node,
+            "sequence": sequence,
+            "data": data,
+            "run_id": run_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        return payload
+
+    async def _push_event(self, payload: dict) -> None:
+        """推送事件到 queue（如果已注册）"""
+        if self.event_queue is not None:
+            try:
+                self.event_queue.put_nowait(payload)
+            except asyncio.QueueFull:
+                logger.warning("Event queue full, dropping event: %s", payload.get("type"))
+
     async def execute(
         self, run: AIRun, model: BaseChatModel,
         input_state: dict, **graph_kwargs,
@@ -79,22 +118,41 @@ class GraphRunner:
         await self.db.flush()
 
         seq = 0
+        total_usage = None
+        started_at = datetime.now(timezone.utc)
+
         try:
             builder = graph_registry.get(run.workflow_type)
-            graph = builder(model, **graph_kwargs)
+            graph = builder(model, checkpointer=self.checkpointer, **graph_kwargs)
 
             # 记录开始事件
             seq = await self._record_event(
                 run.id, EventType.NODE_START, "graph", seq,
             )
+            payload = self._make_event_payload("node_start", "graph", seq, run_id=run.id)
+            await self._push_event(payload)
 
-            result = await graph.ainvoke(input_state)
+            config = graph_kwargs.get("config")
+            if self.checkpointer is not None and config is not None:
+                result = await graph.ainvoke(input_state, config=config)
+            else:
+                result = await graph.ainvoke(input_state)
 
             # 记录完成事件
             seq = await self._record_event(
                 run.id, EventType.NODE_END, "graph", seq,
                 data={"keys": list(result.keys()) if isinstance(result, dict) else None},
             )
+            payload = self._make_event_payload(
+                "node_end", "graph", seq,
+                data={"keys": list(result.keys()) if isinstance(result, dict) else None},
+                run_id=run.id,
+            )
+            await self._push_event(payload)
+
+            # Token 回填
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
 
             run.status = RunStatus.SUCCEEDED
             run.output_data = json.dumps(
@@ -102,7 +160,32 @@ class GraphRunner:
             ) if isinstance(result, dict) else str(result)
             run.finished_at = datetime.now(timezone.utc)
             await self.db.flush()
+
+            # 记录 metrics
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=True, duration_s=duration, tokens=run.tokens_used or 0)
+
+            # 推送 done 事件
+            await self._push_event(self._make_event_payload(
+                "done", sequence=seq + 1, data={"status": "succeeded", "tokens_used": run.tokens_used},
+                run_id=run.id,
+            ))
+
             return result
+
+        except asyncio.CancelledError:
+            logger.info("Graph run %s was cancelled", run.id)
+            run.status = RunStatus.CANCELLED
+            run.finished_at = datetime.now(timezone.utc)
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
+            await self.db.flush()
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=False, duration_s=duration, tokens=run.tokens_used or 0)
+            await self._push_event(self._make_event_payload(
+                "cancelled", sequence=seq + 1, run_id=run.id,
+            ))
+            raise
 
         except Exception as exc:
             logger.exception("Graph run %s failed", run.id)
@@ -113,7 +196,14 @@ class GraphRunner:
             run.status = RunStatus.FAILED
             run.error_message = str(exc)
             run.finished_at = datetime.now(timezone.utc)
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
             await self.db.flush()
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=False, duration_s=duration, tokens=run.tokens_used or 0)
+            await self._push_event(self._make_event_payload(
+                "error", sequence=seq + 1, data={"message": str(exc)}, run_id=run.id,
+            ))
             raise
 
     async def execute_stream(
@@ -127,11 +217,19 @@ class GraphRunner:
         await self.db.flush()
 
         seq = 0
+        total_usage = None
+        started_at = datetime.now(timezone.utc)
+
         try:
             builder = graph_registry.get(run.workflow_type)
-            graph = builder(model, **graph_kwargs)
+            graph = builder(model, checkpointer=self.checkpointer, **graph_kwargs)
 
-            async for event in graph.astream_events(input_state, version="v2"):
+            config = graph_kwargs.get("config")
+            if self.checkpointer is not None and config is not None:
+                stream_iter = graph.astream_events(input_state, version="v2", config=config)
+            else:
+                stream_iter = graph.astream_events(input_state, version="v2")
+            async for event in stream_iter:
                 kind = event.get("event", "")
                 name = event.get("name", "")
 
@@ -139,23 +237,74 @@ class GraphRunner:
                     seq = await self._record_event(
                         run.id, EventType.NODE_START, name, seq,
                     )
-                    yield {"type": "node_start", "node": name}
+                    payload = self._make_event_payload("node_start", name, seq, run_id=run.id)
+                    await self._push_event(payload)
+                    yield payload
 
                 elif kind == "on_chain_end":
                     seq = await self._record_event(
                         run.id, EventType.NODE_END, name, seq,
                     )
-                    yield {"type": "node_end", "node": name}
+                    payload = self._make_event_payload("node_end", name, seq, run_id=run.id)
+                    await self._push_event(payload)
+                    yield payload
 
                 elif kind == "on_chat_model_stream":
                     chunk = event.get("data", {}).get("chunk")
                     if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield {"type": "token", "content": chunk.content}
+                        payload = self._make_event_payload(
+                            "token", name, seq, data={"content": chunk.content}, run_id=run.id,
+                        )
+                        await self._push_event(payload)
+                        yield payload
+
+                elif kind == "on_chat_model_end":
+                    output = event.get("data", {}).get("output")
+                    if output and hasattr(output, "usage_metadata") and output.usage_metadata:
+                        usage = output.usage_metadata
+                        total_usage = add_usage(total_usage, usage)
+                        payload = self._make_event_payload(
+                            "usage", name, seq,
+                            data={
+                                "input_tokens": usage.get("input_tokens", 0),
+                                "output_tokens": usage.get("output_tokens", 0),
+                                "total_tokens": usage.get("total_tokens", 0),
+                            },
+                            run_id=run.id,
+                        )
+                        await self._push_event(payload)
+                        yield payload
 
             run.status = RunStatus.SUCCEEDED
             run.finished_at = datetime.now(timezone.utc)
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
             await self.db.flush()
-            yield {"type": "done"}
+
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=True, duration_s=duration, tokens=run.tokens_used or 0)
+
+            done_payload = self._make_event_payload(
+                "done", sequence=seq + 1,
+                data={"status": "succeeded", "tokens_used": run.tokens_used},
+                run_id=run.id,
+            )
+            await self._push_event(done_payload)
+            yield done_payload
+
+        except asyncio.CancelledError:
+            logger.info("Graph stream run %s was cancelled", run.id)
+            run.status = RunStatus.CANCELLED
+            run.finished_at = datetime.now(timezone.utc)
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
+            await self.db.flush()
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=False, duration_s=duration, tokens=run.tokens_used or 0)
+            payload = self._make_event_payload("cancelled", sequence=seq + 1, run_id=run.id)
+            await self._push_event(payload)
+            yield payload
+            raise
 
         except Exception as exc:
             logger.exception("Graph stream run %s failed", run.id)
@@ -166,8 +315,58 @@ class GraphRunner:
             run.status = RunStatus.FAILED
             run.error_message = str(exc)
             run.finished_at = datetime.now(timezone.utc)
+            if total_usage:
+                run.tokens_used = total_usage.get("total_tokens", 0)
             await self.db.flush()
-            yield {"type": "error", "message": str(exc)}
+            duration = (run.finished_at - started_at).total_seconds()
+            metrics.record_ai_run(succeeded=False, duration_s=duration, tokens=run.tokens_used or 0)
+            payload = self._make_event_payload(
+                "error", sequence=seq + 1, data={"message": str(exc)}, run_id=run.id,
+            )
+            await self._push_event(payload)
+            yield payload
+
+    async def consume_events(
+        self, run: AIRun, model: BaseChatModel,
+        input_state: dict, **graph_kwargs,
+    ) -> AsyncIterator[dict]:
+        """
+        异步生成器：内部启动 event_queue，驱动 execute_stream 并将事件 yield 给 SSE。
+        这是 execute_stream 的 queue-based 包装，用于 SSE 实时流。
+        """
+        queue: asyncio.Queue = asyncio.Queue(maxsize=256)
+        self.event_queue = queue
+
+        async def _worker():
+            try:
+                # 迭代 consume 掉 execute_stream 的所有 yield
+                async for _ in self.execute_stream(run, model, input_state, **graph_kwargs):
+                    pass
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                # 将异常包装为 error 事件 push 到 queue
+                try:
+                    queue.put_nowait(self._make_event_payload(
+                        "error", sequence=-1, data={"message": str(exc)}, run_id=run.id,
+                    ))
+                except asyncio.QueueFull:
+                    pass
+
+        task = asyncio.create_task(_worker(), name=f"graph-worker-{run.id}")
+        try:
+            while True:
+                event = await queue.get()
+                yield event
+                if event.get("type") in ("done", "error", "cancelled"):
+                    break
+        finally:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
     async def _record_event(
         self, run_id: int, event_type: EventType,

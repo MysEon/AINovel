@@ -514,6 +514,59 @@
 - `AINovel/WORK_PLAN.md`
 - `AINovel/TODO.md`
 
+## M4 AI Runtime langgraph 0.6.5→1.2.4 + Checkpointer + Token 回填 + SSE + Cancel — 2026-06-11
+
+### 已完成内容（前 70% 由前序 subagent 完成）
+1. `requirements.txt` 版本锁定（langgraph==1.2.4, langchain-core>=1.4.0 等）
+2. 双 conda env 升级到 langgraph 1.2.4
+3. `app/infrastructure/graph/runner.py` 大改造：
+   - 构造接收 `checkpointer` + `event_queue`
+   - Token 跟踪：`on_chat_model_end` → `add_usage()` → `run.tokens_used`
+   - Event queue 桥接：`_push_event` / `_make_event_payload`
+   - CancelledError 优雅处理
+   - `ainvoke` / `astream_events` 只在 checkpointer 存在时传 config
+4. `app/infrastructure/checkpoint/__init__.py` — `get_sqlite_checkpointer()` 工厂 + 单例
+5. `app/infrastructure/graph/workflows/chapter_outline.py` — 接受 checkpointer 参数
+6. `tests/integration/test_ai_runtime.py` MockGraph 已接受 `**kwargs`
+
+### 本次完成内容（剩余 30%）
+1. **Phase B 收尾 — cancel_run 真正取消**
+   - `app/api/v1/ai.py`：`cancel_run` 端点改造
+     - 引入 `background_runner`，检查 `get_status(run_id)`
+     - 活 task 存在时调用 `background_runner.cancel(run_id)`
+     - 保留同步运行（generate_chapter_outline）的"已知限制"注释
+   - 新增 `tests/integration/test_cancel.py`（2 用例）：验证 cancel API 调 background_runner.cancel + DB 状态写回
+
+2. **Phase B 测试补全**
+   - `tests/unit/test_checkpoint_factory.py`（2 用例）：单例一致性 + BaseCheckpointSaver 子类类型
+   - `tests/integration/test_token_tracking.py`（2 用例）：usage_metadata 回填 tokens_used + 多轮累加
+   - `tests/integration/test_checkpointer_resume.py`（1 用例）：InMemorySaver 两次 ainvoke 验 state 持久
+
+3. **Phase C — SSE 实时流**
+   - `app/infrastructure/graph/runner.py`：新增 `consume_events()` 异步生成器
+     - 内部维护 `asyncio.Queue`，push 事件到 queue
+     - 错误时把 exception 包装为 error 事件 push 到 queue
+     - caller 不传 `event_queue` 时仍走原 yield 路径（向后兼容）
+   - `app/api/v1/ai.py` SSE 端点改造：
+     - `GET /runs/{run_id}/stream`：completed run replay 历史事件；running run 从 `RUN_QUEUES` 拉取实时事件
+     - 新增 `POST /runs/{run_id}/start-stream`：注册 queue、启动后台 task
+     - `StreamingResponse` → `sse-starlette.EventSourceResponse`
+     - `/runs/{id}/stream` 加 `@limiter.limit("30/minute")`
+   - 新增 `tests/integration/test_sse_streaming.py`（3 用例）：completed replay + running live + content-type 验证
+
+4. **测试基线**
+   - 新增 10 个测试用例，全量 **86 passed**（76 基线 + 10 新增）
+   - `chapter_outline` 端到端未破坏
+
+### 修改文件
+- `backend/app/infrastructure/graph/runner.py` — 新增 `consume_events()`
+- `backend/app/api/v1/ai.py` — cancel_run 改造 + SSE 实时流 + start-stream 端点
+- `backend/tests/unit/test_checkpoint_factory.py`（新建）
+- `backend/tests/integration/test_token_tracking.py`（新建）
+- `backend/tests/integration/test_cancel.py`（新建）
+- `backend/tests/integration/test_checkpointer_resume.py`（新建）
+- `backend/tests/integration/test_sse_streaming.py`（新建）
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式

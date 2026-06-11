@@ -113,7 +113,7 @@ def format_output(state: ChapterOutlineState) -> dict:
 
 
 @graph_registry.register("chapter_outline")
-def build_chapter_outline_graph(model: BaseChatModel, **kwargs):
+def build_chapter_outline_graph(model: BaseChatModel, checkpointer=None, **kwargs):
     """构建章节大纲生成图"""
     graph = StateGraph(ChapterOutlineState)
 
@@ -126,4 +126,4 @@ def build_chapter_outline_graph(model: BaseChatModel, **kwargs):
     graph.add_edge("generate_outline", "format_output")
     graph.add_edge("format_output", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

@@ -17,7 +17,7 @@ from app.domain.ai_runtime.enums import RunStatus, EventType
 class MockGraph:
     """模拟 LangGraph 图，用于测试 runner"""
 
-    async def ainvoke(self, state):
+    async def ainvoke(self, state, **kwargs):
         return {
             "outline": {
                 "chapter_title": "测试章节",
@@ -25,7 +25,7 @@ class MockGraph:
             }
         }
 
-    async def astream_events(self, state, version):
+    async def astream_events(self, state, version, **kwargs):
         # 模拟节点事件流
         yield {"event": "on_chain_start", "name": "build_prompt"}
         yield {"event": "on_chain_end", "name": "build_prompt"}
