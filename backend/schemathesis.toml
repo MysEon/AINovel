@@ -1,0 +1,43 @@
+# Schemathesis v4 配置文件
+# 用于控制契约测试的全局行为
+
+[generation]
+max-examples = 50
+
+[phases]
+enabled = true
+
+[phases.examples]
+enabled = true
+
+[phases.coverage]
+enabled = true
+
+[phases.fuzzing]
+enabled = false
+
+[phases.stateful]
+enabled = false
+
+# 跳过 SSE / stream 端点：EventSourceResponse / StreamingResponse 不适合普通 HTTP 测试
+[[operations]]
+include-path = "/api/v1/ai/runs/{run_id}/stream"
+enabled = false
+
+[[operations]]
+include-path = "/api/v1/ai/runs/{run_id}/start-stream"
+enabled = false
+
+[[operations]]
+include-path = "/api/ai/chat-stream"
+enabled = false
+
+# 跳过 Admin 端点：需要 superuser 权限
+[[operations]]
+include-path = "/api/v1/admin/keys/rotate"
+enabled = false
+
+# 跳过 health diag：仅 dev 环境开放，响应随环境变化
+[[operations]]
+include-path = "/health/diag"
+enabled = false

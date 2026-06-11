@@ -25,3 +25,4 @@ google-generativeai
 anthropic
 cryptography>=42.0.0
 slowapi>=0.1.9
+schemathesis>=4.21.0
