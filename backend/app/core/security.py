@@ -101,24 +101,34 @@ def decode_token_unsafe(token: str) -> dict | None:
 async def revoke_token(jti: str, user_id: int, expires_at: datetime, db) -> None:
     """将指定 jti 加入黑名单"""
     from sqlalchemy import select
+    from sqlalchemy.exc import OperationalError
 
     from app.infrastructure.db.models.auth import TokenBlacklist
 
-    result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
-    existing = result.scalar_one_or_none()
-    if existing:
-        return
+    try:
+        result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
+        existing = result.scalar_one_or_none()
+        if existing:
+            return
 
-    entry = TokenBlacklist(jti=jti, user_id=user_id, expires_at=expires_at)
-    db.add(entry)
-    await db.commit()
+        entry = TokenBlacklist(jti=jti, user_id=user_id, expires_at=expires_at)
+        db.add(entry)
+        await db.commit()
+    except OperationalError:
+        # 表不存在时优雅降级，不抛异常
+        await db.rollback()
 
 
 async def is_token_revoked(jti: str, db) -> bool:
     """检查指定 jti 是否在黑名单中"""
     from sqlalchemy import select
+    from sqlalchemy.exc import OperationalError
 
     from app.infrastructure.db.models.auth import TokenBlacklist
 
-    result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
-    return result.scalar_one_or_none() is not None
+    try:
+        result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
+        return result.scalar_one_or_none() is not None
+    except OperationalError:
+        # 表不存在时视为未撤销，避免登录流程中断
+        return False

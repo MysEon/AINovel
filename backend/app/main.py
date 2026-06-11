@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIDMiddleware, limiter, setup_cors
+from app.infrastructure.db.init_tables import ensure_token_blacklist_table
 from app.infrastructure.db.session import dispose_engine, get_async_engine
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,11 @@ async def lifespan(app: FastAPI):
     _startup_checks(settings)
 
     # 数据库连接池预热
-    get_async_engine()
+    engine = get_async_engine()
     logger.info("数据库引擎已初始化")
+
+    # 兜底：确保 token_blacklist 表存在（防御未运行 Alembic 的场景）
+    await ensure_token_blacklist_table(engine)
 
     yield
 
