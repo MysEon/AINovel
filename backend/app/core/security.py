@@ -3,6 +3,7 @@
 密码哈希、JWT Token 生成与验证、Refresh Token、Token 黑名单
 """
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -14,12 +15,17 @@ from app.core.config import get_settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _pre_hash(password: str) -> str:
+    """SHA256 预哈希：绕过 bcrypt 72 字节限制，保证输入永远 ≤ 64 字符"""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(_pre_hash(plain_password), hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_pre_hash(password))
 
 
 def create_access_token(
