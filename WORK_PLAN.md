@@ -341,6 +341,69 @@
 - frontend/src/services/aiService.js (修改AI服务支持自定义模板)
 - frontend/src/components/ProjectEditor.jsx (集成到项目界面)
 
+## M1 数据库地基 + AI Runtime 表迁移 + 外键索引 + N+1 防护 — 2026-06-11
+
+### 完成内容
+1. **Phase 1: Alembic 基线迁移**
+   - 新建 `alembic/versions/0001_baseline_schema.py`，含 13 张核心表的 `create_table`
+   - 旧迁移（95ec18802f56 / a8f033bea24c / b3e7a1c9d042 / d9f7c1b2e4aa）upgrade/downgrade 置空，down_revision 接链到 0001
+   - 解决新环境 `alembic upgrade head` 无法建表的问题（DL-001）
+
+2. **Phase 2: AI Runtime 5 张表迁移**
+   - 新建 `alembic/versions/0002_ai_runtime_tables.py`
+   - 创建 `ai_runs`、`ai_run_events`、`ai_generated_content`、`langgraph_workflows`、`langgraph_sessions`
+   - `down_revision` 指向旧链末端 `d9f7c1b2e4aa`（AI-001）
+
+3. **Phase 3: 外键索引**
+   - 新建 `alembic/versions/0003_foreign_key_indexes.py`
+   - 为 projects / characters / locations / organizations / worldviews / chapters / model_configs / prompt_templates / ai_generated_content 的高频外键列加索引
+   - 增加 chapters 复合索引 `(project_id, status, order_index)`（DL-002）
+
+4. **Phase 4: 小型清理**
+   - `manuscript.py`: `Text(1000000)` → `Text`，`Text(50000)` → `Text`（DL-005）
+   - `ai_runtime.py`: `server_default="now()"` → `server_default=func.now()`（DL-009）
+   - `models/__init__.py`: 补导入 `AIRun`、`AIRunEvent`
+
+5. **Phase 5: conftest 修复**
+   - 修正 `tests/conftest.py` 错误导入路径（DL-013）
+   - 修正 `test_user` fixture 字段名 `hashed_password` → `password_hash`
+   - `auth_headers` 改为独立注册/登录，避免跨测试用户冲突
+
+6. **Phase 6: N+1 防护**
+   - `BaseRepository.get_all` 增加可选 `load_options` 参数
+   - `ProjectScopedRepository.get_by_project` 增加可选 `load_options`
+   - `ProjectRepository.get_user_project` 默认 `selectinload(Project.chapters)`
+   - `ChapterRepository.get_by_project` 默认 `selectinload(Chapter.project)`（DL-006）
+
+7. **Phase 7: 测试**
+   - `test_alembic_migration.py`（5 用例）：空 DB upgrade head、AI Runtime 表存在、外键索引存在、downgrade base、幂等性
+   - `test_projects.py`（7 用例）：CRUD + 跨用户权限 + 字数统计
+   - `test_chapters.py`（7 用例）：CRUD + 批量发布单事务回滚验证 + 项目字数自动更新
+   - `test_ai_runtime.py`（3 用例）：AIRun 创建查询、chapter_outline mock 工作流、事件顺序
+   - 既有 `test_auth.py` 修复 3 处错误断言/字段
+   - **全部 29 个集成测试通过**
+
+8. **事务一致性修复**
+   - `app/api/v1/chapters.py:batch_publish_chapters` 移除循环内逐章 commit，改为单事务统一 flush + commit，异常时 rollback（DL-003 最痛点收敛）
+
+### 修改文件
+- `app/infrastructure/db/models/__init__.py`
+- `app/infrastructure/db/models/manuscript.py`
+- `app/infrastructure/db/models/ai_runtime.py`
+- `app/infrastructure/db/repositories/base.py`
+- `app/infrastructure/db/repositories/project.py`
+- `app/infrastructure/db/repositories/chapter.py`
+- `app/api/v1/chapters.py`
+- `tests/conftest.py`
+- `tests/integration/test_auth.py`
+- `alembic/versions/0001_baseline_schema.py`（新建）
+- `alembic/versions/0002_ai_runtime_tables.py`（新建）
+- `alembic/versions/0003_foreign_key_indexes.py`（新建）
+- `alembic/versions/95ec18802f56_initial_migration.py`
+- `alembic/versions/a8f033bea24c_扩展prompttemplate表支持提示词管理功能.py`
+- `alembic/versions/b3e7a1c9d042_扩展character表新增角色参数字段.py`
+- `alembic/versions/d9f7c1b2e4aa_扩展character表新增extra_attributes字段.py`
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式

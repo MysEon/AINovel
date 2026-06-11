@@ -11,8 +11,8 @@ class Chapter(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
-    content = Column(Text(1000000))
-    outline = Column(Text(50000))
+    content = Column(Text)
+    outline = Column(Text)
     chapter_number = Column(Integer, default=0)
     order_index = Column(Integer, default=0)
     word_count = Column(Integer, default=0)

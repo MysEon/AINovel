@@ -1,6 +1,6 @@
 """章节管理 API v1"""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
 from typing import List, Optional
@@ -206,22 +206,29 @@ async def batch_publish_chapters(
     published = []
     failed = []
 
-    for cid in body.chapter_ids:
-        chapter = await ch_repo.get_one_in_project(cid, body.project_id)
-        if chapter and chapter.status == "draft":
-            chapter.status = "published"
-            await db.commit()
-            await db.refresh(chapter)
-            published.append({"id": chapter.id, "title": chapter.title, "published_at": chapter.updated_at})
-        else:
-            failed.append({"id": cid, "reason": "章节不存在或已发布"})
+    try:
+        for cid in body.chapter_ids:
+            chapter = await ch_repo.get_one_in_project(cid, body.project_id)
+            if chapter and chapter.status == "draft":
+                chapter.status = "published"
+                published.append(chapter)
+            else:
+                failed.append({"id": cid, "reason": "章节不存在或已发布"})
 
-    await ch_repo.update_project_stats(body.project_id)
-    await db.commit()
+        if published:
+            await db.flush()
+            await ch_repo.update_project_stats(body.project_id)
+
+        await db.commit()
+        for chapter in published:
+            await db.refresh(chapter)
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量发布失败: {exc}") from exc
 
     return {
         "success": len(failed) == 0,
-        "published_chapters": published,
+        "published_chapters": [{"id": ch.id, "title": ch.title, "published_at": ch.updated_at} for ch in published],
         "failed_chapters": failed,
         "total_count": len(body.chapter_ids),
         "success_count": len(published),

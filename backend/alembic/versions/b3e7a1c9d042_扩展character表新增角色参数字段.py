@@ -1,8 +1,8 @@
-"""initial_migration (历史迁移，已置空)
+"""扩展Character表新增角色参数字段 (历史迁移，已置空)
 
-Revision ID: 95ec18802f56
-Revises: 0001
-Create Date: 2025-08-21 15:26:36.819762
+Revision ID: b3e7a1c9d042
+Revises: a8f033bea24c
+Create Date: 2026-02-26 11:30:00.000000
 
 说明：
 - 此迁移为历史记录，其变更已合并至 0001_baseline_schema。
@@ -14,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '95ec18802f56'
-down_revision: Union[str, None] = '0001'
+revision: str = 'b3e7a1c9d042'
+down_revision: Union[str, None] = 'a8f033bea24c'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,6 +1,6 @@
 """AI Runtime 模型：工作流、会话、运行、事件、生成内容"""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 
 from app.infrastructure.db.base import Base, TimestampMixin
@@ -94,6 +94,6 @@ class AIRunEvent(Base):
     node_name = Column(String(100), nullable=True)
     data = Column(Text)
     sequence = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, nullable=False, server_default="now()")
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     run = relationship("AIRun", back_populates="events")

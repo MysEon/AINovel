@@ -5,6 +5,7 @@ from typing import Optional, Sequence
 
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
 from app.infrastructure.db.models.manuscript import Chapter
@@ -16,13 +17,20 @@ def calculate_word_count(content: str) -> int:
     if not content:
         return 0
     content = re.sub(r'\s+', ' ', content.strip())
-    chinese = len(re.findall(r'[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]', content))
+    chinese = len(re.findall(r'[一-鿿　-〿＀-￯]', content))
     english = len(re.findall(r'\b[a-zA-Z]+\b', content))
     return chinese + english
 
 
 class ChapterRepository(ProjectScopedRepository[Chapter]):
     model = Chapter
+
+    async def get_by_project(
+        self, project_id: int, *, skip: int = 0, limit: int = 100, load_options: Optional[list] = None,
+    ) -> Sequence[Chapter]:
+        if load_options is None:
+            load_options = [selectinload(Chapter.project)]
+        return await super().get_by_project(project_id, skip=skip, limit=limit, load_options=load_options)
 
     async def get_next_numbers(self, project_id: int) -> tuple[int, int]:
         """获取下一个章节编号和排序索引"""

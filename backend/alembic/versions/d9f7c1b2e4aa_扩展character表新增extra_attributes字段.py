@@ -1,8 +1,8 @@
-"""initial_migration (历史迁移，已置空)
+"""扩展Character表新增extra_attributes字段 (历史迁移，已置空)
 
-Revision ID: 95ec18802f56
-Revises: 0001
-Create Date: 2025-08-21 15:26:36.819762
+Revision ID: d9f7c1b2e4aa
+Revises: b3e7a1c9d042
+Create Date: 2026-02-26 20:30:00.000000
 
 说明：
 - 此迁移为历史记录，其变更已合并至 0001_baseline_schema。
@@ -14,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '95ec18802f56'
-down_revision: Union[str, None] = '0001'
+revision: str = "d9f7c1b2e4aa"
+down_revision: Union[str, None] = "b3e7a1c9d042"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,3 +28,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     # 历史回滚已包含在 0001_baseline_schema downgrade 中，此处留空
     pass
+

@@ -15,10 +15,9 @@ async def test_register_user(client):
         "email": "new@example.com",
         "password": "NewPass123!",
     })
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     data = resp.json()
-    assert data["success"] is True
-    assert "id" in data["user"]
+    assert "id" in data
 
 
 @pytest.mark.asyncio
@@ -43,7 +42,7 @@ async def test_login_success(client):
         "password": "LoginPass123!",
     })
     resp = await client.post("/api/v1/auth/login", json={
-        "email": "login@example.com",
+        "username": "loginuser",
         "password": "LoginPass123!",
     })
     assert resp.status_code == 200
@@ -60,7 +59,7 @@ async def test_login_wrong_password(client):
         "password": "CorrectPass1!",
     })
     resp = await client.post("/api/v1/auth/login", json={
-        "email": "wrongpw@example.com",
+        "username": "wrongpw",
         "password": "WrongPass1!",
     })
     assert resp.status_code == 401

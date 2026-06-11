@@ -22,7 +22,7 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("AUTH_SECRET_KEY", "test-secret-key-must-be-at-least-32-chars-long!!")
 os.environ.setdefault("DB_URL", "sqlite+aiosqlite:///:memory:")
 
-from app.infrastructure.db.models.base import Base  # noqa: E402
+from app.infrastructure.db.base import Base  # noqa: E402
 from app.infrastructure.db.session import get_db  # noqa: E402
 from app.main import create_app  # noqa: E402
 
@@ -94,13 +94,14 @@ TEST_USER_PASSWORD = "TestPass123!"
 @pytest_asyncio.fixture
 async def test_user(db_session):
     """创建测试用户并返回 ORM 对象"""
+    import uuid
     from app.infrastructure.db.models.auth import User
     from app.core.security import get_password_hash
 
     user = User(
-        username="testuser",
-        email=TEST_USER_EMAIL,
-        hashed_password=get_password_hash(TEST_USER_PASSWORD),
+        username=f"testuser_{uuid.uuid4().hex[:8]}",
+        email=f"{uuid.uuid4().hex[:8]}@example.com",
+        password_hash=get_password_hash(TEST_USER_PASSWORD),
         is_active=True,
     )
     db_session.add(user)
@@ -110,11 +111,24 @@ async def test_user(db_session):
 
 
 @pytest_asyncio.fixture
-async def auth_headers(client, test_user) -> dict:
-    """登录并返回带 JWT 的请求头"""
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": TEST_USER_EMAIL,
+async def auth_headers(client) -> dict:
+    """注册并登录，返回带 JWT 的请求头"""
+    import uuid
+
+    username = f"testuser_{uuid.uuid4().hex[:8]}"
+    email = f"{uuid.uuid4().hex[:8]}@example.com"
+
+    reg_resp = await client.post("/api/v1/auth/register", json={
+        "username": username,
+        "email": email,
         "password": TEST_USER_PASSWORD,
     })
+    assert reg_resp.status_code == 201
+
+    resp = await client.post("/api/v1/auth/login", json={
+        "username": username,
+        "password": TEST_USER_PASSWORD,
+    })
+    assert resp.status_code == 200
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

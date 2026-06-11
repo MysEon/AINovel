@@ -14,5 +14,5 @@ from app.infrastructure.db.models.worldbuilding import (  # noqa: F401
 from app.infrastructure.db.models.model_configs import ModelConfig  # noqa: F401
 from app.infrastructure.db.models.prompts import PromptTemplate  # noqa: F401
 from app.infrastructure.db.models.ai_runtime import (  # noqa: F401
-    LangGraphWorkflow, LangGraphSession, AIGeneratedContent,
+    LangGraphWorkflow, LangGraphSession, AIGeneratedContent, AIRun, AIRunEvent,
 )

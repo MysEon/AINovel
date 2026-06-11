@@ -4,6 +4,7 @@ from typing import Optional, Sequence
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.infrastructure.db.repositories.base import BaseRepository
 from app.infrastructure.db.models.projects import Project
@@ -28,10 +29,11 @@ class ProjectRepository(BaseRepository[Project]):
     async def get_user_project(
         self, project_id: int, user_id: int,
     ) -> Optional[Project]:
-        """获取用户拥有的项目（所有权校验）"""
-        stmt = select(Project).where(
-            Project.id == project_id,
-            Project.user_id == user_id,
+        """获取用户拥有的项目（所有权校验），默认预加载 chapters"""
+        stmt = (
+            select(Project)
+            .where(Project.id == project_id, Project.user_id == user_id)
+            .options(selectinload(Project.chapters))
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
