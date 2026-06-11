@@ -8,14 +8,13 @@ AI 上下文构建器 — 从项目数据统一组装 LLM 上下文
 """
 
 import logging
-from typing import Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.models.worldbuilding import Character, Location, Organization, Worldview
-from app.infrastructure.db.models.manuscript import Chapter
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,10 @@ class AIContextBuilder:
         self.db = db
 
     async def get_project_context(
-        self, project_id: int, *, mode: str = "full",
+        self,
+        project_id: int,
+        *,
+        mode: str = "full",
     ) -> dict:
         """
         构建项目上下文。
@@ -67,16 +69,12 @@ class AIContextBuilder:
 
         return ctx
 
-    async def _get_project(self, project_id: int) -> Optional[Project]:
-        result = await self.db.execute(
-            select(Project).where(Project.id == project_id)
-        )
+    async def _get_project(self, project_id: int) -> Project | None:
+        result = await self.db.execute(select(Project).where(Project.id == project_id))
         return result.scalar_one_or_none()
 
     async def _get_characters(self, project_id: int) -> list[dict]:
-        result = await self.db.execute(
-            select(Character).where(Character.project_id == project_id).limit(20)
-        )
+        result = await self.db.execute(select(Character).where(Character.project_id == project_id).limit(20))
         return [
             {
                 "name": c.name,
@@ -88,9 +86,7 @@ class AIContextBuilder:
         ]
 
     async def _get_worldviews(self, project_id: int) -> list[dict]:
-        result = await self.db.execute(
-            select(Worldview).where(Worldview.project_id == project_id).limit(10)
-        )
+        result = await self.db.execute(select(Worldview).where(Worldview.project_id == project_id).limit(10))
         return [
             {
                 "name": w.name,
@@ -102,9 +98,7 @@ class AIContextBuilder:
         ]
 
     async def _get_locations(self, project_id: int) -> list[dict]:
-        result = await self.db.execute(
-            select(Location).where(Location.project_id == project_id).limit(15)
-        )
+        result = await self.db.execute(select(Location).where(Location.project_id == project_id).limit(15))
         return [
             {
                 "name": loc.name,
@@ -115,9 +109,7 @@ class AIContextBuilder:
         ]
 
     async def _get_organizations(self, project_id: int) -> list[dict]:
-        result = await self.db.execute(
-            select(Organization).where(Organization.project_id == project_id).limit(10)
-        )
+        result = await self.db.execute(select(Organization).where(Organization.project_id == project_id).limit(10))
         return [
             {
                 "name": org.name,
@@ -129,10 +121,7 @@ class AIContextBuilder:
 
     async def _get_chapter_summaries(self, project_id: int) -> list[dict]:
         result = await self.db.execute(
-            select(Chapter)
-            .where(Chapter.project_id == project_id)
-            .order_by(Chapter.chapter_number)
-            .limit(30)
+            select(Chapter).where(Chapter.project_id == project_id).order_by(Chapter.chapter_number).limit(30)
         )
         return [
             {

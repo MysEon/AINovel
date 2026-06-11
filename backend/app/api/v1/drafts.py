@@ -1,19 +1,18 @@
 """草稿管理 API v1"""
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps.auth import require_active_user
 from app.core.exceptions import NotFoundError
-from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.manuscript import Draft
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
 from app.infrastructure.db.repositories.project import ProjectRepository
-from app.schemas.drafts import DraftCreate, DraftUpdate, DraftResponse
-from app.api.deps.auth import require_active_user
+from app.infrastructure.db.session import get_db
+from app.schemas.drafts import DraftCreate, DraftResponse, DraftUpdate
 
 router = APIRouter(tags=["内容创作：草稿"])
 
@@ -23,12 +22,11 @@ class DraftRepository(ProjectScopedRepository[Draft]):
 
 
 async def _get_draft_with_owner_check(
-    draft_id: int, user_id: int, db: AsyncSession,
+    draft_id: int,
+    user_id: int,
+    db: AsyncSession,
 ) -> Draft:
-    stmt = (
-        select(Draft).join(Project)
-        .where(Draft.id == draft_id, Project.user_id == user_id)
-    )
+    stmt = select(Draft).join(Project).where(Draft.id == draft_id, Project.user_id == user_id)
     result = await db.execute(stmt)
     draft = result.scalar_one_or_none()
     if not draft:
@@ -38,7 +36,8 @@ async def _get_draft_with_owner_check(
 
 @router.post(
     "/api/v1/projects/{project_id}/drafts",
-    response_model=DraftResponse, status_code=201,
+    response_model=DraftResponse,
+    status_code=201,
 )
 async def create_draft(
     project_id: int,
@@ -53,7 +52,9 @@ async def create_draft(
 
     word_count = len(body.content) if body.content else 0
     draft = Draft(
-        **body.model_dump(), project_id=project_id, word_count=word_count,
+        **body.model_dump(),
+        project_id=project_id,
+        word_count=word_count,
     )
     repo = DraftRepository(db)
     await repo.create(draft)
@@ -64,7 +65,7 @@ async def create_draft(
 
 @router.get(
     "/api/v1/projects/{project_id}/drafts",
-    response_model=List[DraftResponse],
+    response_model=list[DraftResponse],
 )
 async def list_drafts(
     project_id: int,

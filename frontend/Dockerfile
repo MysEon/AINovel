@@ -1,20 +1,27 @@
-# Use an official Node runtime as a parent image
-FROM node:18-alpine
+# ── AINovel Frontend ──
+# 多阶段构建：node builder → nginx runtime
 
-# Set the working directory in the container
+FROM node:20-alpine AS builder
+
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application's code
 COPY . .
+RUN npm run build
 
-# Expose the port the app runs on
-EXPOSE 3000
+FROM nginx:alpine AS runtime
 
-# Start the app
-CMD ["npm", "run", "dev"]
+# 复制构建产物到 nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# nginx 配置：SPA 路由 fallback
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD wget -qO- http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

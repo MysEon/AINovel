@@ -1,34 +1,33 @@
 """章节 Schemas"""
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 
 class ChapterCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    content: Optional[str] = Field(None, max_length=1000000)
-    outline: Optional[str] = Field(None, max_length=50000)
-    order_index: Optional[int] = 0
+    content: str | None = Field(None, max_length=1000000)
+    outline: str | None = Field(None, max_length=50000)
+    order_index: int | None = 0
     status: str = Field("draft", pattern="^(draft|published)$")
-    project_id: Optional[int] = None
+    project_id: int | None = None
 
 
 class ChapterUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, max_length=1000000)
-    outline: Optional[str] = Field(None, max_length=50000)
-    order_index: Optional[int] = None
-    status: Optional[str] = Field(None, pattern="^(draft|published)$")
+    title: str | None = Field(None, min_length=1, max_length=200)
+    content: str | None = Field(None, max_length=1000000)
+    outline: str | None = Field(None, max_length=50000)
+    order_index: int | None = None
+    status: str | None = Field(None, pattern="^(draft|published)$")
 
 
 class ChapterResponse(BaseModel):
     id: int
     project_id: int
     title: str
-    content: Optional[str] = None
-    outline: Optional[str] = None
+    content: str | None = None
+    outline: str | None = None
     chapter_number: int
     order_index: int = 0
     word_count: int
@@ -46,13 +45,13 @@ class ChapterBatchUpdate(BaseModel):
 
 
 class BatchPublishRequest(BaseModel):
-    chapter_ids: List[int]
+    chapter_ids: list[int]
     project_id: int
 
 
 class BatchPublishResponse(BaseModel):
     success: bool
-    published_chapters: List[dict]
-    failed_chapters: List[dict]
+    published_chapters: list[dict]
+    failed_chapters: list[dict]
     total_count: int
     success_count: int

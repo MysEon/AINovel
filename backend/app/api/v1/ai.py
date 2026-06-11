@@ -3,32 +3,40 @@
 import asyncio
 import json
 import uuid
-from typing import Optional
+from datetime import UTC
 
 from fastapi import APIRouter, Depends, Query, Request
-from sse_starlette.sse import EventSourceResponse
-from sqlalchemy import select, func, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import EventSourceResponse
 
-from app.core.exceptions import NotFoundError, ForbiddenError
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.core.middleware import limiter
 from app.domain.ai_runtime.enums import RunStatus
-from app.infrastructure.db.session import get_db
-from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.ai_runtime import (
-    LangGraphWorkflow, LangGraphSession, AIRun, AIRunEvent, AIGeneratedContent,
+    AIGeneratedContent,
+    AIRun,
+    AIRunEvent,
+    LangGraphSession,
+    LangGraphWorkflow,
 )
+from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.db.session import get_db
 from app.infrastructure.secrets import get_encryption_service
 from app.infrastructure.task.runner import background_runner
 from app.schemas.ai import (
-    ChapterOutlineRequest, ChapterOutlineResponse,
-    CreateRunRequest, RunResponse, RunListResponse,
-    EventResponse, SessionResponse, ArtifactResponse,
+    ArtifactResponse,
+    ChapterOutlineRequest,
+    ChapterOutlineResponse,
+    EventResponse,
+    RunListResponse,
+    RunResponse,
+    SessionResponse,
 )
-from app.api.deps.auth import require_active_user
 
 router = APIRouter(prefix="/api/v1/ai", tags=["AI辅助：工作流"])
 
@@ -43,16 +51,20 @@ def _user_rate_key(request: Request) -> str:
     if auth:
         return f"user:{auth}"
     from slowapi.util import get_remote_address
+
     return f"ip:{get_remote_address(request)}"
 
 
 async def _get_user_model_config(
-    config_id: int, user_id: int, db: AsyncSession,
+    config_id: int,
+    user_id: int,
+    db: AsyncSession,
 ) -> ModelConfig:
     """获取用户的模型配置并解密 API Key"""
     result = await db.execute(
         select(ModelConfig).where(
-            ModelConfig.id == config_id, ModelConfig.user_id == user_id,
+            ModelConfig.id == config_id,
+            ModelConfig.user_id == user_id,
         )
     )
     cfg = result.scalar_one_or_none()
@@ -65,7 +77,7 @@ async def _get_user_model_config(
 
 def _build_model_from_config(model_cfg: ModelConfig):
     """从 ModelConfig 构建 LangChain ChatModel"""
-    from app.infrastructure.llm.provider_adapters import get_provider, ProviderConfig
+    from app.infrastructure.llm.provider_adapters import ProviderConfig, get_provider
 
     provider = get_provider(model_cfg.model_type)
     decrypted_key = _encryption_service.decrypt(model_cfg.api_key)
@@ -81,7 +93,9 @@ def _build_model_from_config(model_cfg: ModelConfig):
 
 
 async def _get_run_with_access(
-    run_id: int, user_id: int, db: AsyncSession,
+    run_id: int,
+    user_id: int,
+    db: AsyncSession,
 ) -> AIRun:
     """获取 Run 并校验用户权限（通过 session → workflow → project 链路）"""
     result = await db.execute(
@@ -145,7 +159,8 @@ async def generate_chapter_outline(
     thread_id = f"outline-{body.project_id}-{body.chapter_number}-{uuid.uuid4().hex[:8]}"
     session = await runner.get_or_create_session(workflow.id, thread_id)
     run = await runner.create_run(
-        session, "chapter_outline",
+        session,
+        "chapter_outline",
         input_data={
             "project_id": body.project_id,
             "chapter_number": body.chapter_number,
@@ -180,13 +195,10 @@ async def list_workflow_types(
     user: User = Depends(require_active_user),
 ):
     """列出已注册的工作流类型"""
-    from app.infrastructure.graph import graph_registry
     import app.infrastructure.graph.workflows  # noqa: F401
+    from app.infrastructure.graph import graph_registry
 
-    return [
-        {"value": t, "label": t.replace("_", " ").title()}
-        for t in graph_registry.registered_types
-    ]
+    return [{"value": t, "label": t.replace("_", " ").title()} for t in graph_registry.registered_types]
 
 
 # ==================== 标准化 Run API ====================
@@ -205,9 +217,9 @@ async def get_run(
 
 @router.get("/runs", response_model=RunListResponse)
 async def list_runs(
-    project_id: Optional[int] = Query(None),
-    workflow_type: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
+    project_id: int | None = Query(None),
+    workflow_type: str | None = Query(None),
+    status: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -228,14 +240,10 @@ async def list_runs(
     if status:
         base = base.where(AIRun.status == status)
 
-    count_result = await db.execute(
-        select(func.count()).select_from(base.subquery())
-    )
+    count_result = await db.execute(select(func.count()).select_from(base.subquery()))
     total = count_result.scalar() or 0
 
-    result = await db.execute(
-        base.order_by(desc(AIRun.id)).offset(skip).limit(limit)
-    )
+    result = await db.execute(base.order_by(desc(AIRun.id)).offset(skip).limit(limit))
     runs = result.scalars().all()
     return RunListResponse(
         items=[RunResponse.model_validate(r) for r in runs],
@@ -263,7 +271,7 @@ async def cancel_run(
     if run.status not in ("pending", "running"):
         raise ForbiddenError(f"当前状态 '{run.status}' 不可取消")
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     # 1. 尝试真正取消后台 task（如果是通过 start-stream 启动的）
     task_status = background_runner.get_status(run_id)
@@ -272,7 +280,7 @@ async def cancel_run(
 
     # 2. 更新 DB 状态
     run.status = RunStatus.CANCELLED.value
-    run.finished_at = datetime.now(timezone.utc)
+    run.finished_at = datetime.now(UTC)
     await db.commit()
     return RunResponse.model_validate(run)
 
@@ -285,11 +293,7 @@ async def get_run_events(
 ):
     """获取运行的事件列表"""
     await _get_run_with_access(run_id, user.id, db)
-    result = await db.execute(
-        select(AIRunEvent)
-        .where(AIRunEvent.run_id == run_id)
-        .order_by(AIRunEvent.sequence)
-    )
+    result = await db.execute(select(AIRunEvent).where(AIRunEvent.run_id == run_id).order_by(AIRunEvent.sequence))
     events = result.scalars().all()
     return [EventResponse.model_validate(e) for e in events]
 
@@ -353,11 +357,10 @@ async def stream_run_events(
 
     # 如果 run 已完成，直接 replay 历史事件
     if run.status in (RunStatus.SUCCEEDED.value, RunStatus.FAILED.value, RunStatus.CANCELLED.value):
+
         async def replay_events():
             result = await db.execute(
-                select(AIRunEvent)
-                .where(AIRunEvent.run_id == run_id)
-                .order_by(AIRunEvent.sequence)
+                select(AIRunEvent).where(AIRunEvent.run_id == run_id).order_by(AIRunEvent.sequence)
             )
             for evt in result.scalars().all():
                 payload = {
@@ -392,7 +395,9 @@ async def stream_run_events(
         async def pending_stream():
             yield {
                 "event": "info",
-                "data": json.dumps({"type": "info", "message": "Run is still in progress", "status": run.status}, ensure_ascii=False),
+                "data": json.dumps(
+                    {"type": "info", "message": "Run is still in progress", "status": run.status}, ensure_ascii=False
+                ),
             }
 
         return EventSourceResponse(
@@ -412,7 +417,7 @@ async def stream_run_events(
                 }
                 if event.get("type") in ("done", "error", "cancelled"):
                     break
-        except asyncio.TimeoutError:
+        except TimeoutError:
             yield {
                 "event": "heartbeat",
                 "data": json.dumps({"type": "heartbeat"}, ensure_ascii=False),
@@ -449,13 +454,14 @@ async def start_stream_run(
     # 重建 runner（需要与当前 db session 解耦，后台任务使用新 session）
     async def _background_task():
         from app.infrastructure.db.session import get_session_factory
+
         async with get_session_factory()() as session:
             try:
                 # 重新加载 run 对象（在新 session 中）
                 result = await session.execute(select(AIRun).where(AIRun.id == run_id))
                 run_obj = result.scalar_one()
 
-                runner = GraphRunner(session, event_queue=queue)
+                GraphRunner(session, event_queue=queue)
                 # 这里需要一个模型和 input_state；实际场景由调用方在创建 run 时保留
                 # 为保持简单，consume_events 需要 model/input_state；
                 # 但 start-stream 作为通用端点，目前只做 queue 注册和状态变更。

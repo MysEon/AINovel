@@ -5,35 +5,33 @@
   load_context → build_prompt → generate_outline → format_output
 """
 
-from typing import Any, Optional
-from typing_extensions import TypedDict
-
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
+from typing_extensions import TypedDict
 
 from app.infrastructure.graph.registry import graph_registry
-
 
 # ---------- 状态定义 ----------
 
 
 class ChapterOutlineState(TypedDict):
     """章节大纲工作流状态"""
+
     # 输入
     project_name: str
     project_description: str
     chapter_number: int
-    user_requirements: Optional[str]
-    characters_info: Optional[str]
-    worldview_info: Optional[str]
-    previous_chapters: Optional[str]
+    user_requirements: str | None
+    characters_info: str | None
+    worldview_info: str | None
+    previous_chapters: str | None
     # 中间
     system_prompt: str
     user_prompt: str
     # 输出
     raw_output: str
-    outline: Optional[dict]
+    outline: dict | None
 
 
 # ---------- 节点函数 ----------

@@ -4,12 +4,12 @@
 禁止在此模块执行 create_all()
 """
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy import create_engine
 
 from app.core.config import get_settings
 
@@ -68,6 +68,7 @@ def get_session_factory():
 
 
 # ── FastAPI 依赖注入 ─────────────────────────────────────────
+
 
 async def get_db():
     """FastAPI Depends 用：每请求一个 session，自动关闭"""

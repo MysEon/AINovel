@@ -1,6 +1,6 @@
 """AI Runtime 模型：工作流、会话、运行、事件、生成内容"""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, Float, ForeignKey, DateTime, func
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.infrastructure.db.base import Base, TimestampMixin
@@ -66,6 +66,7 @@ class AIGeneratedContent(Base, TimestampMixin):
 
 class AIRun(Base, TimestampMixin):
     """一次图运行实例（对应 LangGraph 的一次 invoke/stream）"""
+
     __tablename__ = "ai_runs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -86,6 +87,7 @@ class AIRun(Base, TimestampMixin):
 
 class AIRunEvent(Base):
     """运行过程中的事件记录（节点开始/结束、token、错误等）"""
+
     __tablename__ = "ai_run_events"
 
     id = Column(Integer, primary_key=True, index=True)

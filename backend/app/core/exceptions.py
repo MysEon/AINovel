@@ -3,16 +3,17 @@
 所有业务异常继承自 AppException
 """
 
-from typing import Optional, Any
+from typing import Any
 
 
 class AppException(Exception):
     """应用异常基类"""
+
     status_code: int = 500
     error_code: str = "INTERNAL_ERROR"
     message: str = "服务器内部错误"
 
-    def __init__(self, message: Optional[str] = None, detail: Any = None):
+    def __init__(self, message: str | None = None, detail: Any = None):
         self.message = message or self.__class__.message
         self.detail = detail
         super().__init__(self.message)
@@ -20,8 +21,10 @@ class AppException(Exception):
 
 # ── 具体业务异常 ──────────────────────────────────────────────
 
+
 class NotFoundError(AppException):
     """资源不存在"""
+
     status_code = 404
     error_code = "NOT_FOUND"
     message = "请求的资源不存在"
@@ -29,6 +32,7 @@ class NotFoundError(AppException):
 
 class UnauthorizedError(AppException):
     """未认证 / Token 无效"""
+
     status_code = 401
     error_code = "UNAUTHORIZED"
     message = "未认证或认证已过期"
@@ -36,6 +40,7 @@ class UnauthorizedError(AppException):
 
 class ForbiddenError(AppException):
     """无权限访问"""
+
     status_code = 403
     error_code = "FORBIDDEN"
     message = "无权访问该资源"
@@ -43,6 +48,7 @@ class ForbiddenError(AppException):
 
 class ValidationError(AppException):
     """业务校验失败"""
+
     status_code = 422
     error_code = "VALIDATION_ERROR"
     message = "请求参数校验失败"
@@ -50,6 +56,7 @@ class ValidationError(AppException):
 
 class ConflictError(AppException):
     """资源冲突（如重复创建）"""
+
     status_code = 409
     error_code = "CONFLICT"
     message = "资源冲突"
@@ -57,12 +64,14 @@ class ConflictError(AppException):
 
 class ExternalServiceError(AppException):
     """外部服务调用失败（LLM / 第三方 API）"""
+
     status_code = 502
     error_code = "EXTERNAL_SERVICE_ERROR"
     message = "外部服务调用失败"
 
 
 # ── FastAPI 异常处理器注册 ────────────────────────────────────
+
 
 def _build_error_body(
     error_code: str,
@@ -83,9 +92,10 @@ def _build_error_body(
 def register_exception_handlers(app) -> None:
     """向 FastAPI 应用注册全局异常处理器"""
     import logging
-    from fastapi import FastAPI, Request
-    from fastapi.responses import JSONResponse
+
+    from fastapi import Request
     from fastapi.exceptions import RequestValidationError
+    from fastapi.responses import JSONResponse
     from sqlalchemy.exc import SQLAlchemyError
 
     logger = logging.getLogger(__name__)
@@ -123,6 +133,7 @@ def register_exception_handlers(app) -> None:
         @app.exception_handler(RateLimitExceeded)
         async def rate_limit_handler(_req: Request, exc: RateLimitExceeded) -> JSONResponse:
             from app.core.logging import request_id_var
+
             trace_id = request_id_var.get("")
             return JSONResponse(
                 status_code=429,

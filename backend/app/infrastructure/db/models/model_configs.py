@@ -1,6 +1,6 @@
 """模型配置"""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 
 from app.infrastructure.db.base import Base, TimestampMixin
 

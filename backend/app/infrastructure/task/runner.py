@@ -12,10 +12,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Optional
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +22,13 @@ DEFAULT_TIMEOUT = 300
 
 class TaskInfo:
     """后台任务元数据"""
+
     __slots__ = ("run_id", "task", "created_at", "timeout")
 
     def __init__(self, run_id: int, task: asyncio.Task, timeout: int):
         self.run_id = run_id
         self.task = task
-        self.created_at = datetime.now(timezone.utc)
+        self.created_at = datetime.now(UTC)
         self.timeout = timeout
 
 
@@ -49,7 +47,11 @@ class BackgroundTaskRunner:
         self._tasks: dict[int, TaskInfo] = {}
 
     def submit(
-        self, run_id: int, coro, *, timeout: int = DEFAULT_TIMEOUT,
+        self,
+        run_id: int,
+        coro,
+        *,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> TaskInfo:
         """提交后台任务"""
         if run_id in self._tasks:
@@ -61,7 +63,7 @@ class BackgroundTaskRunner:
         async def _wrapped():
             try:
                 await asyncio.wait_for(coro, timeout=timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error("run %s timed out after %ds", run_id, timeout)
             except asyncio.CancelledError:
                 logger.info("run %s was cancelled", run_id)
@@ -85,7 +87,7 @@ class BackgroundTaskRunner:
         logger.info("cancelled background task for run %s", run_id)
         return True
 
-    def get_status(self, run_id: int) -> Optional[dict]:
+    def get_status(self, run_id: int) -> dict | None:
         """查询任务状态"""
         info = self._tasks.get(run_id)
         if not info:

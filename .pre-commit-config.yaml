@@ -1,0 +1,35 @@
+# AINovel Pre-commit Hooks
+# 安装: pip install pre-commit && pre-commit install
+# 手动运行: pre-commit run --all-files
+
+minimum_pre_commit_version: "3.0.0"
+
+repos:
+  # ── 后端: ruff (lint + format) ──
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.16
+    hooks:
+      - id: ruff-check
+        name: ruff lint
+        args: [--fix]
+        files: ^backend/
+        types_or: [python]
+      - id: ruff-format
+        name: ruff format
+        files: ^backend/
+        types_or: [python]
+
+  # ── 前端: eslint ──
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.33.0
+    hooks:
+      - id: eslint
+        name: eslint
+        files: ^frontend/src/.*\.[jt]sx?$
+        types: [file]
+        additional_dependencies:
+          - eslint@9.33.0
+          - "@eslint/js@9.33.0"
+          - eslint-plugin-react-hooks@5.2.0
+          - eslint-plugin-react-refresh@0.4.20
+          - globals@16.3.0

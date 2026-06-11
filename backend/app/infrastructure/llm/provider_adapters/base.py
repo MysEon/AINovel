@@ -7,7 +7,6 @@ Provider Adapter 使用实例参数调用，不通过全局环境变量切换。
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Optional
 
 from langchain_core.language_models import BaseChatModel
 
@@ -15,22 +14,24 @@ from langchain_core.language_models import BaseChatModel
 @dataclass(frozen=True)
 class ProviderConfig:
     """Provider 调用所需的配置（从 ModelConfig ORM 解密后传入）"""
+
     api_key: str
     model_name: str
     temperature: float = 0.7
     max_tokens: int = 2000
     top_p: float = 1.0
-    api_url: Optional[str] = None
-    proxy_url: Optional[str] = None
+    api_url: str | None = None
+    proxy_url: str | None = None
     # 扩展参数
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    stop_sequences: Optional[list[str]] = None
+    stop_sequences: list[str] | None = None
 
 
 @dataclass(frozen=True)
 class ModelInfo:
     """可用模型信息"""
+
     value: str
     label: str
 

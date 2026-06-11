@@ -6,17 +6,16 @@
 - 敏感字段自动脱敏
 """
 
+import json
 import logging
 import re
 import sys
-import json
 from contextvars import ContextVar
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 # ── 请求级上下文变量（中间件写入，Filter 自动读取） ──
 request_id_var: ContextVar[str] = ContextVar("request_id", default="")
-run_id_var: ContextVar[Optional[int]] = ContextVar("run_id", default=None)
+run_id_var: ContextVar[int | None] = ContextVar("run_id", default=None)
 
 # ── 脱敏 ─────────────────────────────────────────────
 _SENSITIVE_RE = re.compile(
@@ -53,7 +52,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -72,7 +71,7 @@ class JSONFormatter(logging.Formatter):
 DEV_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | rid=%(request_id)s | %(message)s"
 
 
-def setup_logging(env: str = "dev", level: Optional[str] = None) -> None:
+def setup_logging(env: str = "dev", level: str | None = None) -> None:
     """初始化全局日志配置，应在应用启动时调用一次"""
     log_level = getattr(logging, (level or "DEBUG" if env == "dev" else "INFO").upper(), logging.INFO)
 

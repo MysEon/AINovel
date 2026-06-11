@@ -9,12 +9,12 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
-from app.infrastructure.db.session import get_db
-from app.infrastructure.db.models.auth import User
-from app.infrastructure.db.repositories.project import ProjectRepository
 from app.api.deps.auth import require_active_user
 from app.application.ai_context_builder import AIContextBuilder
+from app.core.exceptions import NotFoundError
+from app.infrastructure.db.models.auth import User
+from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.db.session import get_db
 
 logger = logging.getLogger(__name__)
 

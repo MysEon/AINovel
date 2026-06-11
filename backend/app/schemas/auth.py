@@ -1,16 +1,15 @@
 """认证相关 Pydantic schemas"""
 
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: str = Field(..., max_length=100)
     password: str = Field(..., min_length=6, max_length=50)
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 class UserLogin(BaseModel):
@@ -22,8 +21,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
-    full_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    full_name: str | None = None
+    avatar_url: str | None = None
     is_active: bool
     created_at: datetime
 

@@ -1,6 +1,6 @@
 """章节与草稿模型"""
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.infrastructure.db.base import Base, TimestampMixin

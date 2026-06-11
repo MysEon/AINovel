@@ -49,14 +49,16 @@ async def readiness(db: AsyncSession = Depends(get_db)):
 async def metrics_snapshot():
     """指标快照（供运维 / 监控拉取）"""
     from app.core.metrics import metrics
+
     return metrics.snapshot()
 
 
 @router.get("/diag")
 async def diagnostics(db: AsyncSession = Depends(get_db)):
     """运行时诊断（仅 dev / 内部环境开放）"""
-    import sys
     import asyncio
+    import sys
+
     from app.core.config import get_settings
     from app.infrastructure.task.runner import background_runner
 

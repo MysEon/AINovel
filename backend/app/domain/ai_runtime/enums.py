@@ -5,6 +5,7 @@ from enum import Enum
 
 class RunStatus(str, Enum):
     """AI 运行状态"""
+
     PENDING = "pending"
     RUNNING = "running"
     INTERRUPTED = "interrupted"
@@ -15,6 +16,7 @@ class RunStatus(str, Enum):
 
 class EventType(str, Enum):
     """AI 运行事件类型"""
+
     TOKEN = "token"
     NODE_START = "node_start"
     NODE_END = "node_end"
@@ -26,6 +28,7 @@ class EventType(str, Enum):
 
 class ContentType(str, Enum):
     """AI 生成内容类型"""
+
     OUTLINE = "outline"
     DRAFT = "draft"
     DIALOGUE = "dialogue"
@@ -37,6 +40,7 @@ class ContentType(str, Enum):
 
 class WorkflowType(str, Enum):
     """工作流类型"""
+
     CHAPTER_OUTLINE = "chapter_outline"
     CHAPTER_DRAFT = "chapter_draft"
     PLOT_SUGGESTION = "plot_suggestion"

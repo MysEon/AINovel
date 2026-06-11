@@ -1,0 +1,32 @@
+# AINovel — Development Docker Compose Override
+# docker compose 自动加载此文件，覆盖 docker-compose.yml 的 production 配置
+# 用法: docker compose up （自动合并 override）
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: dev
+      DB_URL: sqlite+aiosqlite:///./data/ainovel.db
+      AUTH_SECRET_KEY: dev-secret-key-must-be-at-least-32-characters-long!!
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
+      - backend-data:/app/data
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/src:/app/src:ro
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  backend-data:

@@ -1,0 +1,12 @@
+# ── AINovel Frontend .dockerignore ──
+node_modules/
+dist/
+.vite/
+.eslintcache
+.git/
+.gitignore
+*.md
+!README.md
+docker-compose*.yml
+Dockerfile
+.dockerignore

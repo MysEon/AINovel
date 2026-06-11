@@ -5,7 +5,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-
 BASE_TEMPLATE: dict[str, Any] = {
     "template_id": "character.base.v1",
     "label": "通用角色模板",
@@ -414,8 +413,7 @@ def build_character_template_registry() -> dict[str, Any]:
         "base_template": deepcopy(BASE_TEMPLATE),
         "delta_templates": deepcopy(DELTA_TEMPLATES),
         "merged_templates": {
-            key: merge_character_template(BASE_TEMPLATE, delta)
-            for key, delta in DELTA_TEMPLATES.items()
+            key: merge_character_template(BASE_TEMPLATE, delta) for key, delta in DELTA_TEMPLATES.items()
         },
         "merge_rules": {
             "base_first": True,
@@ -423,4 +421,3 @@ def build_character_template_registry() -> dict[str, Any]:
             "field_conflict_policy": "preserve_value_type_extend_options",
         },
     }
-

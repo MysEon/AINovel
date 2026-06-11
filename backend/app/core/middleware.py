@@ -5,9 +5,9 @@
 - Rate Limit：集成 slowapi
 """
 
-import uuid
-import time
 import logging
+import time
+import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -35,8 +35,10 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = rid
         logger.info(
             "%s %s -> %s (%.1fms)",
-            request.method, request.url.path,
-            response.status_code, elapsed_ms,
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
         )
         return response
 
@@ -67,4 +69,4 @@ def _auth_key_func(request: Request) -> str:
     return f"ip:{get_remote_address(request)}"
 
 
-limiter = Limiter(key_func=get_remote_address, config_filename='')
+limiter = Limiter(key_func=get_remote_address, config_filename="")

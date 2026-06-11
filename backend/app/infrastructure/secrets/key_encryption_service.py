@@ -6,13 +6,11 @@ Key Encryption Service — 基于 Fernet 的 API Key 加密/解密
 """
 
 import base64
-import os
-import secrets as _secrets
 from typing import Optional
 
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from app.core.config import get_settings
 
@@ -28,7 +26,7 @@ class KeyEncryptionService:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, key_material: Optional[str] = None):
+    def __init__(self, key_material: str | None = None):
         if self._initialized:
             return
         settings = get_settings()

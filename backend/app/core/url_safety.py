@@ -8,21 +8,20 @@ from urllib.parse import urlparse
 
 from app.core.exceptions import ValidationError
 
-
 # 被拒绝的 IPv4 网段
 _DISALLOWED_IPV4_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),      # loopback
-    ipaddress.ip_network("10.0.0.0/8"),       # private
-    ipaddress.ip_network("172.16.0.0/12"),    # private
-    ipaddress.ip_network("192.168.0.0/16"),   # private
-    ipaddress.ip_network("169.254.0.0/16"),   # link-local (含 AWS/GCP/Azure 元数据 169.254.169.254)
+    ipaddress.ip_network("127.0.0.0/8"),  # loopback
+    ipaddress.ip_network("10.0.0.0/8"),  # private
+    ipaddress.ip_network("172.16.0.0/12"),  # private
+    ipaddress.ip_network("192.168.0.0/16"),  # private
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local (含 AWS/GCP/Azure 元数据 169.254.169.254)
 ]
 
 # 被拒绝的 IPv6 网段
 _DISALLOWED_IPV6_NETWORKS = [
-    ipaddress.ip_network("::1/128"),          # loopback
-    ipaddress.ip_network("fc00::/7"),         # unique local
-    ipaddress.ip_network("fe80::/10"),        # link-local
+    ipaddress.ip_network("::1/128"),  # loopback
+    ipaddress.ip_network("fc00::/7"),  # unique local
+    ipaddress.ip_network("fe80::/10"),  # link-local
 ]
 
 _DISALLOWED_LITERAL_HOSTS = {

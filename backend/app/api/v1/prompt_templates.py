@@ -1,19 +1,18 @@
 """提示词模板管理 API v1"""
 
 import json
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, or_, and_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ForbiddenError
-from app.infrastructure.db.session import get_db
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.prompts import PromptTemplate
 from app.infrastructure.db.repositories.base import BaseRepository
-from app.schemas.prompts import PromptTemplateCreate, PromptTemplateUpdate, PromptTemplateResponse
-from app.api.deps.auth import require_active_user
+from app.infrastructure.db.session import get_db
+from app.schemas.prompts import PromptTemplateCreate, PromptTemplateResponse, PromptTemplateUpdate
 
 router = APIRouter(prefix="/api/v1/prompt-templates", tags=["AI辅助：提示词模板"])
 
@@ -23,11 +22,11 @@ class PromptTemplateRepository(BaseRepository[PromptTemplate]):
 
 
 async def _get_template_with_access(
-    template_id: int, user_id: int, db: AsyncSession,
+    template_id: int,
+    user_id: int,
+    db: AsyncSession,
 ) -> PromptTemplate:
-    result = await db.execute(
-        select(PromptTemplate).where(PromptTemplate.id == template_id)
-    )
+    result = await db.execute(select(PromptTemplate).where(PromptTemplate.id == template_id))
     tpl = result.scalar_one_or_none()
     if not tpl:
         raise NotFoundError("提示词模板不存在")
@@ -36,10 +35,10 @@ async def _get_template_with_access(
     return tpl
 
 
-@router.get("/", response_model=List[PromptTemplateResponse])
+@router.get("/", response_model=list[PromptTemplateResponse])
 async def list_templates(
-    category: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
+    category: str | None = Query(None),
+    search: str | None = Query(None),
     include_system: bool = Query(True),
     only_active: bool = Query(True),
     db: AsyncSession = Depends(get_db),
@@ -55,11 +54,13 @@ async def list_templates(
     if only_active:
         conditions.append(PromptTemplate.is_active == True)
     if search:
-        conditions.append(or_(
-            PromptTemplate.name.ilike(f"%{search}%"),
-            PromptTemplate.description.ilike(f"%{search}%"),
-            PromptTemplate.tags.ilike(f"%{search}%"),
-        ))
+        conditions.append(
+            or_(
+                PromptTemplate.name.ilike(f"%{search}%"),
+                PromptTemplate.description.ilike(f"%{search}%"),
+                PromptTemplate.tags.ilike(f"%{search}%"),
+            )
+        )
 
     stmt = (
         select(PromptTemplate)
@@ -91,7 +92,10 @@ async def create_template(
     user: User = Depends(require_active_user),
 ):
     tpl = PromptTemplate(
-        **body.model_dump(), user_id=user.id, is_system=False, usage_count=0,
+        **body.model_dump(),
+        user_id=user.id,
+        is_system=False,
+        usage_count=0,
     )
     repo = PromptTemplateRepository(db)
     await repo.create(tpl)
@@ -189,15 +193,14 @@ async def initialize_system_templates(
     user: User = Depends(require_active_user),
 ):
     """初始化系统默认模板（从种子数据加载）"""
-    result = await db.execute(
-        select(PromptTemplate).where(PromptTemplate.is_system == True)
-    )
+    result = await db.execute(select(PromptTemplate).where(PromptTemplate.is_system == True))
     existing = result.scalars().all()
     if existing:
         return {"message": "系统模板已存在，无需重复初始化", "count": len(existing)}
 
     # TODO: 将系统模板种子数据迁移到独立模块 app/domain/prompts/seed.py
     from app.domain.prompts.seed import get_system_templates
+
     templates = get_system_templates()
     for data in templates:
         data["user_id"] = None
@@ -210,7 +213,7 @@ async def initialize_system_templates(
 @router.get("/{template_id}/preview")
 async def preview_template(
     template_id: int,
-    variables: Optional[str] = Query(None, description="JSON格式的变量值"),
+    variables: str | None = Query(None, description="JSON格式的变量值"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):
@@ -222,6 +225,7 @@ async def preview_template(
             var_dict = json.loads(variables)
         except json.JSONDecodeError:
             from app.core.exceptions import ValidationError
+
             raise ValidationError("变量格式错误，需要合法 JSON")
 
     rendered = tpl.template

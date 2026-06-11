@@ -5,6 +5,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
 from app.core.url_safety import validate_outbound_url
+
 from .base import BaseProvider, ModelInfo, ProviderConfig
 
 
@@ -57,7 +58,4 @@ class OpenAIProvider(BaseProvider):
 
         client = AsyncOpenAI(**client_kwargs)
         resp = await client.models.list()
-        return [
-            ModelInfo(value=m.id, label=m.id)
-            for m in sorted(resp.data, key=lambda x: x.id)
-        ]
+        return [ModelInfo(value=m.id, label=m.id) for m in sorted(resp.data, key=lambda x: x.id)]

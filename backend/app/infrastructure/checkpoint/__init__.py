@@ -7,14 +7,13 @@ Checkpointer 工厂 — 提供持久化 checkpointer 实例
 """
 
 import logging
-from typing import Optional
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 logger = logging.getLogger(__name__)
 
 # 单例缓存
-_sqlite_checkpointer: Optional[BaseCheckpointSaver] = None
+_sqlite_checkpointer: BaseCheckpointSaver | None = None
 
 
 async def get_sqlite_checkpointer(db_path: str = "ainovel_checkpoints.db") -> BaseCheckpointSaver:
@@ -29,8 +28,8 @@ async def get_sqlite_checkpointer(db_path: str = "ainovel_checkpoints.db") -> Ba
     """
     global _sqlite_checkpointer
     if _sqlite_checkpointer is None:
-        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
         import aiosqlite
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
         conn = await aiosqlite.connect(db_path)
         _sqlite_checkpointer = AsyncSqliteSaver(conn)

@@ -1,8 +1,6 @@
 """用户模型 + Token 黑名单模型"""
 
-from datetime import datetime, timezone
-
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 

@@ -44,7 +44,9 @@ def get_system_templates() -> list[dict]:
             "description": "为当前章节内容提供情节发展建议",
             "variables": json.dumps(["project_info", "current_chapter_content"]),
             "tags": "建议,情节,发展",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "内容优化改进",
@@ -61,7 +63,9 @@ def get_system_templates() -> list[dict]:
             "description": "对章节内容进行优化改进",
             "variables": json.dumps(["content", "project_info", "optimization_type"]),
             "tags": "优化,改进,文字",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "创意灵感生成",
@@ -78,7 +82,9 @@ def get_system_templates() -> list[dict]:
             "description": "生成各种创意灵感和想法",
             "variables": json.dumps(["project_info", "prompt", "category"]),
             "tags": "创意,灵感,想法",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "AI写作助手对话",
@@ -92,7 +98,9 @@ def get_system_templates() -> list[dict]:
             "description": "AI写作助手的对话提示词模板",
             "variables": json.dumps(["project_info", "history", "message"]),
             "tags": "对话,助手,指导",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "写作技巧建议",
@@ -110,7 +118,9 @@ def get_system_templates() -> list[dict]:
             "description": "提供专业的写作技巧和建议",
             "variables": json.dumps(["content", "project_info", "context"]),
             "tags": "技巧,建议,专业",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "辅助优化型AI助手",
@@ -127,7 +137,9 @@ def get_system_templates() -> list[dict]:
             "description": "辅助优化型AI模式的专用提示词模板，强调建议式协助",
             "variables": json.dumps(["project_name", "project_description", "current_chapter", "user_message"]),
             "tags": "AI模式,辅助优化型,建议式,协助",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
         {
             "name": "全面接管型AI助手",
@@ -142,8 +154,12 @@ def get_system_templates() -> list[dict]:
                 "完整的新内容创作、具体的对话和场景描写。"
             ),
             "description": "全面接管型AI模式的专用提示词模板，强调主动创作和深度参与",
-            "variables": json.dumps(["project_name", "project_description", "current_chapter", "current_content", "user_message"]),
+            "variables": json.dumps(
+                ["project_name", "project_description", "current_chapter", "current_content", "user_message"]
+            ),
             "tags": "AI模式,全面接管型,主动创作,深度参与",
-            "is_system": True, "is_active": True, "usage_count": 0,
+            "is_system": True,
+            "is_active": True,
+            "usage_count": 0,
         },
     ]

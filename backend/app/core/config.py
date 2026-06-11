@@ -3,13 +3,13 @@
 使用 Pydantic Settings 统一管理所有配置项
 """
 
-from typing import List, Optional
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, field_validator
 
 
 class AppSettings(BaseSettings):
     """应用基础配置"""
+
     app_name: str = "AINovel API"
     app_version: str = "0.2.0"
     debug: bool = False
@@ -25,6 +25,7 @@ class AppSettings(BaseSettings):
 
 class DatabaseSettings(BaseSettings):
     """数据库配置"""
+
     url: str = Field(
         default="sqlite+aiosqlite:///./ainovel.db",
         description="异步数据库连接URL",
@@ -46,6 +47,7 @@ class DatabaseSettings(BaseSettings):
 
 class AuthSettings(BaseSettings):
     """认证配置"""
+
     secret_key: str = Field(
         ...,
         min_length=32,
@@ -64,7 +66,8 @@ class AuthSettings(BaseSettings):
 
 class EncryptionSettings(BaseSettings):
     """加密配置"""
-    encryption_key: Optional[str] = Field(
+
+    encryption_key: str | None = Field(
         default=None,
         description="独立加密密钥（可选），未设置时从 AUTH_SECRET_KEY 派生",
     )
@@ -83,13 +86,14 @@ class EncryptionSettings(BaseSettings):
 
 class CORSSettings(BaseSettings):
     """CORS配置"""
-    allowed_origins: List[str] = Field(
+
+    allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:5173"],
         description="允许的来源列表",
     )
     allow_credentials: bool = True
-    allow_methods: List[str] = ["*"]
-    allow_headers: List[str] = ["*"]
+    allow_methods: list[str] = ["*"]
+    allow_headers: list[str] = ["*"]
 
     model_config = SettingsConfigDict(
         env_prefix="CORS_",
@@ -100,6 +104,7 @@ class CORSSettings(BaseSettings):
 
 class FeatureFlags(BaseSettings):
     """功能开关 — 灰度切换控制"""
+
     use_new_ai_runtime: bool = Field(
         default=True,
         description="启用新 LangGraph AI Runtime（False 则走旧兼容层）",

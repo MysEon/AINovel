@@ -1,28 +1,33 @@
 """章节管理 API v1"""
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import update
-from typing import List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ForbiddenError
-from app.infrastructure.db.session import get_db
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import NotFoundError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.chapter import ChapterRepository, calculate_word_count
 from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.db.session import get_db
 from app.schemas.chapters import (
-    ChapterCreate, ChapterUpdate, ChapterResponse,
-    ChapterBatchUpdate, BatchPublishRequest, BatchPublishResponse,
+    BatchPublishRequest,
+    BatchPublishResponse,
+    ChapterBatchUpdate,
+    ChapterCreate,
+    ChapterResponse,
+    ChapterUpdate,
 )
-from app.api.deps.auth import require_active_user
 
 router = APIRouter(tags=["内容创作：章节"])
 
 
 async def _get_user_project(
-    repo: ProjectRepository, project_id: int, user_id: int,
+    repo: ProjectRepository,
+    project_id: int,
+    user_id: int,
 ) -> Project:
     project = await repo.get_user_project(project_id, user_id)
     if not project:
@@ -32,7 +37,8 @@ async def _get_user_project(
 
 @router.post(
     "/api/v1/projects/{project_id}/chapters",
-    response_model=ChapterResponse, status_code=201,
+    response_model=ChapterResponse,
+    status_code=201,
 )
 async def create_chapter(
     project_id: int,
@@ -68,7 +74,7 @@ async def create_chapter(
 
 @router.get(
     "/api/v1/projects/{project_id}/chapters",
-    response_model=List[ChapterResponse],
+    response_model=list[ChapterResponse],
 )
 async def list_chapters(
     project_id: int,
@@ -143,7 +149,7 @@ async def delete_chapter(
 @router.get("/api/v1/projects/{project_id}/chapters/unpublished")
 async def get_unpublished_chapters(
     project_id: int,
-    current_chapter_id: Optional[int] = Query(None),
+    current_chapter_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):

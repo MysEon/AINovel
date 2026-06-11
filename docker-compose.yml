@@ -1,18 +1,26 @@
-version: '3.8'
+# AINovel — Production Docker Compose
+# 用法: docker compose up -d
+
 services:
   backend:
     build: ./backend
     ports:
       - "8000:8000"
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_URL: ${DB_URL:-sqlite+aiosqlite:///./data/ainovel.db}
+      AUTH_SECRET_KEY: ${AUTH_SECRET_KEY:?AUTH_SECRET_KEY is required}
     volumes:
-      - ./backend:/app
+      - backend-data:/app/data
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:

@@ -5,13 +5,13 @@
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import verify_token, is_token_revoked
-from app.core.exceptions import UnauthorizedError, ForbiddenError
-from app.infrastructure.db.session import get_db
+from app.core.exceptions import ForbiddenError, UnauthorizedError
+from app.core.security import is_token_revoked, verify_token
 from app.infrastructure.db.models.auth import User
+from app.infrastructure.db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

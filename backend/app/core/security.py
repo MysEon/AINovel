@@ -3,12 +3,11 @@
 密码哈希、JWT Token 生成与验证、Refresh Token、Token 黑名单
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from jose import JWTError, jwt
 from passlib.context import CryptContext
-from jose import jwt, JWTError
 
 from app.core.config import get_settings
 
@@ -25,12 +24,12 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(
     subject: str,
-    expires_delta: Optional[timedelta] = None,
-    extra_claims: Optional[dict] = None,
+    expires_delta: timedelta | None = None,
+    extra_claims: dict | None = None,
 ) -> str:
     """创建JWT访问令牌"""
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + (expires_delta or timedelta(minutes=settings.auth.access_token_expire_minutes))
     jti = str(uuid4())
     payload = {"sub": subject, "iat": now, "exp": expire, "jti": jti, "type": "access"}
@@ -41,12 +40,12 @@ def create_access_token(
 
 def create_refresh_token(
     subject: str,
-    expires_delta: Optional[timedelta] = None,
-    extra_claims: Optional[dict] = None,
+    expires_delta: timedelta | None = None,
+    extra_claims: dict | None = None,
 ) -> str:
     """创建JWT刷新令牌"""
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + (expires_delta or timedelta(minutes=settings.auth.refresh_token_expire_minutes))
     jti = str(uuid4())
     payload = {"sub": subject, "iat": now, "exp": expire, "jti": jti, "type": "refresh"}
@@ -55,7 +54,7 @@ def create_refresh_token(
     return jwt.encode(payload, settings.auth.secret_key, algorithm=settings.auth.algorithm)
 
 
-def verify_token(token: str) -> Optional[dict]:
+def verify_token(token: str) -> dict | None:
     """验证JWT令牌，返回payload或None"""
     settings = get_settings()
     try:
@@ -71,7 +70,7 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-def verify_refresh_token(token: str) -> Optional[dict]:
+def verify_refresh_token(token: str) -> dict | None:
     """验证JWT刷新令牌，返回payload或None"""
     payload = verify_token(token)
     if payload is None:
@@ -81,7 +80,7 @@ def verify_refresh_token(token: str) -> Optional[dict]:
     return payload
 
 
-def decode_token_unsafe(token: str) -> Optional[dict]:
+def decode_token_unsafe(token: str) -> dict | None:
     """解码JWT令牌（不验证过期），用于调试/刷新"""
     settings = get_settings()
     try:
@@ -97,12 +96,11 @@ def decode_token_unsafe(token: str) -> Optional[dict]:
 
 async def revoke_token(jti: str, user_id: int, expires_at: datetime, db) -> None:
     """将指定 jti 加入黑名单"""
-    from app.infrastructure.db.models.auth import TokenBlacklist
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(TokenBlacklist).where(TokenBlacklist.jti == jti)
-    )
+    from app.infrastructure.db.models.auth import TokenBlacklist
+
+    result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
     existing = result.scalar_one_or_none()
     if existing:
         return
@@ -114,10 +112,9 @@ async def revoke_token(jti: str, user_id: int, expires_at: datetime, db) -> None
 
 async def is_token_revoked(jti: str, db) -> bool:
     """检查指定 jti 是否在黑名单中"""
-    from app.infrastructure.db.models.auth import TokenBlacklist
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(TokenBlacklist).where(TokenBlacklist.jti == jti)
-    )
+    from app.infrastructure.db.models.auth import TokenBlacklist
+
+    result = await db.execute(select(TokenBlacklist).where(TokenBlacklist.jti == jti))
     return result.scalar_one_or_none() is not None

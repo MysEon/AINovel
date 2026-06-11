@@ -1,24 +1,27 @@
 """模型配置管理 API v1"""
 
 import json
-from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ForbiddenError
-from app.infrastructure.db.session import get_db
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import NotFoundError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.repositories.base import BaseRepository
+from app.infrastructure.db.session import get_db
 from app.infrastructure.secrets import get_encryption_service
 from app.schemas.model_configs import (
-    ModelConfigCreate, ModelConfigUpdate, ModelConfigResponse,
-    TestConnectionRequest, TestConnectionResponse,
-    ListModelsRequest, ModelInfoResponse,
+    ListModelsRequest,
+    ModelConfigCreate,
+    ModelConfigResponse,
+    ModelConfigUpdate,
+    ModelInfoResponse,
+    TestConnectionRequest,
+    TestConnectionResponse,
 )
-from app.api.deps.auth import require_active_user
 
 router = APIRouter(prefix="/api/v1/model-configs", tags=["AI辅助：模型配置"])
 
@@ -46,11 +49,14 @@ def _mask_key(api_key: str) -> str:
 
 
 async def _get_user_config(
-    config_id: int, user_id: int, db: AsyncSession,
+    config_id: int,
+    user_id: int,
+    db: AsyncSession,
 ) -> ModelConfig:
     result = await db.execute(
         select(ModelConfig).where(
-            ModelConfig.id == config_id, ModelConfig.user_id == user_id,
+            ModelConfig.id == config_id,
+            ModelConfig.user_id == user_id,
         )
     )
     cfg = result.scalar_one_or_none()
@@ -59,7 +65,7 @@ async def _get_user_config(
     return cfg
 
 
-def _serialize_stop_sequences(seqs: Optional[list]) -> Optional[str]:
+def _serialize_stop_sequences(seqs: list | None) -> str | None:
     return json.dumps(seqs) if seqs else None
 
 
@@ -98,16 +104,12 @@ async def create_config(
     return cfg
 
 
-@router.get("/", response_model=List[ModelConfigResponse])
+@router.get("/", response_model=list[ModelConfigResponse])
 async def list_configs(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):
-    result = await db.execute(
-        select(ModelConfig)
-        .where(ModelConfig.user_id == user.id)
-        .order_by(ModelConfig.name)
-    )
+    result = await db.execute(select(ModelConfig).where(ModelConfig.user_id == user.id).order_by(ModelConfig.name))
     configs = result.scalars().all()
     for c in configs:
         _attach_masked_key(c)
@@ -166,13 +168,15 @@ async def delete_config(
 
 
 def _build_provider_config(
-    api_key: str, model_type: str,
+    api_key: str,
+    model_type: str,
     model_name: str | None = None,
     api_url: str | None = None,
     proxy_url: str | None = None,
 ):
     """从请求参数构建 ProviderConfig"""
     from app.infrastructure.llm.provider_adapters import ProviderConfig
+
     return ProviderConfig(
         api_key=api_key,
         model_name=model_name or "",
@@ -192,8 +196,11 @@ async def test_connection(
     try:
         provider = get_provider(body.model_type)
         cfg = _build_provider_config(
-            body.api_key, body.model_type, body.model_name,
-            body.api_url, body.proxy_url,
+            body.api_key,
+            body.model_type,
+            body.model_name,
+            body.api_url,
+            body.proxy_url,
         )
         await provider.test_connection(cfg)
         return TestConnectionResponse(
@@ -221,8 +228,11 @@ async def test_saved_config(
     try:
         provider = get_provider(cfg.model_type)
         pcfg = _build_provider_config(
-            _decrypt_key(cfg.api_key), cfg.model_type, cfg.model_name,
-            cfg.api_url, cfg.proxy_url if cfg.enable_proxy else None,
+            _decrypt_key(cfg.api_key),
+            cfg.model_type,
+            cfg.model_name,
+            cfg.api_url,
+            cfg.proxy_url if cfg.enable_proxy else None,
         )
         await provider.test_connection(pcfg)
         return TestConnectionResponse(
@@ -234,7 +244,7 @@ async def test_saved_config(
         return TestConnectionResponse(success=False, message=f"连接测试失败: {e}")
 
 
-@router.post("/list-models", response_model=List[ModelInfoResponse])
+@router.post("/list-models", response_model=list[ModelInfoResponse])
 async def list_available_models(
     body: ListModelsRequest,
     user: User = Depends(require_active_user),
@@ -244,14 +254,16 @@ async def list_available_models(
 
     provider = get_provider(body.model_type)
     cfg = _build_provider_config(
-        body.api_key, body.model_type,
-        api_url=body.api_url, proxy_url=body.proxy_url,
+        body.api_key,
+        body.model_type,
+        api_url=body.api_url,
+        proxy_url=body.proxy_url,
     )
     models = await provider.list_models(cfg)
     return [ModelInfoResponse(value=m.value, label=m.label) for m in models]
 
 
-@router.post("/{config_id}/list-models", response_model=List[ModelInfoResponse])
+@router.post("/{config_id}/list-models", response_model=list[ModelInfoResponse])
 async def list_models_by_config(
     config_id: int,
     db: AsyncSession = Depends(get_db),
@@ -266,8 +278,11 @@ async def list_models_by_config(
 
     provider = get_provider(cfg.model_type)
     pcfg = _build_provider_config(
-        _decrypt_key(cfg.api_key), cfg.model_type, cfg.model_name,
-        cfg.api_url, cfg.proxy_url if cfg.enable_proxy else None,
+        _decrypt_key(cfg.api_key),
+        cfg.model_type,
+        cfg.model_name,
+        cfg.api_url,
+        cfg.proxy_url if cfg.enable_proxy else None,
     )
     models = await provider.list_models(pcfg)
     return [ModelInfoResponse(value=m.value, label=m.label) for m in models]

@@ -1,10 +1,10 @@
 """Google Gemini Provider Adapter"""
 
-import httpx
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.url_safety import validate_outbound_url
+
 from .base import BaseProvider, ModelInfo, ProviderConfig
 
 

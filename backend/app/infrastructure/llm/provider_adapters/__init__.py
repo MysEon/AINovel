@@ -7,11 +7,11 @@ Provider Registry — 按 provider_type 查找适配器实例
     model = provider.build_chat_model(config)
 """
 
-from .base import BaseProvider, ProviderConfig, ModelInfo
-from .openai_provider import OpenAIProvider
 from .anthropic_provider import AnthropicProvider
-from .gemini_provider import GeminiProvider
+from .base import BaseProvider, ModelInfo, ProviderConfig
 from .custom_provider import CustomProvider
+from .gemini_provider import GeminiProvider
+from .openai_provider import OpenAIProvider
 
 _REGISTRY: dict[str, BaseProvider] = {
     "openai": OpenAIProvider(),

@@ -3,20 +3,18 @@
 四个实体共享相同的 CRUD 模式，用工厂函数生成路由。
 """
 
-from typing import Type
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps.auth import require_active_user
+from app.core.character_templates import build_character_template_registry
 from app.core.exceptions import NotFoundError
 from app.infrastructure.db.base import Base
-from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.repositories.base import ProjectScopedRepository
 from app.infrastructure.db.repositories.project import ProjectRepository
-from app.api.deps.auth import require_active_user
-from app.core.character_templates import build_character_template_registry
+from app.infrastructure.db.session import get_db
 
 router = APIRouter()
 
@@ -36,10 +34,10 @@ async def get_character_templates(
 
 def _register_crud(
     *,
-    model: Type[Base],
-    create_schema: Type[BaseModel],
-    update_schema: Type[BaseModel],
-    response_schema: Type[BaseModel],
+    model: type[Base],
+    create_schema: type[BaseModel],
+    update_schema: type[BaseModel],
+    response_schema: type[BaseModel],
     plural: str,
     singular: str,
     label: str,
@@ -49,11 +47,14 @@ def _register_crud(
 
     class _Repo(ProjectScopedRepository):
         pass
+
     _Repo.model = model
 
     @router.post(
         f"/api/v1/projects/{{project_id}}/{plural}",
-        response_model=response_schema, status_code=201, tags=[tag],
+        response_model=response_schema,
+        status_code=201,
+        tags=[tag],
         name=f"create_{singular}",
     )
     async def create_entity(
@@ -76,7 +77,8 @@ def _register_crud(
 
     @router.get(
         f"/api/v1/projects/{{project_id}}/{plural}",
-        response_model=list[response_schema], tags=[tag],
+        response_model=list[response_schema],
+        tags=[tag],
         name=f"list_{plural}",
     )
     async def list_entities(
@@ -94,7 +96,8 @@ def _register_crud(
 
     @router.get(
         f"/api/v1/{plural}/{{item_id}}",
-        response_model=response_schema, tags=[tag],
+        response_model=response_schema,
+        tags=[tag],
         name=f"get_{singular}",
     )
     async def get_entity(
@@ -103,12 +106,10 @@ def _register_crud(
         user: User = Depends(require_active_user),
     ):
         from sqlalchemy import select
+
         from app.infrastructure.db.models.projects import Project
-        stmt = (
-            select(model)
-            .join(Project)
-            .where(model.id == item_id, Project.user_id == user.id)
-        )
+
+        stmt = select(model).join(Project).where(model.id == item_id, Project.user_id == user.id)
         result = await db.execute(stmt)
         entity = result.scalar_one_or_none()
         if not entity:
@@ -117,7 +118,8 @@ def _register_crud(
 
     @router.put(
         f"/api/v1/{plural}/{{item_id}}",
-        response_model=response_schema, tags=[tag],
+        response_model=response_schema,
+        tags=[tag],
         name=f"update_{singular}",
     )
     async def update_entity(
@@ -152,39 +154,66 @@ def _register_crud(
 # ── 注册四个实体 ───────────────────────────────────────
 
 from app.infrastructure.db.models.worldbuilding import (
-    Character, Location, Organization, Worldview,
+    Character,
+    Location,
+    Organization,
+    Worldview,
 )
 from app.schemas.worldbuilding import (
-    CharacterCreate, CharacterUpdate, CharacterResponse,
-    LocationCreate, LocationUpdate, LocationResponse,
-    OrganizationCreate, OrganizationUpdate, OrganizationResponse,
-    WorldviewCreate, WorldviewUpdate, WorldviewResponse,
+    CharacterCreate,
+    CharacterResponse,
+    CharacterUpdate,
+    LocationCreate,
+    LocationResponse,
+    LocationUpdate,
+    OrganizationCreate,
+    OrganizationResponse,
+    OrganizationUpdate,
+    WorldviewCreate,
+    WorldviewResponse,
+    WorldviewUpdate,
 )
 
 _register_crud(
-    model=Character, create_schema=CharacterCreate,
-    update_schema=CharacterUpdate, response_schema=CharacterResponse,
-    plural="characters", singular="character",
-    label="角色", tag="小说元素：角色",
+    model=Character,
+    create_schema=CharacterCreate,
+    update_schema=CharacterUpdate,
+    response_schema=CharacterResponse,
+    plural="characters",
+    singular="character",
+    label="角色",
+    tag="小说元素：角色",
 )
 
 _register_crud(
-    model=Location, create_schema=LocationCreate,
-    update_schema=LocationUpdate, response_schema=LocationResponse,
-    plural="locations", singular="location",
-    label="地点", tag="小说元素：地点",
+    model=Location,
+    create_schema=LocationCreate,
+    update_schema=LocationUpdate,
+    response_schema=LocationResponse,
+    plural="locations",
+    singular="location",
+    label="地点",
+    tag="小说元素：地点",
 )
 
 _register_crud(
-    model=Organization, create_schema=OrganizationCreate,
-    update_schema=OrganizationUpdate, response_schema=OrganizationResponse,
-    plural="organizations", singular="organization",
-    label="组织", tag="小说元素：组织",
+    model=Organization,
+    create_schema=OrganizationCreate,
+    update_schema=OrganizationUpdate,
+    response_schema=OrganizationResponse,
+    plural="organizations",
+    singular="organization",
+    label="组织",
+    tag="小说元素：组织",
 )
 
 _register_crud(
-    model=Worldview, create_schema=WorldviewCreate,
-    update_schema=WorldviewUpdate, response_schema=WorldviewResponse,
-    plural="worldviews", singular="worldview",
-    label="世界观", tag="小说元素：世界观",
+    model=Worldview,
+    create_schema=WorldviewCreate,
+    update_schema=WorldviewUpdate,
+    response_schema=WorldviewResponse,
+    plural="worldviews",
+    singular="worldview",
+    label="世界观",
+    tag="小说元素：世界观",
 )

@@ -11,16 +11,16 @@
 生产环境建议接入 Prometheus / StatsD。
 """
 
-import time
 import threading
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
 class _Counter:
     """线程安全计数器"""
+
     _value: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
@@ -36,6 +36,7 @@ class _Counter:
 @dataclass
 class _Histogram:
     """简易直方图（只记录 count / sum / min / max）"""
+
     count: int = 0
     total: float = 0.0
     min_val: float = float("inf")
@@ -68,15 +69,15 @@ class MetricsCollector:
     def __init__(self):
         # ── HTTP 请求指标 ──
         self.http_requests = _Counter()
-        self.http_errors = _Counter()          # 4xx + 5xx
-        self.http_latency = _Histogram()       # ms
+        self.http_errors = _Counter()  # 4xx + 5xx
+        self.http_latency = _Histogram()  # ms
         self.http_status: dict[int, int] = defaultdict(int)
 
         # ── AI Run 指标 ──
         self.ai_runs_total = _Counter()
         self.ai_runs_succeeded = _Counter()
         self.ai_runs_failed = _Counter()
-        self.ai_run_latency = _Histogram()     # seconds
+        self.ai_run_latency = _Histogram()  # seconds
         self.ai_tokens_used = _Counter()
 
         # ── Provider 指标 ──
@@ -100,7 +101,11 @@ class MetricsCollector:
     # ── AI Run 记录 ──
 
     def record_ai_run(
-        self, *, succeeded: bool, duration_s: float, tokens: int = 0,
+        self,
+        *,
+        succeeded: bool,
+        duration_s: float,
+        tokens: int = 0,
     ) -> None:
         self.ai_runs_total.inc()
         if succeeded:
@@ -143,10 +148,7 @@ class MetricsCollector:
                 "calls": dict(self.provider_calls),
                 "errors": dict(self.provider_errors),
             },
-            "nodes": {
-                name: hist.snapshot()
-                for name, hist in self.node_latency.items()
-            },
+            "nodes": {name: hist.snapshot() for name, hist in self.node_latency.items()},
         }
 
 

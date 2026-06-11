@@ -7,23 +7,21 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ForbiddenError
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.core.middleware import limiter
-from app.infrastructure.db.session import get_db
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
-from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.project import ProjectRepository
+from app.infrastructure.db.session import get_db
 from app.infrastructure.secrets import get_encryption_service
-from app.api.deps.auth import require_active_user
 
 logger = logging.getLogger(__name__)
 
@@ -37,44 +35,50 @@ def _user_rate_key(request: Request) -> str:
     if auth:
         return f"user:{auth}"
     from slowapi.util import get_remote_address
+
     return f"ip:{get_remote_address(request)}"
 
 
 # ---------- 旧格式 Schema（仅兼容层使用） ----------
 
+
 class _LegacyChatRequest(BaseModel):
     project_id: int
     model_config_id: int
     message: str
-    history: Optional[list] = None
-    prompt_template_id: Optional[int] = None
+    history: list | None = None
+    prompt_template_id: int | None = None
 
 
 class _LegacyGenerateRequest(BaseModel):
     project_id: int
     model_config_id: int
-    chapter_number: Optional[int] = None
-    chapter_outline: Optional[str] = None
-    character_names: Optional[list[str]] = None
-    situation: Optional[str] = None
-    content: Optional[str] = None
-    optimization_type: Optional[str] = None
-    prompt: Optional[str] = None
-    category: Optional[str] = None
-    user_requirements: Optional[str] = None
+    chapter_number: int | None = None
+    chapter_outline: str | None = None
+    character_names: list[str] | None = None
+    situation: str | None = None
+    content: str | None = None
+    optimization_type: str | None = None
+    prompt: str | None = None
+    category: str | None = None
+    user_requirements: str | None = None
 
 
 # ---------- 辅助函数 ----------
 
+
 async def _get_config_and_model(
-    config_id: int, user_id: int, db: AsyncSession,
+    config_id: int,
+    user_id: int,
+    db: AsyncSession,
 ):
     """获取模型配置并构建 ChatModel"""
-    from app.infrastructure.llm.provider_adapters import get_provider, ProviderConfig
+    from app.infrastructure.llm.provider_adapters import ProviderConfig, get_provider
 
     result = await db.execute(
         select(ModelConfig).where(
-            ModelConfig.id == config_id, ModelConfig.user_id == user_id,
+            ModelConfig.id == config_id,
+            ModelConfig.user_id == user_id,
         )
     )
     cfg = result.scalar_one_or_none()
@@ -124,6 +128,7 @@ async def legacy_chat(
     model = await _get_config_and_model(body.model_config_id, user.id, db)
 
     from langchain_core.messages import HumanMessage, SystemMessage
+
     messages = [
         SystemMessage(content=f"你是一个专业的小说写作助手。当前项目：{project.name}"),
     ]
@@ -133,6 +138,7 @@ async def legacy_chat(
             content = msg.get("content", "")
             if role == "assistant":
                 from langchain_core.messages import AIMessage
+
                 messages.append(AIMessage(content=content))
             else:
                 messages.append(HumanMessage(content=content))
@@ -165,7 +171,8 @@ async def legacy_chat_stream(
 
     model = await _get_config_and_model(body.model_config_id, user.id, db)
 
-    from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
     messages = [
         SystemMessage(content=f"你是一个专业的小说写作助手。当前项目：{project.name}"),
     ]
@@ -203,9 +210,14 @@ async def legacy_chat_stream(
 
 # ---------- 通用生成辅助 ----------
 
+
 async def _simple_generate(
-    project_id: int, model_config_id: int, user_id: int,
-    system_prompt: str, user_prompt: str, db: AsyncSession,
+    project_id: int,
+    model_config_id: int,
+    user_id: int,
+    system_prompt: str,
+    user_prompt: str,
+    db: AsyncSession,
 ) -> str:
     """通用单轮生成：构建消息 → 调用模型 → 返回文本"""
     proj_repo = ProjectRepository(db)
@@ -216,6 +228,7 @@ async def _simple_generate(
     model = await _get_config_and_model(model_config_id, user_id, db)
 
     from langchain_core.messages import HumanMessage, SystemMessage
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_prompt),
@@ -236,7 +249,9 @@ async def legacy_chapter_outline(
     response.headers.update(_deprecated_headers())
 
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         "你是一个专业的小说写作助手。请为指定章节创建详细的写作大纲，返回JSON格式。",
         f"第{body.chapter_number or 1}章大纲。" + (f"要求：{body.user_requirements}" if body.user_requirements else ""),
         db,
@@ -261,7 +276,9 @@ async def legacy_chapter_draft(
     response.headers.update(_deprecated_headers())
 
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         "你是一个专业的小说写作助手。请根据大纲生成章节草稿内容。",
         f"大纲：{body.chapter_outline or '无'}",
         db,
@@ -288,7 +305,9 @@ async def legacy_character_dialogue(
 
     names = ", ".join(body.character_names) if body.character_names else "角色"
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         "你是一个专业的小说写作助手。请根据角色和场景生成对话。",
         f"角色：{names}\n场景：{body.situation or '无'}",
         db,
@@ -313,7 +332,9 @@ async def legacy_plot_suggestions(
     response.headers.update(_deprecated_headers())
 
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         "你是一个专业的小说写作助手。请提供情节发展建议。",
         body.user_requirements or "请给出下一步情节建议",
         db,
@@ -339,7 +360,9 @@ async def legacy_optimize_content(
 
     opt_type = body.optimization_type or "polish"
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         f"你是一个专业的小说写作助手。请对以下内容进行{opt_type}优化。",
         body.content or "",
         db,
@@ -365,7 +388,9 @@ async def legacy_creative_ideas(
 
     category = body.category or "general"
     text = await _simple_generate(
-        body.project_id, body.model_config_id, user.id,
+        body.project_id,
+        body.model_config_id,
+        user.id,
         f"你是一个专业的小说写作助手。请围绕'{category}'类别生成创意想法。",
         body.prompt or "请给出创意想法",
         db,

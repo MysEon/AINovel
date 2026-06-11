@@ -10,11 +10,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.core.logging import setup_logging
 from app.core.exceptions import register_exception_handlers
-from app.core.middleware import RequestIDMiddleware, setup_cors, limiter
-from app.infrastructure.db.session import get_async_engine, dispose_engine
-
+from app.core.logging import setup_logging
+from app.core.middleware import RequestIDMiddleware, limiter, setup_cors
+from app.infrastructure.db.session import dispose_engine, get_async_engine
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,8 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info(
         "AINovel API 启动 | env=%s | version=%s",
-        settings.app.env, settings.app.app_version,
+        settings.app.env,
+        settings.app.app_version,
     )
 
     # ── 启动配置自检 ──
@@ -94,6 +94,7 @@ def create_app() -> FastAPI:
 
     # 4. 中间件（注册顺序：后注册先执行）
     from slowapi.middleware import SlowAPIMiddleware
+
     app.add_middleware(SlowAPIMiddleware)
     setup_cors(app, settings)
     app.add_middleware(RequestIDMiddleware)
@@ -111,11 +112,19 @@ def _register_routers(app: FastAPI) -> None:
     """集中注册所有路由（受 FeatureFlags 控制）"""
     settings = get_settings()
 
-    from app.api.v1 import health, auth, projects, chapters, worldbuilding, drafts
-    from app.api.v1 import prompt_templates, model_configs
-    from app.api.v1 import ai
-    from app.api.v1 import knowledge
-    from app.api.v1 import admin
+    from app.api.v1 import (
+        admin,
+        ai,
+        auth,
+        chapters,
+        drafts,
+        health,
+        knowledge,
+        model_configs,
+        projects,
+        prompt_templates,
+        worldbuilding,
+    )
 
     # 健康检查（无前缀）
     app.include_router(health.router)
@@ -143,6 +152,7 @@ def _register_routers(app: FastAPI) -> None:
     # 旧接口兼容层（受 Feature Flag 控制）
     if settings.ff.enable_legacy_compat:
         from app.api.v1 import ai_compat
+
         app.include_router(ai_compat.router)
         logger.info("旧接口兼容层已挂载（FF_ENABLE_LEGACY_COMPAT=true）")
     else:

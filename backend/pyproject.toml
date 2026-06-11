@@ -1,0 +1,62 @@
+# ── AINovel Backend ──
+# 项目元数据 + 工具配置统一入口
+
+[project]
+name = "ainovel-backend"
+version = "0.1.0"
+description = "AI Novel Writing Platform — Backend"
+requires-python = ">=3.11"
+
+# ── Ruff（lint + format） ──
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line length 由 formatter 管
+    "B008",   # FastAPI Depends() 标准写法
+    "E712",   # SQLAlchemy == True 惯用写法
+    "E402",   # 模块级非顶部 import（FastAPI/配置依赖顺序）
+    "SIM105", # contextlib.suppress 建议（可读性偏好）
+    "UP042",  # StrEnum 重构（后续统一迁移）
+    "B904",   # raise from 建议（后续统一迁移）
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ── Pytest ──
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+# ── Mypy（预留，当前不激活） ──
+# 未来 type hint 覆盖率提高后，CI 加 `mypy app/` 即可启用
+
+[tool.mypy]
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_configs = true
+# strict = false  — 未来逐步开启
+exclude = ["tests/"]

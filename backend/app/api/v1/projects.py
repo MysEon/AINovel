@@ -2,15 +2,14 @@
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
 
-from app.core.exceptions import NotFoundError, ConflictError
-from app.infrastructure.db.session import get_db
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import ConflictError, NotFoundError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.project import ProjectRepository
-from app.schemas.projects import ProjectCreate, ProjectUpdate, ProjectResponse
-from app.api.deps.auth import require_active_user
+from app.infrastructure.db.session import get_db
+from app.schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
 
 router = APIRouter(prefix="/api/v1/projects", tags=["项目管理"])
 
@@ -32,7 +31,7 @@ async def create_project(
     return project
 
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("/", response_model=list[ProjectResponse])
 async def list_projects(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),

@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError, ForbiddenError
-from app.infrastructure.db.session import get_db
+from app.api.deps.auth import require_active_user
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.models.model_configs import ModelConfig
+from app.infrastructure.db.session import get_db
 from app.infrastructure.secrets import get_encryption_service
-from app.api.deps.auth import require_active_user
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin 管理"])
 
@@ -37,9 +37,8 @@ async def rotate_model_key(
         raise ForbiddenError("无权访问：仅超级管理员可操作")
 
     from sqlalchemy import select
-    result = await db.execute(
-        select(ModelConfig).where(ModelConfig.id == body.model_config_id)
-    )
+
+    result = await db.execute(select(ModelConfig).where(ModelConfig.id == body.model_config_id))
     cfg = result.scalar_one_or_none()
     if not cfg:
         raise NotFoundError("模型配置不存在")
