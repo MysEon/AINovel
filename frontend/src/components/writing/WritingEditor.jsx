@@ -661,6 +661,12 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     );
   }
 
+  const contentCharCount = (content || '').replace(/\s/g, '').length;
+  const contentLineCount = content ? content.split('\n').length : 0;
+  const hasCurrentChapter = Boolean(currentChapter);
+  const isCurrentPublished = currentChapter?.status === 'published';
+  const canPublishCurrentChapter = hasCurrentChapter && !isCurrentPublished && !isPublishing;
+
   return (
     <div className="writing-editor">
       <div className="editor-content">
@@ -716,118 +722,203 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       </div>
       <div className="editor-footer">
         <div className="footer-left">
-          <div className="chapter-selector">
-            <label>当前章节:</label>
-            <select value={currentChapter?.id || ''} onChange={handleChapterChange}>
-              {chapters.map(chapter => (
-                <option key={chapter.id} value={chapter.id}>
-                  第{chapter.chapter_number}章 {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
-                </option>
-              ))}
-            </select>
+          <div className="footer-panel footer-panel-chapter">
+            <div className="footer-panel-head">
+              <div className="footer-panel-title">
+                <FaBook />
+                <span>章节导航</span>
+              </div>
+              <div className="footer-panel-meta">
+                {currentChapter && (
+                  <span className="footer-chip">
+                    第 {currentChapter.chapter_number} 章
+                  </span>
+                )}
+                {currentChapter && (
+                  <span className={`chapter-status ${currentChapter.status}`}>
+                    {currentChapter.status === 'published' ? '已发布' : '草稿'}
+                  </span>
+                )}
+                {isEditorLocked && (
+                  <span className="footer-chip warning">编辑锁定</span>
+                )}
+              </div>
+            </div>
+
+            <div className="chapter-selector">
+              <label>当前章节</label>
+              <select value={currentChapter?.id || ''} onChange={handleChapterChange}>
+                {chapters.map(chapter => (
+                  <option key={chapter.id} value={chapter.id}>
+                    第{chapter.chapter_number}章 {chapter.title} ({chapter.status === 'published' ? '已发布' : '草稿'})
+                  </option>
+                ))}
+              </select>
+              {isEditorLocked && (
+                <button
+                  className="action-btn unlock-btn footer-icon-action"
+                  onClick={handleUnlockClick}
+                  title="解锁章节并回退后续发布状态"
+                >
+                  <FaLockOpen />
+                </button>
+              )}
+            </div>
+
             {currentChapter && (
-              <span className={`chapter-status ${currentChapter.status}`}>
-                {currentChapter.status === 'published' ? '已发布' : '草稿'}
-              </span>
-            )}
-            {isEditorLocked && (
-              <button className="action-btn unlock-btn" onClick={handleUnlockClick} title="解锁">
-                <FaLockOpen />
-              </button>
+              <div className="footer-panel-subtext">
+                {isCurrentPublished
+                  ? '当前章节已发布，编辑前需先解锁。'
+                  : '当前章节为草稿，可继续编辑并发布。'}
+              </div>
             )}
           </div>
-          <button 
-            className={`publish-button ${currentChapter?.status === 'published' ? 'published' : ''}`}
-            onClick={publishChapterContent}
-            disabled={isPublishing || !currentChapter || currentChapter.status === 'published'}
-            title={currentChapter?.status === 'published' ? "章节已发布" : "发布章节"}
-          >
-            <FaUpload />
-            <span>{currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布')}</span>
-          </button>
-          <button 
-            className="batch-publish-button"
-            onClick={handleBatchPublishClick}
-            disabled={!currentChapter}
-            title="批量发布多个章节"
-          >
-            <FaLayerGroup />
-            <span>批量发布</span>
-          </button>
-          <button 
-            className="publish-button"
-            onClick={() => {
-              showConfirmDialog({
-                title: '开启新章节',
-                message: '请输入新章节的标题：',
-                showInput: true,
-                inputValue: newChapterTitle,
-                onInputChange: (value) => setNewChapterTitle(value),
-                inputPlaceholder: '例如：新的征程',
-                required: true,
-                type: 'info',
-                showResultNotification: true,
-                successMessage: '新章节已开启',
-                errorMessage: '开启新章失败',
-                onConfirm: handleStartNewChapter
-              });
-            }}
-            title="开启一个全新的章节"
-          >
-            <FaPlus />
-            <span>开启新章</span>
-          </button>
+
+          <div className="footer-panel footer-panel-actions">
+            <div className="footer-panel-head compact">
+              <div className="footer-panel-title">
+                <FaUpload />
+                <span>发布与章节</span>
+              </div>
+            </div>
+
+            <div className="footer-action-row">
+              <button 
+                className={`publish-button footer-cta ${currentChapter?.status === 'published' ? 'published' : ''}`}
+                onClick={publishChapterContent}
+                disabled={isPublishing || !currentChapter || currentChapter.status === 'published'}
+                title={currentChapter?.status === 'published' ? "章节已发布" : "发布章节"}
+              >
+                <FaUpload />
+                <span>
+                  {currentChapter?.status === 'published' ? '已发布' : (isPublishing ? '发布中...' : '发布章节')}
+                </span>
+              </button>
+
+              <button 
+                className="batch-publish-button footer-secondary-btn"
+                onClick={handleBatchPublishClick}
+                disabled={!currentChapter}
+                title="批量发布多个章节"
+              >
+                <FaLayerGroup />
+                <span>批量发布</span>
+              </button>
+
+              <button 
+                className="new-chapter-button footer-secondary-btn"
+                onClick={() => {
+                  showConfirmDialog({
+                    title: '开启新章节',
+                    message: '请输入新章节的标题：',
+                    showInput: true,
+                    inputValue: newChapterTitle,
+                    onInputChange: (value) => setNewChapterTitle(value),
+                    inputPlaceholder: '例如：新的征程',
+                    required: true,
+                    type: 'info',
+                    showResultNotification: true,
+                    successMessage: '新章节已开启',
+                    errorMessage: '开启新章失败',
+                    onConfirm: handleStartNewChapter
+                  });
+                }}
+                title="开启一个全新的章节"
+              >
+                <FaPlus />
+                <span>开启新章</span>
+              </button>
+            </div>
+
+            <div className="footer-panel-subtext">
+              {hasCurrentChapter
+                ? (canPublishCurrentChapter ? '发布会将当前章节状态变更为“已发布”。' : '可先保存草稿，再按需发布。')
+                : '请先创建或选择章节。'}
+            </div>
+          </div>
         </div>
         <div className="footer-right">
-          {aiAssisted && (
-            <>
-              <div className="ai-mode-selector">
-                <span className="ai-mode-label">AI模式:</span>
-                <div className="ai-mode-buttons">
-                  <button
-                    className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
-                    onClick={() => handleAiModeChange('optimize')}
-                  >
-                    辅助优化型
-                  </button>
-                  <button
-                    className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
-                    onClick={() => handleAiModeChange('takeover')}
-                  >
-                    全面接管型
-                  </button>
+          <div className="footer-panel footer-panel-session">
+            <div className="footer-panel-head">
+              <div className="footer-panel-title">
+                <FaSave />
+                <span>写作控制</span>
+              </div>
+              <div className="footer-metrics" aria-label="当前内容统计">
+                <div className="footer-metric">
+                  <strong>{contentCharCount}</strong>
+                  <span>字</span>
+                </div>
+                <div className="footer-metric">
+                  <strong>{contentLineCount}</strong>
+                  <span>行</span>
                 </div>
               </div>
-              <Tooltip title={layoutMode === 'left' ? '切换到右侧聊天' : '切换到左侧聊天'}>
-                <Button
-                  type="default"
-                  icon={<FaExchangeAlt />}
-                  onClick={toggleLayout}
-                  size="small"
-                  className="layout-toggle-button"
-                >
-                  布局
-                </Button>
-              </Tooltip>
-            </>
-          )}
-          <button 
-            className="save-button"
-            onClick={saveContent}
-            disabled={isSaving}
-            title="保存内容 (Ctrl+S)"
-          >
-            <FaSave />
-            <span>{isSaving ? '保存中...' : '保存'}</span>
-          </button>
-          <button 
-            className={`ai-toggle-button ${aiAssisted ? 'active' : ''}`}
-            onClick={toggleAiAssisted}
-            aria-label={aiAssisted ? "关闭AI辅助" : "开启AI辅助"}
-          >
-            {aiAssisted ? <FaRobot /> : <FaFont />}
-            <span>{aiAssisted ? "AI辅助中" : "AI辅助"}</span>
-          </button>
+            </div>
+
+            <div className="footer-action-row">
+              <button 
+                className="save-button footer-save-btn"
+                onClick={saveContent}
+                disabled={isSaving}
+                title="保存内容 (Ctrl+S)"
+              >
+                <FaSave />
+                <span>{isSaving ? '保存中...' : '保存草稿'}</span>
+              </button>
+              <button 
+                className={`ai-toggle-button footer-ai-toggle ${aiAssisted ? 'active' : ''}`}
+                onClick={toggleAiAssisted}
+                aria-label={aiAssisted ? "关闭AI辅助" : "开启AI辅助"}
+              >
+                {aiAssisted ? <FaRobot /> : <FaFont />}
+                <span>{aiAssisted ? "AI辅助中" : "AI辅助"}</span>
+              </button>
+            </div>
+
+            {aiAssisted && (
+              <div className="footer-ai-inline">
+                <div className="footer-ai-inline-head">
+                  <FaRobot />
+                  <span>AI写作控制</span>
+                </div>
+                <div className="footer-ai-inline-body">
+                  <div className="ai-mode-selector">
+                    <span className="ai-mode-label">AI模式:</span>
+                    <div className="ai-mode-buttons">
+                      <button
+                        className={`ai-mode-button ${aiMode === 'optimize' ? 'active' : ''}`}
+                        onClick={() => handleAiModeChange('optimize')}
+                      >
+                        辅助优化型
+                      </button>
+                      <button
+                        className={`ai-mode-button ${aiMode === 'takeover' ? 'active' : ''}`}
+                        onClick={() => handleAiModeChange('takeover')}
+                      >
+                        全面接管型
+                      </button>
+                    </div>
+                  </div>
+                  <Tooltip title={layoutMode === 'left' ? '切换到右侧聊天' : '切换到左侧聊天'}>
+                    <Button
+                      type="default"
+                      icon={<FaExchangeAlt />}
+                      onClick={toggleLayout}
+                      size="small"
+                      className="layout-toggle-button footer-layout-toggle"
+                    >
+                      布局
+                    </Button>
+                  </Tooltip>
+                </div>
+              </div>
+            )}
+
+            <div className="footer-panel-subtext">
+              先保存草稿再发布更稳妥，支持快捷键 <kbd>Ctrl</kbd> + <kbd>S</kbd>。
+            </div>
+          </div>
         </div>
       </div>
 

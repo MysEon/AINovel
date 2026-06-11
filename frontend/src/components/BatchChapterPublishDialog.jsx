@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FaUpload, FaTimes, FaCheck, FaChevronRight, FaBook, FaExclamationTriangle } from 'react-icons/fa';
 import './BatchChapterPublishDialog.css';
 
@@ -14,19 +14,23 @@ const BatchChapterPublishDialog = ({
   const [publishing, setPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState({ current: 0, total: 0 });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [rangeSelecting, setRangeSelecting] = useState(false);
   const [rangeStart, setRangeStart] = useState(null);
   const [rangeEnd, setRangeEnd] = useState(null);
 
   // 获取未发布的章节
-  const unpublishedChapters = chapters.filter(ch => ch.status === 'draft');
+  const unpublishedChapters = chapters
+    .filter(ch => ch.status === 'draft')
+    .sort((a, b) => a.chapter_number - b.chapter_number);
+  const selectedChapterList = unpublishedChapters.filter(ch => selectedChapters.has(ch.id));
 
   // 计算对话框位置
   const getDialogStyle = () => {
     if (!triggerPosition) return {};
     
-    const dialogWidth = 450; // 预估对话框宽度
-    const dialogHeight = 500; // 预估对话框高度
-    const margin = 20; // 边距
+    const margin = window.innerWidth <= 768 ? 8 : 20; // 边距
+    const dialogWidth = Math.min(500, window.innerWidth - margin * 2); // 预估对话框宽度
+    const dialogHeight = Math.min(620, window.innerHeight - margin * 2); // 预估对话框高度
     
     let left = triggerPosition.left;
     let top = triggerPosition.bottom + 10;
@@ -73,6 +77,7 @@ const BatchChapterPublishDialog = ({
     }
     setSelectedChapters(newSelected);
     // 清除范围选择
+    setRangeSelecting(false);
     setRangeStart(null);
     setRangeEnd(null);
   };
@@ -82,6 +87,7 @@ const BatchChapterPublishDialog = ({
     if (!rangeStart) {
       setRangeStart(chapter);
       setRangeEnd(null);
+      setSelectedChapters(new Set([chapter.id]));
     } else {
       const start = Math.min(rangeStart.chapter_number, chapter.chapter_number);
       const end = Math.max(rangeStart.chapter_number, chapter.chapter_number);
@@ -90,9 +96,16 @@ const BatchChapterPublishDialog = ({
       );
       const newSelected = new Set(rangeChapters.map(ch => ch.id));
       setSelectedChapters(newSelected);
-      setRangeStart(null);
-      setRangeEnd(null);
+      setRangeEnd(chapter);
+      setRangeSelecting(false);
     }
+  };
+
+  const startRangeSelection = () => {
+    setRangeSelecting(true);
+    setRangeStart(null);
+    setRangeEnd(null);
+    setSelectedChapters(new Set());
   };
 
   // 全选
@@ -101,10 +114,13 @@ const BatchChapterPublishDialog = ({
     setSelectedChapters(newSelected);
     setRangeStart(null);
     setRangeEnd(null);
+    setRangeSelecting(false);
   };
 
   // 一键发布当前章节及之前的草稿
   const publishCurrentAndPrevious = () => {
+    if (!currentChapter) return;
+
     const currentAndPrevious = unpublishedChapters.filter(ch => 
       ch.chapter_number <= currentChapter.chapter_number
     );
@@ -112,6 +128,7 @@ const BatchChapterPublishDialog = ({
     setSelectedChapters(newSelected);
     setRangeStart(null);
     setRangeEnd(null);
+    setRangeSelecting(false);
   };
 
   // 开始批量发布
@@ -129,6 +146,7 @@ const BatchChapterPublishDialog = ({
     setPublishing(true);
     setPublishProgress({ current: 0, total: chaptersToPublish.length });
     setShowConfirm(false);
+    setRangeSelecting(false);
 
     try {
       await onPublish(chaptersToPublish, (progress) => {
@@ -149,6 +167,9 @@ const BatchChapterPublishDialog = ({
     }
     if (rangeStart?.id === chapter.id) {
       return { text: '范围起点', className: 'range-start' };
+    }
+    if (rangeEnd?.id === chapter.id) {
+      return { text: '范围终点', className: 'range-end' };
     }
     return { text: '', className: '' };
   };
@@ -191,7 +212,12 @@ const BatchChapterPublishDialog = ({
       <div className={`dialog-arrow arrow-${arrowPosition}`} />
       
       <div className="dialog-header">
-        <h3><FaUpload /> 批量发布章节</h3>
+        <div className="header-title-group">
+          <h3><FaUpload /> 批量发布章节</h3>
+          <p className="dialog-subtitle">
+            未发布章节 {unpublishedChapters.length} 个，已选择 {selectedChapters.size} 个
+          </p>
+        </div>
         <button className="close-btn" onClick={onClose}>
           <FaTimes />
         </button>
@@ -202,7 +228,7 @@ const BatchChapterPublishDialog = ({
           <button 
             className="action-btn primary" 
             onClick={publishCurrentAndPrevious}
-            disabled={unpublishedChapters.length === 0}
+            disabled={unpublishedChapters.length === 0 || !currentChapter}
           >
             <FaChevronRight />
             发布当前及之前章节
@@ -215,6 +241,17 @@ const BatchChapterPublishDialog = ({
             <FaCheck />
             全选
           </button>
+          <button
+            className={`action-btn ${rangeSelecting ? 'active' : ''}`}
+            onClick={rangeSelecting ? () => {
+              setRangeSelecting(false);
+              setRangeStart(null);
+              setRangeEnd(null);
+            } : startRangeSelection}
+            disabled={unpublishedChapters.length < 2}
+          >
+            {rangeSelecting ? '取消范围选择' : '范围选择'}
+          </button>
           <button 
             className="action-btn" 
             onClick={() => setSelectedChapters(new Set())}
@@ -223,6 +260,14 @@ const BatchChapterPublishDialog = ({
             清除选择
           </button>
         </div>
+
+        {rangeSelecting && (
+          <div className="range-select-banner">
+            {rangeStart
+              ? `已选择起点：第${rangeStart.chapter_number}章，请点击终点章节`
+              : '范围选择模式：请先点击起点章节，再点击终点章节'}
+          </div>
+        )}
 
         <div className="chapters-list">
           <div className="list-header">
@@ -238,18 +283,16 @@ const BatchChapterPublishDialog = ({
               <p>暂无未发布的章节</p>
             </div>
           ) : (
-            <div className="chapters-scroll">
-              {unpublishedChapters
-                .sort((a, b) => a.chapter_number - b.chapter_number)
-                .map(chapter => {
+            <div className={`chapters-scroll ${rangeSelecting ? 'range-mode' : ''}`}>
+              {unpublishedChapters.map(chapter => {
                   const status = getStatusLabel(chapter);
                   const isSelected = selectedChapters.has(chapter.id);
-                  const isRangeMode = rangeStart !== null;
+                  const isRangeMode = rangeSelecting;
                   
                   return (
                     <div
                       key={chapter.id}
-                      className={`chapter-item ${isSelected ? 'selected' : ''} ${status.className}`}
+                      className={`chapter-item ${isSelected ? 'selected' : ''} ${status.className} ${isRangeMode ? 'range-mode' : ''}`}
                       onClick={() => isRangeMode ? handleRangeSelect(chapter) : toggleChapter(chapter.id)}
                     >
                       <div className="chapter-checkbox">
@@ -265,7 +308,9 @@ const BatchChapterPublishDialog = ({
                       </div>
                       {isRangeMode && (
                         <div className="range-hint">
-                          {rangeStart?.id === chapter.id ? '起点' : '选择终点'}
+                          {rangeStart?.id === chapter.id
+                            ? '起点'
+                            : (rangeStart ? '可作为终点' : '可作为起点')}
                         </div>
                       )}
                     </div>
@@ -276,24 +321,31 @@ const BatchChapterPublishDialog = ({
         </div>
 
         <div className="dialog-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            取消
-          </button>
-          <button 
-            className="btn btn-primary" 
-            onClick={startPublish}
-            disabled={selectedChapters.size === 0}
-          >
-            <FaUpload />
-            发布选中的 {selectedChapters.size} 个章节
-          </button>
+          <div className="footer-summary">
+            {selectedChapters.size > 0
+              ? `将发布 ${selectedChapters.size} 个章节`
+              : '请选择至少 1 个章节'}
+          </div>
+          <div className="footer-actions">
+            <button className="btn btn-secondary" onClick={onClose}>
+              取消
+            </button>
+            <button 
+              className="btn btn-primary" 
+              onClick={startPublish}
+              disabled={selectedChapters.size === 0}
+            >
+              <FaUpload />
+              发布选中的 {selectedChapters.size} 个章节
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 确认对话框 */}
       {showConfirm && (
-        <div className="confirm-overlay">
-          <div className="confirm-dialog">
+        <div className="confirm-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="confirm-header">
               <FaExclamationTriangle className="warning-icon" />
               <h3>确认批量发布</h3>
@@ -301,10 +353,9 @@ const BatchChapterPublishDialog = ({
             <div className="confirm-content">
               <p>您即将发布以下 {selectedChapters.size} 个章节：</p>
               <div className="confirm-chapters-list">
-                {Array.from(selectedChapters).map(id => {
-                  const chapter = unpublishedChapters.find(ch => ch.id === id);
+                {selectedChapterList.map(chapter => {
                   return (
-                    <div key={id} className="confirm-chapter-item">
+                    <div key={chapter.id} className="confirm-chapter-item">
                       第{chapter.chapter_number}章 {chapter.title}
                     </div>
                   );
