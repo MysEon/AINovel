@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBrain, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaSpinner } from 'react-icons/fa';
 import { aiService } from '../services/aiService';
+import { getKnowledgeModule } from '../services/knowledgeService';
 import { useNotification } from './NotificationManager';
 import './KnowledgeBase.css';
 
@@ -53,26 +54,8 @@ const KnowledgeBase = ({ projectId }) => {
   const loadKnowledgeData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('ainovel_token');
-      if (!token) {
-        throw new Error('请先登录');
-      }
-
-      const response = await fetch(`/api/knowledge/${activeModule}/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setKnowledgeData(prev => ({ ...prev, [activeModule]: data }));
-      } else if (response.status === 401) {
-        localStorage.removeItem('ainovel_token');
-        throw new Error('登录已过期，请重新登录');
-      } else {
-        throw new Error('加载知识库数据失败');
-      }
+      const data = await getKnowledgeModule(activeModule, projectId);
+      setKnowledgeData(prev => ({ ...prev, [activeModule]: data }));
     } catch (error) {
       console.error('加载知识库数据失败:', error);
       addNotification({

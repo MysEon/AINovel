@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { STORAGE_KEYS } from '../services/core/authStorage';
 
-// AI模型配置持久化的存储key
-const AI_MODEL_CONFIG_STORAGE_KEY = 'ainovel_selected_model_config';
+const AI_MODEL_CONFIG_STORAGE_KEY = STORAGE_KEYS.SELECTED_MODEL_CONFIG;
 
 /**
  * AI模型配置持久化hook

@@ -1,401 +1,45 @@
-/* 登录页面 - 基于Ant Design组件的现代化设计 */
+/* 登录页面专属自定义样式，大部分样式已通过 Tailwind CSS 实现 */
 
-/* 主布局样式 */
-.login-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
-  overflow: hidden;
+.login-bg-image {
+  background-image: url('../../images/bg.png');
 }
 
-/* 背景图片 */
-.login-page::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('../../images/bg.png') center/cover;
-  opacity: 0.3;
-  z-index: 0;
+/* 覆盖 Ant Design 表单默认样式以匹配现代设计 */
+.modern-login-form .ant-form-item-label {
+  padding-bottom: 6px;
 }
 
-/* 内容区域 */
-.login-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
+.modern-login-form .ant-input-affix-wrapper {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
-/* 行样式 */
-.login-row {
-  width: 100%;
+.modern-login-form .ant-input-affix-wrapper-focused {
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2) !important;
+  border-color: #4f46e5 !important;
 }
 
-/* 品牌区域样式 */
-.brand-section {
-  text-align: center;
-  color: white;
-  animation: slideInLeft 0.8s ease-out;
+.modern-login-form .ant-input-affix-wrapper:hover {
+  border-color: #4f46e5 !important;
 }
 
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.brand-icon {
-  font-size: 48px;
-  color: white;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-}
-
-.brand-title {
-  color: white !important;
-  margin: 0 !important;
-  font-weight: 700 !important;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  letter-spacing: -1px;
-}
-
-.brand-subtitle {
-  color: white !important;
-  margin: 0 0 16px 0 !important;
-  font-weight: 600 !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.brand-description {
-  color: rgba(255, 255, 255, 0.9) !important;
-  font-size: 16px;
-  line-height: 1.6;
-  margin: 0 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* 功能特性区域 */
-.brand-features {
-  margin-top: 32px;
-}
-
-.feature-icon {
-  font-size: 20px;
-  margin-right: 12px;
-}
-
-.brand-features .ant-typography {
-  color: rgba(255, 255, 255, 0.8) !important;
-  font-size: 14px;
-}
-
-/* 登录卡片样式 */
-.login-card {
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(255, 255, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  animation: slideInRight 0.8s ease-out;
-  overflow: hidden;
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.login-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.4), 
-    transparent);
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0%, 100% { transform: translateX(-100%); }
-  50% { transform: translateX(100%); }
-}
-
-.card-title {
-  color: #1a1a1a !important;
-  margin: 0 !important;
-  font-weight: 600 !important;
-}
-
-/* 卡片页脚样式 */
-.card-footer {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.register-link {
-  padding: 0 !important;
-  height: auto !important;
-  font-weight: 500 !important;
-  color: #667eea !important;
-}
-
-.register-link:hover {
-  color: #764ba2 !important;
-}
-
-/* 表单样式优化 */
-.login-card .ant-form-item {
-  margin-bottom: 20px !important;
-}
-
-.login-card .ant-form-item-label {
-  font-weight: 500 !important;
-}
-
-.login-card .ant-input-affix-wrapper {
-  border-radius: 8px !important;
-  border: 1px solid #d9d9d9 !important;
-  transition: all 0.3s ease !important;
-}
-
-.login-card .ant-input-affix-wrapper:hover {
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
-}
-
-.login-card .ant-input-affix-wrapper:focus,
-.login-card .ant-input-affix-wrapper-focused {
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
-}
-
-.login-card .ant-input-prefix {
-  color: #8c8c8c !important;
-}
-
-.login-card .ant-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  border: none !important;
-  border-radius: 8px !important;
-  font-weight: 500 !important;
-  height: 44px !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
-  transition: all 0.3s ease !important;
-}
-
-.login-card .ant-btn-primary:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-}
-
-.login-card .ant-btn-primary:active {
-  transform: translateY(0) !important;
-}
-
-.login-card .ant-divider {
-  margin: 24px 0 !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
-}
-
-/* 响应式设计 */
-@media (max-width: 992px) {
-  .brand-section {
-    text-align: center;
-    margin-bottom: 40px;
-  }
-  
-  .brand-features {
-    margin-top: 24px;
-  }
-  
-  .login-card {
-    animation: fadeInUp 0.8s ease-out;
-  }
-  
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .login-content {
-    padding: 16px;
-  }
-  
-  .brand-title {
-    font-size: 32px !important;
-  }
-  
-  .brand-subtitle {
-    font-size: 20px !important;
-  }
-  
-  .brand-description {
-    font-size: 14px !important;
-  }
-  
-  .brand-features {
-    margin-top: 16px;
-  }
-  
-  .login-card {
-    margin: 0 !important;
-  }
-  
-  .card-title {
-    font-size: 18px !important;
-  }
-}
-
-@media (max-width: 576px) {
-  .login-content {
-    padding: 12px;
-  }
-  
-  .brand-title {
-    font-size: 28px !important;
-  }
-  
-  .brand-subtitle {
-    font-size: 18px !important;
-  }
-  
-  .brand-icon {
-    font-size: 36px;
-  }
-  
-  .brand-features {
-    margin-top: 12px;
-  }
-  
-  .brand-features .ant-space {
-    gap: 8px !important;
-  }
-  
-  .feature-icon {
-    font-size: 16px;
-    margin-right: 8px;
-  }
-  
-  .login-card {
-    padding: 20px !important;
-  }
-  
-  .card-title {
-    font-size: 16px !important;
-  }
-  
-  .login-card .ant-btn-primary {
-    height: 40px !important;
-  }
-}
-
-/* 暗色主题支持 */
+/* 暗色模式下的输入框样式调整 */
 @media (prefers-color-scheme: dark) {
-  .login-page {
-    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-  }
-  
-  .login-card {
-    background: rgba(30, 30, 30, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  }
-  
-  .card-title {
+  .modern-login-form .ant-input {
+    background-color: transparent !important;
     color: white !important;
   }
   
-  .login-card .ant-input-affix-wrapper {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
+  .modern-login-form .ant-input::placeholder {
+    color: #9ca3af !important;
   }
   
-  .login-card .ant-input-affix-wrapper:hover {
-    border-color: #667eea !important;
-    background: rgba(255, 255, 255, 0.08) !important;
+  .modern-login-form .ant-input-password-icon {
+    color: #9ca3af !important;
   }
   
-  .login-card .ant-input-affix-wrapper:focus,
-  .login-card .ant-input-affix-wrapper-focused {
-    border-color: #667eea !important;
-    background: rgba(255, 255, 255, 0.1) !important;
+  .modern-login-form .ant-input-affix-wrapper-focused {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
+    border-color: #6366f1 !important;
   }
-  
-  .login-card .ant-input-prefix {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-  
-  .login-card .ant-input {
-    color: white !important;
-  }
-  
-  .login-card .ant-input::placeholder {
-    color: rgba(255, 255, 255, 0.4) !important;
-  }
-  
-  .login-card .ant-form-item-label > label {
-    color: rgba(255, 255, 255, 0.8) !important;
-  }
-  
-  .login-card .ant-divider {
-    border-color: rgba(255, 255, 255, 0.1) !important;
-  }
-}
-
-/* 加载状态 */
-.login-card.ant-loading {
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-/* 动画效果优化 */
-.ant-space {
-  transition: all 0.3s ease;
-}
-
-.ant-space:hover {
-  transform: translateY(-1px);
-}
-
-/* 卡片悬浮效果 */
-.login-card:hover {
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.15),
-    0 4px 12px rgba(255, 255, 255, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }

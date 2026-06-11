@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Space, Alert, Spin } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, GlobalOutlined, BulbOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
+import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
+import { login, register } from '../services/authService';
+import { STORAGE_KEYS } from '../services/core/authStorage';
+import './AuthPage.css';
 
 const { TabPane } = Tabs;
 
@@ -11,16 +15,24 @@ const AuthPage = ({ onLogin }) => {
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [language, setLanguage] = useState('zh');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [error, setError] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showShapeSettings, setShowShapeSettings] = useState(false);
+  const [enabledShapes, setEnabledShapes] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PARTICLE_SHAPES);
+      return saved ? JSON.parse(saved) : SHAPE_LIST.map(s => s.key);
+    } catch { return SHAPE_LIST.map(s => s.key); }
+  });
 
-  useEffect(() => {
-    // 检查系统主题
-    const darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(darkMode);
-  }, []);
+  const toggleShape = (key) => {
+    setEnabledShapes(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      const result = next.length === 0 ? [key] : next; // at least one
+      localStorage.setItem(STORAGE_KEYS.PARTICLE_SHAPES, JSON.stringify(result));
+      return result;
+    });
+  };
 
   const calculatePasswordStrength = (password) => {
     if (!password) return 0;
@@ -39,14 +51,6 @@ const AuthPage = ({ onLogin }) => {
     setPasswordStrength(calculatePasswordStrength(password));
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'zh' ? 'en' : 'zh');
-  };
-
   const handleSocialLogin = (provider) => {
     message.info(`${provider} 登录功能开发中`);
   };
@@ -58,24 +62,11 @@ const AuthPage = ({ onLogin }) => {
   const handleLogin = async (values) => {
     setIsLoginLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('登录成功');
-        onLogin(data.access_token);
-      } else {
-        message.error(data.detail || '登录失败');
-      }
+      const data = await login(values);
+      message.success('登录成功');
+      onLogin(data.access_token);
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '登录失败');
     } finally {
       setIsLoginLoading(false);
     }
@@ -84,58 +75,33 @@ const AuthPage = ({ onLogin }) => {
   const handleRegister = async (values) => {
     setIsRegisterLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('注册成功！请登录您的账户。');
-        registerForm.resetFields();
-        setActiveTab('login');
-      } else {
-        let errorMessage = '注册失败';
-        if (data.detail) {
-          if (typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (Array.isArray(data.detail)) {
-            errorMessage = data.detail[0]?.msg || errorMessage;
-          } else if (typeof data.detail === 'object') {
-            errorMessage = data.detail.msg || JSON.stringify(data.detail);
-          }
-        }
-        message.error(errorMessage);
-      }
+      await register(values);
+      message.success('注册成功！请登录您的账户。');
+      registerForm.resetFields();
+      setActiveTab('login');
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '注册失败');
     } finally {
       setIsRegisterLoading(false);
     }
   };
 
+  const containerClass = isDarkMode ? "auth-container dark" : "auth-container light";
+
   return (
-    <div className="auth-container">
-      <Card className="auth-card" bordered={false}>
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            onClose={() => setError(null)}
-            style={{ marginBottom: '24px' }}
-          />
-        )}
-        
-        <div className="auth-header">
-          <h1>AINovel</h1>
-          <p className="auth-subtitle">AI驱动的小说创作平台</p>
+    <div className={containerClass}>
+      <ParticleBackground isDarkMode={isDarkMode} enabledShapes={enabledShapes} />
+      <div className="auth-wrapper">
+
+        <div className="auth-brand">
+          <div className="brand-icon">✦</div>
+          <h1 className="brand-title">AINovel</h1>
+          <p className="brand-slogan">用 AI 重新定义创作</p>
         </div>
+
+        <div className="auth-spacer" />
+
+        <Card className="auth-card" bordered={false}>
 
         <Tabs
           activeKey={activeTab}
@@ -149,25 +115,26 @@ const AuthPage = ({ onLogin }) => {
               name="login"
               onFinish={handleLogin}
               autoComplete="off"
-              layout="vertical"
               className="auth-form"
             >
               <Form.Item
                 name="username"
                 rules={[{ required: true, message: '请输入用户名' }]}
+                className="auth-input"
               >
                 <Input
                   prefix={<UserOutlined />}
                   placeholder="用户名"
                   size="large"
                   disabled={isLoginLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
               <Form.Item
                 name="password"
                 rules={[{ required: true, message: '请输入密码' }]}
+                className="auth-input"
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -175,22 +142,21 @@ const AuthPage = ({ onLogin }) => {
                   size="large"
                   disabled={isLoginLoading}
                   iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
               <Form.Item>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <Checkbox 
+                <div className="auth-meta">
+                  <Checkbox
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   >
                     记住我
                   </Checkbox>
-                  <Button 
-                    type="link" 
+                  <Button
+                    type="link"
                     onClick={handleForgotPassword}
-                    style={{ padding: 0, height: 'auto' }}
                   >
                     忘记密码？
                   </Button>
@@ -215,7 +181,6 @@ const AuthPage = ({ onLogin }) => {
               name="register"
               onFinish={handleRegister}
               autoComplete="off"
-              layout="vertical"
               className="auth-form"
             >
               <Form.Item
@@ -225,13 +190,14 @@ const AuthPage = ({ onLogin }) => {
                   { min: 3, message: '用户名至少需要3个字符' },
                   { max: 50, message: '用户名不能超过50个字符' }
                 ]}
+                className="auth-input"
               >
                 <Input
                   prefix={<UserOutlined />}
                   placeholder="用户名"
                   size="large"
                   disabled={isRegisterLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
@@ -241,13 +207,14 @@ const AuthPage = ({ onLogin }) => {
                   { required: true, message: '请输入电子邮箱' },
                   { type: 'email', message: '请输入有效的邮箱地址' }
                 ]}
+                className="auth-input"
               >
                 <Input
                   prefix={<MailOutlined />}
                   placeholder="电子邮箱"
                   size="large"
                   disabled={isRegisterLoading}
-                  className="auth-input"
+                  bordered={false}
                 />
               </Form.Item>
 
@@ -258,6 +225,7 @@ const AuthPage = ({ onLogin }) => {
                   { min: 6, message: '密码至少需要6个字符' },
                   { max: 50, message: '密码不能超过50个字符' }
                 ]}
+                className="auth-input"
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -265,37 +233,22 @@ const AuthPage = ({ onLogin }) => {
                   size="large"
                   disabled={isRegisterLoading}
                   iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  className="auth-input"
                   onChange={handlePasswordChange}
+                  bordered={false}
                 />
               </Form.Item>
               
               {passwordStrength > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', marginRight: '8px' }}>
-                      密码强度: 
-                    </span>
-                    <div style={{ 
-                      flex: 1, 
-                      height: '4px', 
-                      background: '#f0f0f0', 
-                      borderRadius: '2px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: `${passwordStrength}%`, 
-                        height: '100%', 
-                        background: passwordStrength < 40 ? '#ff4d4f' : 
+                <div className="pwd-strength">
+                  <span>密码强度</span>
+                  <div className="pwd-strength-bar">
+                    <div className="pwd-strength-fill" style={{
+                      width: `${passwordStrength}%`,
+                      background: passwordStrength < 40 ? '#ff4d4f' :
                                  passwordStrength < 70 ? '#faad14' : '#52c41a',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <span style={{ fontSize: '12px', marginLeft: '8px' }}>
-                      {passwordStrength < 40 ? '弱' : 
-                       passwordStrength < 70 ? '中' : '强'}
-                    </span>
+                    }} />
                   </div>
+                  <span>{passwordStrength < 40 ? '弱' : passwordStrength < 70 ? '中' : '强'}</span>
                 </div>
               )}
 
@@ -315,15 +268,12 @@ const AuthPage = ({ onLogin }) => {
           </TabPane>
         </Tabs>
         
-        {/* 第三方登录 */}
-        <div style={{ marginTop: '24px' }}>
-          <Divider>或</Divider>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <Divider className="auth-divider">或</Divider>
+        <div className="auth-social">
             <Button
               icon={<GithubOutlined />}
               onClick={() => handleSocialLogin('GitHub')}
               size="large"
-              style={{ flex: 1 }}
             >
               GitHub
             </Button>
@@ -331,38 +281,42 @@ const AuthPage = ({ onLogin }) => {
               icon={<WechatOutlined />}
               onClick={() => handleSocialLogin('微信')}
               size="large"
-              style={{ flex: 1, background: '#07C160', borderColor: '#07C160', color: 'white' }}
             >
               微信
             </Button>
           </div>
-        </div>
         
         </Card>
       
-      {/* 页面底部信息 */}
-      <div style={{ position: 'absolute', bottom: '20px', left: '0', right: '0', textAlign: 'center', color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px' }}>
-        <div style={{ marginBottom: '8px' }}>
-          AINovel v1.0.0 | AI驱动的小说创作平台
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
-          <Button
-            type="text"
-            icon={<GlobalOutlined />}
-            onClick={toggleLanguage}
-            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
-          >
-            {language === 'zh' ? 'English' : '中文'}
-          </Button>
-          <Button
-            type="text"
-            icon={isDarkMode ? '☀️' : '🌙'}
-            onClick={toggleTheme}
-            style={{ color: 'rgba(255, 255, 255, 0.8)', height: 'auto', padding: '4px 8px' }}
-          >
-            {isDarkMode ? '亮色主题' : '暗色主题'}
-          </Button>
-        </div>
+      <div className="auth-footer">
+        <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
+        <div style={{marginTop: '8px'}}>AINovel v1.0.0</div>
+      </div>
+
+      <div className="shape-settings">
+        <button
+          className="shape-settings-trigger"
+          onClick={() => setShowShapeSettings(v => !v)}
+          title="粒子形状设置"
+        >
+          <SettingOutlined spin={showShapeSettings} />
+        </button>
+        {showShapeSettings && (
+          <div className="shape-settings-panel">
+            <div className="shape-settings-title">粒子形状</div>
+            {SHAPE_LIST.map(s => (
+              <label key={s.key} className="shape-settings-item">
+                <input
+                  type="checkbox"
+                  checked={enabledShapes.includes(s.key)}
+                  onChange={() => toggleShape(s.key)}
+                />
+                <span>{s.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );

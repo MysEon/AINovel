@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useNotification } from './NotificationManager';
+import { register } from '../services/authService';
 
 const RegisterPage = ({ onNavigate }) => {
   const [form] = Form.useForm();
@@ -10,43 +11,12 @@ const RegisterPage = ({ onNavigate }) => {
 
   const onFinish = async (values) => {
     setIsLoading(true);
-
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('注册成功！请登录您的账户。');
-        
-        // 延迟一段时间后自动跳转到登录页
-        setTimeout(() => {
-          onNavigate('login');
-        }, 1500);
-      } else {
-        // 处理后端返回的错误信息，确保是字符串
-        let errorMessage = '注册失败';
-        if (data.detail) {
-          if (typeof data.detail === 'string') {
-            errorMessage = data.detail;
-          } else if (Array.isArray(data.detail)) {
-            // 如果是数组，取第一个错误信息
-            errorMessage = data.detail[0]?.msg || errorMessage;
-          } else if (typeof data.detail === 'object') {
-            // 如果是对象，尝试获取msg属性
-            errorMessage = data.detail.msg || JSON.stringify(data.detail);
-          }
-        }
-        message.error(errorMessage);
-      }
+      await register(values);
+      message.success('注册成功！请登录您的账户。');
+      setTimeout(() => { onNavigate('login'); }, 1500);
     } catch (error) {
-      message.error('网络错误，请稍后重试');
+      message.error(error.message || '注册失败');
     } finally {
       setIsLoading(false);
     }

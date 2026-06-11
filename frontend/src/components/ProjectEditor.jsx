@@ -6,6 +6,8 @@ import PublishedChapters from './writing/PublishedChapters';
 import KanbanBoard from './KanbanBoard';
 import ModelConfigManager from './ModelConfigManager';
 import KnowledgeBase from './KnowledgeBase';
+import PromptManager from './PromptManager';
+import CharacterManager from './CharacterManager';
 import usePersistentState from '../hooks/usePersistentState';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import './ProjectEditor.css';
@@ -17,6 +19,7 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
   const [activeItem, setActiveItem] = usePersistentState(`ainovel_editor_page_${project.id}`, '项目总览');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
+  const [promptManagerVisible, setPromptManagerVisible] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
@@ -130,8 +133,12 @@ const ProjectEditor = ({ user, project, onBackToDashboard, onProjectsChange }) =
         />;
       case '模型参数选择':
         return <ModelConfigManager />;
+      case '提示词管理':
+        return <PromptManager />;
       case '知识库总览':
         return <KnowledgeBase projectId={project.id} />;
+      case '角色管理':
+        return <CharacterManager projectId={project.id} />;
       default:
         return <textarea placeholder="在这里开始你的创作..."></textarea>;
     }

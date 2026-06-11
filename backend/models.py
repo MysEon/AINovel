@@ -192,10 +192,15 @@ class PromptTemplate(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    category = Column(String(50))  # character, plot, dialogue, etc
+    category = Column(String(50), nullable=False)  # outline, suggestions, optimization, creative, chat, writing_advice
     template = Column(Text, nullable=False)
     description = Column(Text)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_system = Column(Boolean, default=False)  # 是否为系统预设模板
+    is_active = Column(Boolean, default=True)   # 是否启用
+    usage_count = Column(Integer, default=0)    # 使用次数
+    variables = Column(Text)  # JSON格式存储模板变量定义
+    tags = Column(String(500))  # 标签，逗号分隔
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 系统模板可以为空
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

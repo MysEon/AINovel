@@ -1,88 +1,42 @@
-const API_BASE_URL = '/api';
-
-// 获取认证头
-const getAuthHeaders = () => {
-  let token = localStorage.getItem('ainovel_token');
-  
-  // 清理token中可能存在的引号包装
-  if (token && typeof token === 'string') {
-    token = token.replace(/^"|"$/g, '');
-  }
-  
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-};
+import { api } from './core/apiClient.js';
 
 class ModelConfigService {
-  constructor() {
-    this.baseURL = `${API_BASE_URL}/model-configs`;
-  }
-
-  async request(endpoint, options = {}) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || '请求失败');
-    }
-
-    return response.json();
-  }
-
   // 获取所有模型配置
-  async getModelConfigs() {
-    return this.request('/');
+  getModelConfigs() {
+    return api.get('/model-configs/');
   }
 
   // 获取单个模型配置
-  async getModelConfig(id) {
-    return this.request(`/${id}`);
+  getModelConfig(id) {
+    return api.get(`/model-configs/${id}`);
   }
 
   // 创建模型配置
-  async createModelConfig(configData) {
-    return this.request('/', {
-      method: 'POST',
-      body: JSON.stringify(configData),
-    });
+  createModelConfig(configData) {
+    return api.post('/model-configs/', configData);
   }
 
   // 更新模型配置
-  async updateModelConfig(id, configData) {
-    return this.request(`/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(configData),
-    });
+  updateModelConfig(id, configData) {
+    return api.put(`/model-configs/${id}`, configData);
   }
 
   // 删除模型配置
-  async deleteModelConfig(id) {
-    return this.request(`/${id}`, {
-      method: 'DELETE',
-    });
+  deleteModelConfig(id) {
+    return api.delete(`/model-configs/${id}`);
   }
 
   // 测试连接
-  async testConnection(testData) {
-    return this.request('/test-connection', {
-      method: 'POST',
-      body: JSON.stringify(testData),
-    });
+  testConnection(testData) {
+    return api.post('/model-configs/test-connection', testData);
   }
 
   // 测试已保存的连接
-  async testExistingConnection(configId) {
-    return this.request(`/${configId}/test`, {
-      method: 'POST',
-    });
+  testExistingConnection(configId) {
+    return api.post(`/model-configs/${configId}/test`);
   }
 
-  // 获取模型类型列表
+  // 获取模型类型列表（纯前端数据）
   getModelTypes() {
     return [
       { value: 'openai', label: 'OpenAI' },
@@ -93,77 +47,45 @@ class ModelConfigService {
   }
 
   // 从后端获取可用模型列表
-  async listAvailableModels(apiKey, modelType, proxyUrl) {
-    return this.request('/list-models', {
-      method: 'POST',
-      body: JSON.stringify({ api_key: apiKey, model_type: modelType, proxy_url: proxyUrl }),
+  listAvailableModels(apiKey, modelType, proxyUrl) {
+    return api.post('/model-configs/list-models', {
+      api_key: apiKey, model_type: modelType, proxy_url: proxyUrl,
     });
   }
 
   // 使用已保存的配置获取模型列表
-  async listAvailableModelsById(configId) {
-    return this.request(`/${configId}/list-models`, {
-      method: 'POST',
-    });
+  listAvailableModelsById(configId) {
+    return api.post(`/model-configs/${configId}/list-models`);
   }
 
-  // 验证模型配置
+  // 验证模型配置（纯前端校验）
   validateConfig(config) {
     const errors = [];
-
-    if (!config.name || config.name.trim() === '') {
-      errors.push('配置名称不能为空');
-    }
-
-    if (!config.model_type) {
-      errors.push('模型类型不能为空');
-    }
-
-    // 检查API密钥 - 如果是编辑模式且有遮蔽的密钥，则不要求重新输入
+    if (!config.name || config.name.trim() === '') errors.push('配置名称不能为空');
+    if (!config.model_type) errors.push('模型类型不能为空');
     if (!config.api_key || config.api_key.trim() === '') {
-      // 如果没有遮蔽的密钥标识，则要求提供API密钥
-      if (!config.api_key_masked) {
-        errors.push('API密钥不能为空');
-      }
+      if (!config.api_key_masked) errors.push('API密钥不能为空');
     }
-
-    if (config.temperature && (config.temperature < 0 || config.temperature > 2)) {
+    if (config.temperature && (config.temperature < 0 || config.temperature > 2))
       errors.push('温度值必须在0-2之间');
-    }
-
-    if (config.max_tokens && config.max_tokens < 1) {
+    if (config.max_tokens && config.max_tokens < 1)
       errors.push('最大令牌数必须大于0');
-    }
-
-    if (config.top_p && (config.top_p < 0 || config.top_p > 1)) {
+    if (config.top_p && (config.top_p < 0 || config.top_p > 1))
       errors.push('Top P值必须在0-1之间');
-    }
-
-    if (config.top_k && (config.top_k < 0 || config.top_k > 100)) {
+    if (config.top_k && (config.top_k < 0 || config.top_k > 100))
       errors.push('Top K值必须在0-100之间');
-    }
-
-    if (config.frequency_penalty && (config.frequency_penalty < -2 || config.frequency_penalty > 2)) {
+    if (config.frequency_penalty && (config.frequency_penalty < -2 || config.frequency_penalty > 2))
       errors.push('频率惩罚值必须在-2到2之间');
-    }
-
-    if (config.presence_penalty && (config.presence_penalty < -2 || config.presence_penalty > 2)) {
+    if (config.presence_penalty && (config.presence_penalty < -2 || config.presence_penalty > 2))
       errors.push('存在惩罚值必须在-2到2之间');
-    }
-
-    if (config.top_logprobs && (config.top_logprobs < 0 || config.top_logprobs > 20)) {
+    if (config.top_logprobs && (config.top_logprobs < 0 || config.top_logprobs > 20))
       errors.push('Top Logprobs值必须在0-20之间');
-    }
-
-    // 检查代理配置
-    if (config.enable_proxy && (!config.proxy_url || config.proxy_url.trim() === '')) {
+    if (config.enable_proxy && (!config.proxy_url || config.proxy_url.trim() === ''))
       errors.push('启用代理时必须填写代理URL');
-    }
-
     return errors;
   }
 
-  // 获取默认配置
+  // 获取默认配置（纯前端数据）
   getDefaultConfig() {
     return {
       name: '',

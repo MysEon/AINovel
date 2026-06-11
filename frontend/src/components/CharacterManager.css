@@ -1,0 +1,314 @@
+/* CharacterManager.css */
+.character-manager {
+  padding: 30px;
+  max-width: 1600px;
+  margin: 0 auto;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.character-manager::-webkit-scrollbar {
+  width: 8px;
+}
+
+.character-manager::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.character-manager::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.character-manager::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Header */
+.character-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+/* Loading */
+.character-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+/* Card Grid */
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+/* Card */
+.character-card {
+  border-radius: 10px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.character-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.character-card.expanded {
+  grid-column: 1 / -1;
+  max-width: 720px;
+}
+
+/* Card Header */
+.character-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.character-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.character-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.character-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.character-card-desc {
+  font-size: 12px;
+}
+
+.character-card-actions {
+  flex-shrink: 0;
+}
+
+/* Tags */
+.character-card-tags {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Gender tag inline with name */
+.gender-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  vertical-align: middle;
+}
+
+/* Quick info bar */
+.character-card-quick {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #888;
+}
+
+.quick-item {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Expanded Detail */
+.character-card-detail {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.detail-content {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 !important;
+  white-space: pre-wrap;
+}
+
+/* Params grid in expanded card */
+.detail-params {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.param-label {
+  font-size: 11px;
+}
+
+.param-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Dimension bars in expanded card */
+.detail-dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dimension-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dimension-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dim-name {
+  width: 32px;
+  font-size: 12px;
+  color: #666;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dim-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dim-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.dim-val {
+  width: 28px;
+  font-size: 12px;
+  color: #888;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Gender journey editor */
+.gender-transition-card .ant-card-head {
+  min-height: 40px;
+}
+
+.gender-transition-card .ant-card-head-title {
+  padding: 8px 0;
+}
+
+.gender-transition-card .ant-card-extra {
+  padding: 4px 0;
+}
+
+.gender-journey-preview {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* ── Dark Theme ── */
+.dark-theme .character-manager-header h4 {
+  color: #e0e0e0;
+}
+
+.dark-theme .character-card {
+  background: #1e1e2e;
+  border-color: #2d2d3d;
+}
+
+.dark-theme .character-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .character-card-detail {
+  border-top-color: #2d2d3d;
+}
+
+.dark-theme .detail-label {
+  color: #aaa;
+}
+
+.dark-theme .quick-item {
+  background: rgba(255, 255, 255, 0.08);
+  color: #bbb;
+}
+
+.dark-theme .detail-params {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dark-theme .dim-name {
+  color: #aaa;
+}
+
+.dark-theme .dim-bar-bg {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .dim-val {
+  color: #aaa;
+}
+
+.dark-theme .gender-journey-preview {
+  background: rgba(255, 255, 255, 0.06);
+}

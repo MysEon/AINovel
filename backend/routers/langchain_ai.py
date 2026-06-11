@@ -389,13 +389,14 @@ async def chat_with_ai(
         # 获取模型配置
         model_config = await get_model_config_for_user(request.model_config_id, current_user.id, db)
         
-        # 使用LangChain服务进行对话
+        # 使用LangChain服务进行对话，传入提示词模板 ID
         response = await langchain_service.chat_with_ai(
             request.project_id,
             request.message,
             request.history,
             model_config,
-            db
+            db,
+            request.prompt_template_id  # 新增参数
         )
         
         return ChatResponse(
@@ -429,6 +430,23 @@ async def chat_with_ai_stream(
         # 预先获取项目上下文数据，避免在流式输出中使用数据库连接
         project_context = await langchain_service._get_project_context(request.project_id, db)
         
+        # 获取提示词模板（如果指定了）
+        selected_template = None
+        if request.prompt_template_id:
+            try:
+                from models import PromptTemplate
+                from sqlalchemy.future import select
+                result = await db.execute(
+                    select(PromptTemplate).where(PromptTemplate.id == request.prompt_template_id)
+                )
+                selected_template = result.scalar_one_or_none()
+                
+                # 验证模板权限
+                if selected_template and not selected_template.is_system and selected_template.user_id != current_user.id:
+                    selected_template = None
+            except Exception:
+                selected_template = None
+        
         # 直接使用流式生成器
         async def generate_response():
             try:
@@ -437,11 +455,18 @@ async def chat_with_ai_stream(
                     project_context,
                     request.message,
                     request.history,
-                    model_config
+                    model_config,
+                    selected_template  # 传入选定的模板
                 )
+                chunk_count = 0
                 async for chunk in stream_generator:
                     if chunk:  # 确保chunk不为空
+                        chunk_count += 1
+                        print(f"[AI Stream Debug] 后端发送chunk {chunk_count}: '{chunk}' (长度: {len(chunk)})")
                         yield f"data: {chunk}\n\n"
+                        
+                # 确保所有数据都被发送完毕
+                print(f"[AI Stream Debug] 流式输出完成，总共发送 {chunk_count} 个chunk")
                 yield "data: [DONE]\n\n"
             except Exception as e:
                 print(f"流式响应生成错误: {str(e)}")

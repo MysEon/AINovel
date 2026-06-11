@@ -1,17 +1,33 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# ── AINovel Backend ──
+# 多阶段构建：依赖安装 → 运行镜像
 
-# Set the working directory in the container
+FROM python:3.11-slim AS base
+
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt .
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install any needed packages specified in requirements.txt
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application's code from the host to the container at /app
-COPY . .
+FROM python:3.11-slim AS runtime
 
-# Run uvicorn server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+WORKDIR /app
+
+COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=base /usr/local/bin /usr/local/bin
+
+# 仅复制应用代码（排除测试、文档等）
+COPY app/ app/
+COPY alembic/ alembic/
+COPY alembic.ini .
+COPY requirements.txt .
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

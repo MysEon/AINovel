@@ -1,293 +1,60 @@
 // 章节相关的API服务
-const API_BASE_URL = '/api';
-
-// 获取认证头
-const getAuthHeaders = () => {
-  let token = localStorage.getItem('ainovel_token');
-  
-  // 清理token中可能存在的引号包装
-  if (token && typeof token === 'string') {
-    token = token.replace(/^"|"$/g, '');
-  }
-  
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-};
+import { api } from './core/apiClient.js';
 
 // 创建章节
-export const createChapter = async (projectId, chapterData) => {
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/chapters`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(chapterData)
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '创建章节失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '创建章节失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('创建章节失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
-
+export const createChapter = (projectId, chapterData) =>
+  api.post(`/projects/${projectId}/chapters`, chapterData);
 
 // 获取项目的所有章节
-export const getChapters = async (projectId) => {
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/chapters`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '获取章节列表失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '获取章节列表失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('获取章节列表失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
-
+export const getChapters = (projectId) =>
+  api.get(`/projects/${projectId}/chapters`);
 
 // 获取单个章节
-export const getChapter = async (chapterId) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '获取章节详情失败');
-  }
-
-  return await response.json();
-};
-
+export const getChapter = (chapterId) =>
+  api.get(`/chapters/${chapterId}`);
 
 // 更新章节
-export const updateChapter = async (chapterId, chapterData) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(chapterData)
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '更新章节失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '更新章节失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('更新章节失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
-
+export const updateChapter = (chapterId, chapterData) =>
+  api.put(`/chapters/${chapterId}`, chapterData);
 
 // 删除章节
-export const deleteChapter = async (chapterId) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '删除章节失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '删除章节失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('删除章节失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
-
+export const deleteChapter = (chapterId) =>
+  api.delete(`/chapters/${chapterId}`);
 
 // 发布章节
-export const publishChapter = async (chapterId) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ status: 'published' })
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '发布章节失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '发布章节失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('发布章节失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
-
+export const publishChapter = (chapterId) =>
+  api.put(`/chapters/${chapterId}`, { status: 'published' });
 
 // 取消发布章节
-export const unpublishChapter = async (chapterId) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ status: 'draft' })
-  });
-
-  if (!response.ok) {
-    // 尝试解析错误响应，如果失败则使用默认错误消息
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '取消发布章节失败');
-      } catch (jsonError) {
-        // 如果无法解析JSON，使用响应文本或默认错误消息
-        throw new Error(errorText || '取消发布章节失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('取消发布章节失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
-};
+export const unpublishChapter = (chapterId) =>
+  api.put(`/chapters/${chapterId}`, { status: 'draft' });
 
 // 批量更新章节状态
-export const batchUpdateChapterStatus = async (updateData) => {
-  const response = await fetch(`${API_BASE_URL}/chapters/batch_update_status`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updateData)
-  });
+export const batchUpdateChapterStatus = (updateData) =>
+  api.post('/chapters/batch_update_status', updateData);
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || '批量更新章节状态失败');
-  }
-
-  return await response.json();
-};
-
-// 批量发布章节
+// 批量发布章节（使用后端批量接口）
 export const batchPublishChapters = async (projectId, chapterIds, onProgress) => {
-  const totalChapters = chapterIds.length;
-  let successCount = 0;
-  let errorCount = 0;
-  const results = [];
-
-  for (let i = 0; i < chapterIds.length; i++) {
-    const chapterId = chapterIds[i];
-    try {
-      const response = await fetch(`${API_BASE_URL}/chapters/${chapterId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: 'published' })
-      });
-
-      if (response.ok) {
-        const updatedChapter = await response.json();
-        results.push({ chapterId, success: true, chapter: updatedChapter });
-        successCount++;
-      } else {
-        const errorData = await response.json();
-        results.push({ 
-          chapterId, 
-          success: false, 
-          error: errorData.detail || '发布失败' 
-        });
-        errorCount++;
-      }
-    } catch (error) {
-      results.push({ 
-        chapterId, 
-        success: false, 
-        error: error.message || '网络错误' 
-      });
-      errorCount++;
-    }
-
-    // 更新进度
-    if (onProgress) {
-      onProgress({ current: i + 1, total: totalChapters });
-    }
-  }
-
+  if (onProgress) onProgress({ current: 0, total: chapterIds.length });
+  const result = await api.post('/chapters/batch-publish', {
+    project_id: projectId,
+    chapter_ids: chapterIds,
+  });
+  if (onProgress) onProgress({ current: chapterIds.length, total: chapterIds.length });
+  // 适配返回格式：后端返回 BatchPublishResponse
   return {
-    successCount,
-    errorCount,
-    totalChapters,
-    results
+    successCount: result.success_count ?? 0,
+    errorCount: (result.total_count ?? 0) - (result.success_count ?? 0),
+    totalChapters: result.total_count ?? chapterIds.length,
+    results: [
+      ...(result.published_chapters || []).map(c => ({ chapterId: c.id, success: true, chapter: c })),
+      ...(result.failed_chapters || []).map(c => ({ chapterId: c.id, success: false, error: c.reason })),
+    ],
   };
 };
 
 // 获取未发布章节列表
-export const getUnpublishedChapters = async (projectId, currentChapterId) => {
-  const params = new URLSearchParams();
-  if (currentChapterId) {
-    params.append('current_chapter_id', currentChapterId);
-  }
-  
-  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/chapters/unpublished?${params}`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    try {
-      const errorText = await response.clone().text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.detail || '获取未发布章节列表失败');
-      } catch (jsonError) {
-        throw new Error(errorText || '获取未发布章节列表失败: 服务器返回错误');
-      }
-    } catch (e) {
-      throw new Error('获取未发布章节列表失败: 服务器返回错误');
-    }
-  }
-
-  return await response.json();
+export const getUnpublishedChapters = (projectId, currentChapterId) => {
+  const params = currentChapterId ? `?current_chapter_id=${currentChapterId}` : '';
+  return api.get(`/projects/${projectId}/chapters/unpublished${params}`);
 };
-

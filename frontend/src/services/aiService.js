@@ -1,45 +1,20 @@
 // AI服务层 - 连接LangChain/LangGraph API
-const API_BASE_URL = '/api';
+import { api, rawFetch } from './core/apiClient.js';
+import { API_FLAGS } from './core/apiFlags.js';
+import { getSelectedModelConfigId, setSelectedModelConfigId } from './core/authStorage.js';
 
-// 获取认证头
-const getAuthHeaders = () => {
-  let token = localStorage.getItem('ainovel_token');
-  
-  // 清理token中可能存在的引号包装
-  if (token && typeof token === 'string') {
-    token = token.replace(/^"|"$/g, '');
-  }
-  
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-};
+/**
+ * Legacy AI 端点走 /api/ai/* (compat 层)，不走 /api/v1 前缀。
+ * 新 AI Runtime 端点走 /api/v1/ai/* (标准 v1 路由)。
+ */
+const LEGACY_AI_OPTS = { baseURL: '/api' };
 
 // 获取用户的默认模型配置
 const getDefaultModelConfig = async () => {
   try {
-    console.log('正在获取默认模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
-      headers: getAuthHeaders()
-    });
-    
-    console.log('默认模型配置API响应状态:', response.status);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('用户未登录或token已过期，无法获取模型配置');
-        return null;
-      }
-      throw new Error('获取模型配置失败');
-    }
-    
-    const configs = await response.json();
-    console.log('获取到的默认模型配置:', configs);
-    // 返回第一个可用的配置，或者null
+    const configs = await api.get('/model-configs/');
     return configs.length > 0 ? configs[0] : null;
-  } catch (error) {
-    console.error('获取默认模型配置失败:', error);
+  } catch {
     return null;
   }
 };
@@ -47,28 +22,8 @@ const getDefaultModelConfig = async () => {
 // 获取所有可用的模型配置
 const getAvailableModelConfigs = async () => {
   try {
-    console.log('正在获取模型配置...');
-    const response = await fetch(`${API_BASE_URL}/model-configs/`, {
-      headers: getAuthHeaders()
-    });
-    
-    console.log('模型配置API响应状态:', response.status);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('用户未登录或token已过期，无法获取模型配置');
-        return [];
-      }
-      const errorText = await response.text();
-      console.error('模型配置API错误响应:', errorText);
-      throw new Error(`获取模型配置失败: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log('获取到的模型配置:', data);
-    return data;
-  } catch (error) {
-    console.error('获取可用模型配置失败:', error);
+    return await api.get('/model-configs/');
+  } catch {
     return [];
   }
 };
@@ -78,99 +33,53 @@ const hasAvailableModelConfigs = async () => {
   try {
     const configs = await getAvailableModelConfigs();
     return configs.length > 0;
-  } catch (error) {
-    console.error('检查模型配置可用性失败:', error);
+  } catch {
     return false;
   }
 };
 
 class AIService {
   constructor() {
-    this.baseURL = `${API_BASE_URL}/ai`;
-    this.selectedModelConfigId = null; // 存储用户选择的模型配置ID
-    this.loadSelectedModelConfig(); // 启动时加载持久化的配置
-  }
-
-  async request(endpoint, options = {}) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || 'AI服务请求失败');
-    }
-
-    return response.json();
+    this.selectedModelConfigId = null;
+    this._loadSelectedModelConfig();
   }
 
   // 设置当前使用的模型配置ID
   setSelectedModelConfigId(configId) {
     this.selectedModelConfigId = configId;
-    // 持久化到localStorage
-    this.saveSelectedModelConfig(configId);
+    setSelectedModelConfigId(configId);
   }
 
-  // 从localStorage加载保存的模型配置ID
-  loadSelectedModelConfig() {
-    try {
-      const savedConfigId = localStorage.getItem('ainovel_selected_model_config');
-      if (savedConfigId) {
-        const configId = parseInt(savedConfigId, 10);
-        if (!isNaN(configId)) {
-          this.selectedModelConfigId = configId;
-        }
-      }
-    } catch (error) {
-      console.warn('加载AI模型配置失败:', error);
-    }
-  }
-
-  // 保存选中的模型配置ID到localStorage
-  saveSelectedModelConfig(configId) {
-    try {
-      if (configId && typeof configId === 'number') {
-        localStorage.setItem('ainovel_selected_model_config', configId.toString());
-      } else if (configId === null || configId === undefined) {
-        localStorage.removeItem('ainovel_selected_model_config');
-      }
-    } catch (error) {
-      console.error('保存AI模型配置失败:', error);
+  // 从 localStorage 加载
+  _loadSelectedModelConfig() {
+    const saved = getSelectedModelConfigId();
+    if (saved) {
+      const id = parseInt(saved, 10);
+      if (!isNaN(id)) this.selectedModelConfigId = id;
     }
   }
 
   // 清除保存的模型配置
   clearSelectedModelConfig() {
     this.selectedModelConfigId = null;
-    try {
-      localStorage.removeItem('ainovel_selected_model_config');
-    } catch (error) {
-      console.error('清除AI模型配置失败:', error);
-    }
+    setSelectedModelConfigId(null);
   }
 
   // 获取当前选择的模型配置
   async getSelectedModelConfig() {
     try {
-      // 如果有选择的配置ID，优先使用
       if (this.selectedModelConfigId) {
         const configs = await getAvailableModelConfigs();
-        const selectedConfig = configs.find(config => config.id === this.selectedModelConfigId);
-        if (selectedConfig) {
-          return selectedConfig;
-        }
+        const found = configs.find(c => c.id === this.selectedModelConfigId);
+        if (found) return found;
       }
-      
-      // 否则使用默认配置
       return await getDefaultModelConfig();
-    } catch (error) {
-      console.error('获取选择的模型配置失败:', error);
+    } catch {
       return null;
     }
   }
 
-  // 检查是否有可用的模型配置，如果没有则提供详细的错误信息
+  // 检查模型配置可用性
   async checkModelConfigAvailability() {
     const hasConfigs = await hasAvailableModelConfigs();
     if (!hasConfigs) {
@@ -181,126 +90,72 @@ class AIService {
     return true;
   }
 
+  // 内部辅助：获取 modelConfigId 并构建请求体
+  async _withModelConfig(payload) {
+    await this.checkModelConfigAvailability();
+    const mc = await this.getSelectedModelConfig();
+    return { ...payload, model_config_id: mc.id };
+  }
+
   // 章节大纲生成
   async generateChapterOutline(projectId, chapterData) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/chapter-outline', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        chapter_number: chapterData.chapter_number || 1,
-        user_requirements: chapterData.user_requirements || chapterData.current_content || '',
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      chapter_number: chapterData.chapter_number || 1,
+      user_requirements: chapterData.user_requirements || chapterData.current_content || '',
     });
+    return api.post('/ai/chapter-outline', body, LEGACY_AI_OPTS);
   }
 
   // 章节草稿生成
   async generateChapterDraft(projectId, outline) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/chapter-draft', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        chapter_outline: outline,
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      chapter_outline: outline,
     });
+    return api.post('/ai/chapter-draft', body, LEGACY_AI_OPTS);
   }
 
   // 角色对话生成
   async generateCharacterDialogue(projectId, characters, context) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/character-dialogue', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        character_names: characters,
-        situation: context,
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      character_names: characters,
+      situation: context,
     });
+    return api.post('/ai/character-dialogue', body, LEGACY_AI_OPTS);
   }
 
   // 情节发展建议
   async getPlotSuggestions(projectId, currentChapter) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/plot-suggestions', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        current_chapter_content: currentChapter.content || currentChapter || '',
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      current_chapter_content: currentChapter.content || currentChapter || '',
     });
+    return api.post('/ai/plot-suggestions', body, LEGACY_AI_OPTS);
   }
 
   // AI智能体对话
-  async chatWithAI(projectId, message, history = []) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        message: message,
-        history: history,
-        model_config_id: modelConfig.id
-      })
+  async chatWithAI(projectId, message, history = [], promptTemplateId = null) {
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      message,
+      history,
     });
+    if (promptTemplateId) body.prompt_template_id = promptTemplateId;
+    return api.post('/ai/chat', body, LEGACY_AI_OPTS);
   }
 
   // AI智能体对话 - 流式输出
-  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete) {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    const response = await fetch(`${this.baseURL}/chat-stream`, {
-      method: 'POST',
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        project_id: projectId,
-        message: message,
-        history: history,
-        model_config_id: modelConfig.id
-      })
+  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete, promptTemplateId = null) {
+    const body = await this._withModelConfig({
+      project_id: projectId,
+      message,
+      history,
     });
+    if (promptTemplateId) body.prompt_template_id = promptTemplateId;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || 'AI服务请求失败');
-    }
-
+    const response = await rawFetch('/ai/chat-stream', { method: 'POST', body, ...LEGACY_AI_OPTS });
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
@@ -308,40 +163,22 @@ class AIService {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
 
-        // 解码新的数据块，确保UTF-8编码正确处理
-        const chunk = decoder.decode(value, { stream: true });
-        buffer += chunk;
+        if (done) {
+          this._flushBuffer(buffer, onChunk, onComplete);
+          if (onComplete) onComplete();
+          break;
+        }
 
-        // 安全地按行分割，确保不会在多字节字符中间分割
-        const lines = this.safeSplitLines(buffer);
-        buffer = lines.pop() || ''; // 保留最后一个不完整的行
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              if (onComplete) onComplete();
-              return;
-            }
-            // 调试信息：显示接收到的原始chunk数据
-            console.log('🔍 [AI Stream Debug] 接收到chunk:', {
-              rawData: data,
-              dataLength: data.length,
-              containsNewline: data.includes('\n'),
-              containsCarriageReturn: data.includes('\r'),
-              hasWhitespace: /\s/.test(data),
-              isEmptyString: data === '',
-              charCodes: [...data].map(c => `${c}(${c.charCodeAt(0)})`).join(', ')
-            });
-            
-            // 过滤错误消息，但保留所有有效内容包括换行符
-            // 只过滤null、undefined和错误消息，保留所有其他内容（包括空白字符、换行符等）
-            if (data !== null && data !== undefined && !data.startsWith('错误:')) {
-              if (onChunk) onChunk(data);
-            }
-          }
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') { if (onComplete) onComplete(); return; }
+          if (data && !data.startsWith('错误:') && onChunk) onChunk(data);
         }
       }
     } catch (error) {
@@ -350,186 +187,106 @@ class AIService {
     }
   }
 
+  // 处理流式输出剩余 buffer
+  _flushBuffer(buffer, onChunk) {
+    if (!buffer.trim()) return;
+    for (const line of buffer.split('\n')) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data && data !== '[DONE]' && !data.startsWith('错误:') && onChunk) {
+          onChunk(data);
+        }
+      }
+    }
+  }
+
   // 内容优化
   async optimizeContent(projectId, content, optimizationType = 'general') {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/optimize-content', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        content: content,
-        optimization_type: optimizationType,
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId, content, optimization_type: optimizationType,
     });
+    return api.post('/ai/optimize-content', body, LEGACY_AI_OPTS);
   }
 
   // 创意生成
   async generateCreativeIdeas(projectId, prompt, category = 'general') {
-    // 检查模型配置可用性
-    await this.checkModelConfigAvailability();
-    
-    // 获取选择的模型配置
-    const modelConfig = await this.getSelectedModelConfig();
-    
-    return this.request('/creative-ideas', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        prompt: prompt,
-        category: category,
-        model_config_id: modelConfig.id
-      })
+    const body = await this._withModelConfig({
+      project_id: projectId, prompt, category,
     });
+    return api.post('/ai/creative-ideas', body, LEGACY_AI_OPTS);
   }
 
   // 文本风格转换
-  async transformStyle(projectId, content, targetStyle) {
-    return this.request('/transform-style', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        content: content,
-        target_style: targetStyle
-      })
-    });
+  transformStyle(projectId, content, targetStyle) {
+    return api.post('/ai/transform-style', {
+      project_id: projectId, content, target_style: targetStyle,
+    }, LEGACY_AI_OPTS);
   }
 
   // 知识库分析
-  async analyzeKnowledgeBase(projectId, analysisType = 'comprehensive') {
-    return this.request('/analyze-knowledge-base', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        analysis_type: analysisType
-      })
-    });
+  analyzeKnowledgeBase(projectId, analysisType = 'comprehensive') {
+    return api.post('/ai/analyze-knowledge-base', {
+      project_id: projectId, analysis_type: analysisType,
+    }, LEGACY_AI_OPTS);
   }
 
   // 写作建议
-  async getWritingSuggestions(projectId, content, context = {}) {
-    return this.request('/writing-suggestions', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        content: content,
-        context: context
-      })
-    });
+  getWritingSuggestions(projectId, content, context = {}) {
+    return api.post('/ai/writing-suggestions', {
+      project_id: projectId, content, context,
+    }, LEGACY_AI_OPTS);
   }
 
   // 角色关系分析
-  async analyzeCharacterRelationships(projectId) {
-    return this.request('/analyze-character-relationships', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId
-      })
-    });
+  analyzeCharacterRelationships(projectId) {
+    return api.post('/ai/analyze-character-relationships', { project_id: projectId }, LEGACY_AI_OPTS);
   }
 
   // 世界观一致性检查
-  async checkWorldviewConsistency(projectId, content) {
-    return this.request('/check-worldview-consistency', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        content: content
-      })
-    });
+  checkWorldviewConsistency(projectId, content) {
+    return api.post('/ai/check-worldview-consistency', { project_id: projectId, content }, LEGACY_AI_OPTS);
   }
 
   // 情节连贯性分析
-  async analyzePlotCoherence(projectId) {
-    return this.request('/analyze-plot-coherence', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId
-      })
-    });
+  analyzePlotCoherence(projectId) {
+    return api.post('/ai/analyze-plot-coherence', { project_id: projectId }, LEGACY_AI_OPTS);
   }
 
   // 情感分析
-  async analyzeEmotionalTone(content) {
-    return this.request('/analyze-emotional-tone', {
-      method: 'POST',
-      body: JSON.stringify({
-        content: content
-      })
-    });
+  analyzeEmotionalTone(content) {
+    return api.post('/ai/analyze-emotional-tone', { content }, LEGACY_AI_OPTS);
   }
 
   // 阅读难度分析
-  async analyzeReadability(content) {
-    return this.request('/analyze-readability', {
-      method: 'POST',
-      body: JSON.stringify({
-        content: content
-      })
-    });
+  analyzeReadability(content) {
+    return api.post('/ai/analyze-readability', { content }, LEGACY_AI_OPTS);
   }
 
   // 批量内容生成
-  async batchGenerateContent(projectId, requests) {
-    return this.request('/batch-generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        requests: requests
-      })
-    });
+  batchGenerateContent(projectId, requests) {
+    return api.post('/ai/batch-generate', { project_id: projectId, requests }, LEGACY_AI_OPTS);
   }
 
   // AI工作流执行
-  async executeWorkflow(projectId, workflowId, parameters = {}) {
-    return this.request('/execute-workflow', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: projectId,
-        workflow_id: workflowId,
-        parameters: parameters
-      })
-    });
+  executeWorkflow(projectId, workflowId, parameters = {}) {
+    return api.post('/ai/execute-workflow', {
+      project_id: projectId, workflow_id: workflowId, parameters,
+    }, LEGACY_AI_OPTS);
   }
 
   // 获取AI模型状态
-  async getModelStatus() {
-    return this.request('/model-status');
+  getModelStatus() {
+    return api.get('/ai/model-status', LEGACY_AI_OPTS);
   }
 
   // 获取可用的工作流列表
-  async getAvailableWorkflows() {
-    return this.request('/workflows');
+  getAvailableWorkflows() {
+    return api.get('/ai/workflows', LEGACY_AI_OPTS);
   }
 
   // 获取AI使用统计
-  async getUsageStats(projectId) {
-    return this.request(`/usage-stats/${projectId}`);
-  }
-
-  // 安全地按行分割文本，确保不会在多字节字符中间分割
-  safeSplitLines(text) {
-    const lines = [];
-    let start = 0;
-    
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] === '\n') {
-        lines.push(text.slice(start, i));
-        start = i + 1;
-      }
-    }
-    
-    // 添加最后一行（如果没有以换行符结尾）
-    if (start < text.length) {
-      lines.push(text.slice(start));
-    }
-    
-    return lines;
+  getUsageStats(projectId) {
+    return api.get(`/ai/usage-stats/${projectId}`, LEGACY_AI_OPTS);
   }
 }
 

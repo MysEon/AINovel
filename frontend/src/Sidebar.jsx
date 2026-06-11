@@ -11,62 +11,40 @@ import {
 const startWritingStyles = `
   <style>
     .start-writing a {
-      background-color: #4CAF50 !important;
-      color: white !important;
-      font-weight: bold;
-      border-radius: 4px;
-      margin: 5px 0;
-      position: relative;
-      overflow: hidden;
+      background-color: rgba(79, 70, 229, 0.1) !important;
+      color: #4338ca !important;
+      font-weight: 600;
+      border-radius: 12px;
+      margin: 4px 0;
+      border: 1px solid rgba(79, 70, 229, 0.12) !important;
+      box-shadow: none !important;
     }
-    
-    .start-writing a::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0) 100%
-      );
-      transform: rotate(30deg);
-      animation: shine 3s infinite;
-    }
-    
-    @keyframes shine {
-      0% {
-        transform: translateX(-100%) translateY(-100%) rotate(30deg);
-      }
-      20% {
-        transform: translateX(-100%) translateY(-100%) rotate(30deg);
-      }
-      100% {
-        transform: translateX(100%) translateY(100%) rotate(30deg);
-      }
-    }
-    
+
     .start-writing a:hover {
-      background-color: #45a049 !important;
+      background-color: rgba(79, 70, 229, 0.16) !important;
+      border-color: rgba(79, 70, 229, 0.18) !important;
     }
-    
+
     .start-writing.active a {
-      background-color: #388E3C !important;
+      background-color: #4f46e5 !important;
+      color: #ffffff !important;
+      border-color: #4f46e5 !important;
     }
-    
+
     .dark-theme .start-writing a {
-      background-color: #2E7D32 !important;
+      background-color: rgba(129, 140, 248, 0.12) !important;
+      color: #c7d2fe !important;
+      border-color: rgba(129, 140, 248, 0.18) !important;
     }
-    
+
     .dark-theme .start-writing a:hover {
-      background-color: #388E3C !important;
+      background-color: rgba(129, 140, 248, 0.18) !important;
     }
-    
+
     .dark-theme .start-writing.active a {
-      background-color: #1B5E20 !important;
+      background-color: #6366f1 !important;
+      color: #ffffff !important;
+      border-color: #6366f1 !important;
     }
   </style>
 `;

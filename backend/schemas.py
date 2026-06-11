@@ -321,9 +321,12 @@ class ModelInfo(BaseModel):
 # 提示词模板相关模型
 class PromptTemplateBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
-    category: Optional[str] = Field(None, max_length=50, description="例如: 角色, 情节, 对话")
+    category: str = Field(..., max_length=50, description="模板分类：outline, suggestions, optimization, creative, chat, writing_advice")
     template: str = Field(..., min_length=1)
     description: Optional[str] = None
+    variables: Optional[str] = Field(None, description="JSON格式的变量定义")
+    tags: Optional[str] = Field(None, max_length=500, description="标签，逗号分隔")
+    is_active: bool = Field(default=True, description="是否启用")
 
 class PromptTemplateCreate(PromptTemplateBase):
     pass
@@ -333,10 +336,15 @@ class PromptTemplateUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=50)
     template: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = None
+    variables: Optional[str] = Field(None, description="JSON格式的变量定义")
+    tags: Optional[str] = Field(None, max_length=500)
+    is_active: Optional[bool] = None
 
 class PromptTemplateResponse(PromptTemplateBase):
     id: int
-    user_id: int
+    user_id: Optional[int] = None  # 系统模板可以为空
+    is_system: bool = Field(default=False, description="是否为系统预设模板")
+    usage_count: int = Field(default=0, description="使用次数")
     created_at: datetime
     updated_at: datetime
     
@@ -423,6 +431,7 @@ class ChatRequest(BaseModel):
     message: str
     history: List[dict] = []
     model_config_id: int
+    prompt_template_id: Optional[int] = None  # 可选的提示词模板 ID
 
 class ChatResponse(BaseModel):
     success: bool

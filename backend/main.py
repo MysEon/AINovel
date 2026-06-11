@@ -21,6 +21,39 @@ setup_logging()
 from database import create_tables
 from routers import auth, projects, characters, locations, organizations, worldviews, chapters, drafts, model_configs, prompt_templates, knowledge
 
+# 自动初始化系统模板
+async def initialize_system_templates():
+    """在应用启动时自动初始化系统模板"""
+    try:
+        from database import get_db
+        from sqlalchemy.future import select
+        from models import PromptTemplate
+        from routers.prompt_templates import get_system_templates
+        
+        # 获取数据库会话
+        async for db in get_db():
+            # 检查是否已经有系统模板
+            result = await db.execute(
+                select(PromptTemplate).where(PromptTemplate.is_system == True)
+            )
+            existing_templates = result.scalars().all()
+            
+            if len(existing_templates) == 0:
+                # 创建系统模板
+                system_templates = get_system_templates()
+                for template_data in system_templates:
+                    template_data['user_id'] = None  # 系统模板不需要user_id
+                    template = PromptTemplate(**template_data)
+                    db.add(template)
+                
+                await db.commit()
+                print(f"✓ 已自动初始化 {len(system_templates)} 个系统提示词模板")
+            else:
+                print(f"✓ 系统模板已存在 ({len(existing_templates)} 个)，跳过初始化")
+            break
+    except Exception as e:
+        print(f"⚠ 系统模板初始化失败: {e}")
+
 # 尝试导入LangChain路由（如果依赖已安装）
 try:
     from routers import langchain_ai
@@ -80,4 +113,4 @@ def read_root():
     return {"message": "Welcome to AINovel Backend API"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8082)
