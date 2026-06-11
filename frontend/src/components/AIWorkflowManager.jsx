@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlay, FaPause, FaStop, FaCog, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaBook, FaSpinner } from 'react-icons/fa';
 import { aiService } from '../services/aiService';
-import { useNotification } from '../NotificationManager';
+import { useNotification } from './NotificationManager';
 import './AIWorkflowManager.css';
 
 const AIWorkflowManager = ({ projectId }) => {

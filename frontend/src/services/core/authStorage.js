@@ -102,6 +102,7 @@ export const STORAGE_KEYS = {
   // App 状态
   LAST_VIEW: 'ainovel_last_view',
   CURRENT_PROJECT: 'ainovel_current_project',
+  THEME_MODE: 'ainovel_theme_mode',
   // 其他
   PARTICLE_SHAPES: 'ainovel_particle_shapes',
   ERROR_LOG: 'ainovel_errors',

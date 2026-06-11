@@ -200,13 +200,13 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                 style={{
                   width: `${restorationProgress}%`,
                   height: '4px',
-                  backgroundColor: '#1890ff',
+                  backgroundColor: 'var(--primary-color)',
                   borderRadius: '2px',
                   transition: 'width 0.3s ease'
                 }}
               />
             </div>
-            <div className="restoration-details" style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+            <div className="restoration-details" style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '8px' }}>
               恢复AI设置、聊天记录和编辑器状态
             </div>
           </div>

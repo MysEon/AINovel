@@ -1,39 +1,43 @@
 import React, { useState } from 'react';
-import { 
-  Card, 
-  Button, 
-  Modal, 
-  Form, 
-  Input, 
-  Typography, 
-  Avatar, 
-  Dropdown, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Card,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Typography,
+  Avatar,
+  Dropdown,
   Empty,
   Row,
   Col,
-  Statistic,
-  Space,
-  Tag
+  Space
 } from 'antd';
-import { 
-  PlusOutlined, 
-  BookOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  CalendarOutlined,
+import {
+  PlusOutlined,
+  BookOutlined,
+  EditOutlined,
+  DeleteOutlined,
   UserOutlined,
   LogoutOutlined,
   MoreOutlined,
   SunOutlined,
-  MoonOutlined
+  MoonOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons';
 import { useNotification } from './NotificationManager';
 import { useTheme } from './ThemeProvider';
+import { useAuth } from '../contexts/AuthContext';
+import './ProjectDashboard.css';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
 
-const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, onDeleteProject, onLogout }) => {
+const ProjectDashboard = () => {
+  const navigate = useNavigate();
+  const { user, projects, createProject, deleteProject, logout } = useAuth();
   const [form] = Form.useForm();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,33 +47,21 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   // 如果是临时用户（网络错误情况），显示提示信息
   if (user?.is_temp) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '60vh',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        <div style={{ 
-          fontSize: '64px', 
-          marginBottom: '20px',
-          opacity: 0.3
-        }}>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-5 text-center bg-background">
+        <div className="text-6xl mb-5 opacity-30">
           🌐
         </div>
-        <Title level={2} style={{ marginBottom: '16px' }}>
+        <Title level={2} className="mb-4">
           网络连接问题
         </Title>
-        <Paragraph style={{ marginBottom: '24px', color: '#666' }}>
+        <Paragraph className="mb-6 text-muted-foreground">
           无法连接到服务器，但您的登录状态已保存。请检查网络连接后刷新页面。
         </Paragraph>
         <Space>
           <Button type="primary" onClick={() => window.location.reload()}>
             刷新页面
           </Button>
-          <Button onClick={onLogout}>
+          <Button onClick={logout}>
             重新登录
           </Button>
         </Space>
@@ -80,7 +72,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   const handleCreateProject = async (values) => {
     setLoading(true);
     try {
-      await onCreateProject({
+      await createProject({
         name: values.name,
         description: values.description || ''
       });
@@ -91,12 +83,23 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    const diffMonth = Math.floor(diffDay / 30);
+    const diffYear = Math.floor(diffDay / 365);
+
+    if (diffSec < 60) return '刚刚';
+    if (diffMin < 60) return `${diffMin} 分钟前`;
+    if (diffHour < 24) return `${diffHour} 小时前`;
+    if (diffDay < 30) return `${diffDay} 天前`;
+    if (diffMonth < 12) return `${diffMonth} 个月前`;
+    return `${diffYear} 年前`;
   };
 
   const getProjectStats = (project) => {
@@ -110,15 +113,15 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   const userMenuItems = [
     {
       key: 'theme',
-      icon: isDarkMode ? <SunOutlined /> : <MoonOutlined />,
-      label: isDarkMode ? '切换至亮色主题' : '切换至暗色主题',
+      icon: isDarkMode ? <MoonOutlined /> : <SunOutlined />,
+      label: '切换主题模式',
       onClick: toggleTheme
     },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: '退出登录',
-      onClick: onLogout
+      onClick: logout
     }
   ];
 
@@ -127,7 +130,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       key: 'edit',
       icon: <EditOutlined />,
       label: '编辑项目',
-      onClick: () => onSelectProject(project.id)
+      onClick: () => navigate(`/project/${project.id}`)
     },
     {
       key: 'delete',
@@ -138,9 +141,9 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           title: '删除项目',
           message: `您确定要删除项目 "${project.name}" 吗？此操作无法撤销。`,
           content: (
-            <div style={{ marginTop: '12px' }}>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-                请输入项目名称 <strong style={{ color: '#ff4d4f' }}>{project.name}</strong> 以确认删除：
+            <div className="mt-3">
+              <p className="text-sm text-muted-foreground mb-2">
+                请输入项目名称 <strong className="text-error">{project.name}</strong> 以确认删除：
               </p>
             </div>
           ),
@@ -155,7 +158,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           errorMessage: '删除项目失败',
           onConfirm: (inputValue) => {
             if (inputValue === project.name) {
-              return onDeleteProject(project.id);
+              return deleteProject(project.id);
             } else {
               throw new Error('项目名称不匹配，删除已取消');
             }
@@ -168,28 +171,15 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
 
   const ProjectCard = ({ project }) => {
     const stats = getProjectStats(project);
-    
+
     return (
       <Card
-        style={{
-          borderRadius: 12,
-          border: `1px solid ${isDarkMode ? '#404040' : '#e0e0e0'}`,
-          background: isDarkMode ? '#2d2d2d' : '#ffffff',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden',
-          height: '100%',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)'
-        }}
+        className="project-card"
         actions={[
-          <Button 
-            type="primary" 
-            onClick={() => onSelectProject(project.id)}
-            style={{
-              borderRadius: 6,
-              height: 36,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              fontSize: '0.9rem'
-            }}
+          <Button
+            type="primary"
+            onClick={() => navigate(`/project/${project.id}`)}
+            className="open-project-btn"
           >
             打开项目
           </Button>
@@ -200,90 +190,47 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
             trigger={['click']}
             placement="bottomRight"
           >
-            <Button 
-              type="text" 
+            <Button
+              type="text"
               icon={<MoreOutlined />}
-              style={{
-                color: isDarkMode ? '#cccccc' : '#666',
-                borderRadius: 6,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                fontSize: '14px',
-                width: 28,
-                height: 28,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid transparent'
-              }}
+              className="project-menu-btn"
             />
           </Dropdown>
         }
       >
-        <div style={{ marginBottom: '0.75rem', padding: '0 2px' }}>
-          <Title level={4} style={{ 
-            color: isDarkMode ? '#ffffff' : '#1a1a1a',
-            margin: 0,
-            fontWeight: 600,
-            fontSize: '1.1rem',
-            lineHeight: 1.2
-          }}>{project.name}</Title>
+        <div className="mb-3 px-0.5">
+          <Title level={4} className="project-title">
+            {project.name}
+          </Title>
         </div>
-        
+
         {project.description && (
-          <Paragraph style={{ 
-            color: isDarkMode ? '#cccccc' : '#666',
-            marginBottom: '1rem',
-            fontSize: '0.9rem',
-            lineHeight: 1.4,
-            minHeight: '2.1rem',
-            padding: '0 2px'
-          }} ellipsis={{ rows: 2 }}>
+          <Paragraph className="project-description" ellipsis={{ rows: 2 }}>
             {project.description}
           </Paragraph>
         )}
-        
-        <div style={{
-          marginBottom: '1rem',
-          padding: '0.75rem 1rem',
-          background: isDarkMode ? '#3d3d3d' : '#f8f9fa',
-          borderRadius: 8,
-          border: `1px solid ${isDarkMode ? '#505050' : '#e0e0e0'}`
-        }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Statistic
-                title="字数"
-                value={stats.wordCount}
-                suffix="字"
-                valueStyle={{ fontSize: '16px', fontWeight: 600 }}
-              />
-            </Col>
-            <Col span={12}>
-              <Statistic
-                title="章节"
-                value={stats.chapters}
-                suffix="章"
-                valueStyle={{ fontSize: '16px', fontWeight: 600 }}
-              />
-            </Col>
-          </Row>
+
+        <div className="project-stats">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <FileTextOutlined className="text-primary text-sm" />
+              <span className="text-sm font-semibold text-foreground">{stats.wordCount}</span>
+              <span className="text-xs text-muted-foreground">字</span>
+            </div>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-1.5">
+              <BookOutlined className="text-primary text-sm" />
+              <span className="text-sm font-semibold text-foreground">{stats.chapters}</span>
+              <span className="text-xs text-muted-foreground">章</span>
+            </div>
+          </div>
         </div>
-        
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: '0.75rem',
-          borderTop: `1px solid ${isDarkMode ? '#404040' : 'rgba(0, 0, 0, 0.06)'}`,
-          marginTop: '0.5rem'
-        }}>
+
+        <div className="project-footer">
           <Space>
-            <CalendarOutlined style={{ color: isDarkMode ? '#cccccc' : '#999', fontSize: '0.9rem' }} />
-            <Text style={{ 
-              color: isDarkMode ? '#cccccc' : '#666',
-              fontSize: '0.85rem'
-            }}>
-              更新于 {formatDate(stats.lastUpdated)}
+            <ClockCircleOutlined className="text-muted-foreground text-sm" />
+            <Text className="text-xs text-muted-foreground">
+              {formatRelativeTime(stats.lastUpdated)}
             </Text>
           </Space>
         </div>
@@ -292,16 +239,9 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
   };
 
   return (
-    <div className="dashboard-container" style={{ 
-      minHeight: '100vh',
-      background: isDarkMode ? '#1a1a1a' : '#f5f5f5'
-    }}>
+    <div className="dashboard-container bg-background min-h-screen">
       {/* 头部区域 */}
-      <div className="dashboard-header" style={{
-        padding: '2rem 2rem 1rem',
-        background: isDarkMode ? '#2d2d2d' : '#ffffff',
-        borderBottom: `1px solid ${isDarkMode ? '#404040' : '#e0e0e0'}`
-      }}>
+      <div className="dashboard-header bg-card border-b border-border">
         <div className="header-content">
           <div className="header-left">
             <Title level={2} className="dashboard-title">
@@ -311,51 +251,32 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
               欢迎回来，{user?.name || user?.username || '用户'}
             </Paragraph>
           </div>
-          
+
           <div className="header-right">
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => setShowCreateModal(true)}
               size="large"
-              style={{
-                borderRadius: 8,
-                height: 48,
-                fontWeight: 600
-              }}
+              className="create-project-btn"
             >
               新建项目
             </Button>
-            
+
             <Dropdown
               menu={{ items: userMenuItems }}
               trigger={['click']}
               placement="bottomRight"
             >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem 1rem',
-                background: isDarkMode ? '#2d2d2d' : '#f8f9fa',
-                borderRadius: 8,
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: `1px solid ${isDarkMode ? '#404040' : '#e0e0e0'}`
-              }}>
-                <Avatar 
-                  src={user?.avatar} 
+              <div className="user-menu">
+                <Avatar
+                  src={user?.avatar}
                   icon={<UserOutlined />}
-                  style={{
-                    background: isDarkMode ? '#ffffff' : '#1a1a1a',
-                    border: `2px solid ${isDarkMode ? '#404040' : '#e0e0e0'}`
-                  }}
+                  className="user-avatar"
                 />
-                <Text style={{
-                  color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                  fontWeight: 500,
-                  fontSize: '0.95rem'
-                }}>{user?.name || user?.username || '用户'}</Text>
+                <Text className="username">
+                  {user?.name || user?.username || '用户'}
+                </Text>
               </div>
             </Dropdown>
           </div>
@@ -363,34 +284,17 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
       </div>
 
       {/* 项目网格 */}
-      <div style={{
-        padding: '2rem',
-        maxWidth: 1400,
-        margin: '0 auto'
-      }}>
+      <div className="projects-content">
         {projects.length === 0 ? (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: 400
-          }}>
+          <div className="empty-state">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                  <Title level={4} style={{ 
-                    color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                    margin: '0 0 1rem 0',
-                    fontWeight: 600
-                  }}>还没有项目</Title>
-                  <Paragraph style={{ 
-                    color: isDarkMode ? '#cccccc' : '#666',
-                    margin: 0,
-                    fontSize: '1rem',
-                    maxWidth: 400,
-                    lineHeight: 1.6
-                  }}>
+                <div className="text-center mb-8">
+                  <Title level={4} className="empty-title">
+                    还没有项目
+                  </Title>
+                  <Paragraph className="empty-description">
                     创建您的第一个小说项目，开始您的创作之旅
                   </Paragraph>
                 </div>
@@ -400,12 +304,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
                 type="primary"
                 onClick={() => setShowCreateModal(true)}
                 size="large"
-                style={{
-                  borderRadius: 8,
-                  height: 48,
-                  fontWeight: 600,
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                }}
+                className="create-first-project-btn"
               >
                 创建项目
               </Button>
@@ -413,7 +312,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
           </div>
         ) : (
           <Row gutter={[24, 24]} className="projects-grid">
-            {projects.map(project => (
+            {projects.filter(p => p.user_id === user?.id).map(project => (
               <Col xs={24} sm={24} md={12} lg={8} xl={6} key={project.id}>
                 <ProjectCard project={project} />
               </Col>
@@ -432,18 +331,7 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
         }}
         footer={null}
         width={520}
-        styles={{
-          content: {
-            borderRadius: 16,
-            background: isDarkMode ? '#2d2d2d' : '#ffffff',
-            border: `1px solid ${isDarkMode ? '#404040' : 'rgba(255, 255, 255, 0.2)'}`
-          },
-          header: {
-            borderBottom: `1px solid ${isDarkMode ? '#404040' : 'rgba(0, 0, 0, 0.06)'}`,
-            borderRadius: '16px 16px 0 0',
-            background: 'transparent'
-          }
-        }}
+        className="create-project-modal"
       >
         <Form
           form={form}
@@ -466,17 +354,13 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
               },
             ]}
           >
-            <Input 
-              placeholder="输入项目名称" 
+            <Input
+              placeholder="输入项目名称"
               size="large"
-              style={{
-                borderRadius: 8,
-                border: `1px solid ${isDarkMode ? '#505050' : '#e0e0e0'}`,
-                transition: 'all 0.3s ease'
-              }}
+              className="form-input"
             />
           </Form.Item>
-          
+
           <Form.Item
             name="description"
             label="项目描述"
@@ -484,45 +368,28 @@ const ProjectDashboard = ({ user, projects, onSelectProject, onCreateProject, on
             <TextArea
               placeholder="简要描述您的小说项目（可选）"
               rows={3}
-              style={{
-                borderRadius: 8,
-                border: `1px solid ${isDarkMode ? '#505050' : '#e0e0e0'}`,
-                transition: 'all 0.3s ease'
-              }}
+              className="form-textarea"
             />
           </Form.Item>
-          
+
           <Form.Item className="form-actions">
             <Space>
-              <Button 
+              <Button
                 onClick={() => {
                   setShowCreateModal(false);
                   form.resetFields();
                 }}
                 size="large"
-                style={{
-                  borderRadius: 8,
-                  border: `1px solid ${isDarkMode ? '#505050' : '#e0e0e0'}`,
-                  color: isDarkMode ? '#cccccc' : '#666',
-                  fontWeight: 500,
-                  height: 44,
-                  transition: 'all 0.3s ease',
-                  background: isDarkMode ? '#3d3d3d' : 'transparent'
-                }}
+                className="cancel-btn"
               >
                 取消
               </Button>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 htmlType="submit"
                 loading={loading}
                 size="large"
-                style={{
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  height: 44,
-                  transition: 'all 0.3s ease'
-                }}
+                className="submit-btn"
               >
                 创建项目
               </Button>

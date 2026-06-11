@@ -7,48 +7,6 @@ import {
   IoPersonCircle, IoLocationSharp, IoPeople, IoGlobeSharp, IoLibrary, IoTime
 } from 'react-icons/io5';
 
-// 为"开始写作"按钮添加特殊样式
-const startWritingStyles = `
-  <style>
-    .start-writing a {
-      background-color: rgba(79, 70, 229, 0.1) !important;
-      color: #4338ca !important;
-      font-weight: 600;
-      border-radius: 12px;
-      margin: 4px 0;
-      border: 1px solid rgba(79, 70, 229, 0.12) !important;
-      box-shadow: none !important;
-    }
-
-    .start-writing a:hover {
-      background-color: rgba(79, 70, 229, 0.16) !important;
-      border-color: rgba(79, 70, 229, 0.18) !important;
-    }
-
-    .start-writing.active a {
-      background-color: #4f46e5 !important;
-      color: #ffffff !important;
-      border-color: #4f46e5 !important;
-    }
-
-    .dark-theme .start-writing a {
-      background-color: rgba(129, 140, 248, 0.12) !important;
-      color: #c7d2fe !important;
-      border-color: rgba(129, 140, 248, 0.18) !important;
-    }
-
-    .dark-theme .start-writing a:hover {
-      background-color: rgba(129, 140, 248, 0.18) !important;
-    }
-
-    .dark-theme .start-writing.active a {
-      background-color: #6366f1 !important;
-      color: #ffffff !important;
-      border-color: #6366f1 !important;
-    }
-  </style>
-`;
-
 const menuIcons = {
   '开始写作': <FaBook />,
   '模型参数选择': <FaCog />,
@@ -69,11 +27,11 @@ const menuIcons = {
   '项目总览': <FaBook />,
 };
 
-const Sidebar = ({ 
-  menuItems, 
-  activeItem, 
-  setActiveItem, 
-  isCollapsed, 
+const Sidebar = ({
+  menuItems,
+  activeItem,
+  setActiveItem,
+  isCollapsed,
   toggleSidebar,
   currentProject,
   projects,
@@ -86,7 +44,6 @@ const Sidebar = ({
 }) => {
   return (
     <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      <div dangerouslySetInnerHTML={{ __html: startWritingStyles }} />
       {!isCollapsed && hideProjectSelector && onBackToDashboard && !hideBackButton && (
         <>
           <div className="project-header-with-back">
@@ -100,13 +57,13 @@ const Sidebar = ({
           </div>
         </>
       )}
-      
+
       <div className="sidebar-header">
         <div className="project-section">
           {!isCollapsed && !hideProjectSelector && (
             <div className="project-selector">
-              <select 
-                value={currentProject || ''} 
+              <select
+                value={currentProject || ''}
                 onChange={(e) => setCurrentProject(e.target.value || null)}
                 className="project-dropdown"
               >
@@ -117,8 +74,8 @@ const Sidebar = ({
                   </option>
                 ))}
               </select>
-              <button 
-                className="new-project-btn" 
+              <button
+                className="new-project-btn"
                 onClick={onCreateProject}
                 title="新建项目"
               >
@@ -126,7 +83,7 @@ const Sidebar = ({
               </button>
             </div>
           )}
-          
+
           {!isCollapsed && (
             <div className="app-title-section">
               <h1>AINovel</h1>
@@ -138,7 +95,7 @@ const Sidebar = ({
           {isCollapsed ? <FaBars /> : <FaTimes />}
         </button>
       </div>
-      
+
       {(currentProject || hideProjectSelector) && (
         <div className="sidebar-menu">
           {Object.entries(menuItems).map(([section, items]) => (
@@ -146,11 +103,11 @@ const Sidebar = ({
               {!isCollapsed && section !== '开始写作' && <h3>{section}</h3>}
               <ul>
                 {items.map((item) => (
-                  <li 
-                    key={item} 
+                  <li
+                    key={item}
                     className={`${activeItem === item ? 'active' : ''} ${item === '开始写作' ? 'start-writing' : ''}`}
                   >
-                    <a href="#" onClick={() => setActiveItem(item)}>
+                    <a href="#" onClick={(e) => { e.preventDefault(); setActiveItem(item); }} data-title={item}>
                       {menuIcons[item] || <FaBook />}
                       {!isCollapsed && <span>{item}</span>}
                     </a>
@@ -161,7 +118,7 @@ const Sidebar = ({
           ))}
         </div>
       )}
-      
+
       {!currentProject && !hideProjectSelector && !isCollapsed && (
         <div className="no-project-message">
         </div>

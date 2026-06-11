@@ -1,15 +1,10 @@
 .dashboard-container {
   min-height: 100vh;
-  background: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-family);
 }
 
 .dashboard-header {
   padding: 2rem 2rem 1rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .header-content {
@@ -28,18 +23,18 @@
 }
 
 .dashboard-title {
-  color: #1a1a1a !important;
   margin: 0 0 0.5rem 0 !important;
   font-weight: 700 !important;
   font-size: 2.5rem !important;
   letter-spacing: -0.02em;
+  color: var(--text-color) !important;
 }
 
 .welcome-text {
-  color: #666 !important;
   margin: 0 !important;
   font-size: 1.1rem;
   font-weight: 400;
+  color: var(--secondary-text-color) !important;
 }
 
 .header-right {
@@ -49,21 +44,9 @@
 }
 
 .create-project-btn {
-  background: #1a1a1a !important;
-  border: 1px solid #e0e0e0 !important;
-  color: #ffffff !important;
-  transition: all 0.3s ease;
-  font-weight: 600;
   border-radius: 8px;
   height: 48px;
-  padding: 0 1.5rem;
-}
-
-.create-project-btn:hover {
-  background: #333333 !important;
-  border-color: #d0d0d0 !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
 }
 
 .user-menu {
@@ -71,26 +54,26 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: #f8f9fa;
+  background: var(--hover-bg);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border-color);
 }
 
 .user-menu:hover {
-  background: #e9ecef;
+  background: var(--border-color);
   transform: translateY(-1px);
 }
 
 .user-avatar {
-  background: #1a1a1a !important;
-  border: 2px solid #e0e0e0 !important;
-  color: #ffffff !important;
+  background: var(--text-color) !important;
+  border: 2px solid var(--border-color) !important;
+  color: var(--bg-color) !important;
 }
 
 .username {
-  color: #1a1a1a !important;
+  color: var(--text-color) !important;
   font-weight: 500;
   font-size: 0.95rem;
 }
@@ -105,51 +88,38 @@
   margin: 0 !important;
 }
 
+/* 项目卡片 */
 .project-card {
   border-radius: 12px !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color) !important;
+  background: var(--elevated-bg) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   height: 100%;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color) !important;
 }
 
 .project-card .ant-card-body {
   padding: 1rem !important;
 }
 
-.project-card .ant-card-head {
-  padding: 0.5rem 1rem !important;
-  min-height: auto !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+.project-card .ant-card-actions {
+  background: transparent !important;
+  border-top: 1px solid var(--border-color) !important;
 }
 
-.project-card .ant-card-head-title {
-  padding: 0 !important;
-  font-weight: 600 !important;
-  font-size: 1.1rem !important;
-  line-height: 1.2 !important;
-}
-
-.project-card .ant-card-extra {
-  padding: 0 !important;
-}
-
-.project-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: rgba(255, 255, 255, 0.25) !important;
-}
-
-.project-header {
-  margin-bottom: 0.75rem;
-  padding: 0 2px;
+.project-card .ant-card-actions > li {
+  margin: 0 !important;
 }
 
 .project-title {
-  color: #1a1a1a !important;
+  color: var(--text-color) !important;
   margin: 0 !important;
   font-weight: 600 !important;
   font-size: 1.1rem !important;
@@ -157,7 +127,7 @@
 }
 
 .project-description {
-  color: #666 !important;
+  color: var(--secondary-text-color) !important;
   margin-bottom: 1rem !important;
   font-size: 0.9rem;
   line-height: 1.4;
@@ -168,20 +138,9 @@
 .project-stats {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: #f8f9fa;
+  background: var(--hover-bg);
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.project-stats .ant-statistic-title {
-  color: #666 !important;
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-
-.project-stats .ant-statistic-content {
-  color: #1a1a1a !important;
+  border: 1px solid var(--border-color);
 }
 
 .project-footer {
@@ -189,22 +148,11 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 0.75rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-color);
   margin-top: 0.5rem;
 }
 
-.footer-icon {
-  color: #999;
-  font-size: 0.9rem;
-}
-
-.update-text {
-  font-size: 0.85rem !important;
-}
-
 .open-project-btn {
-  background: #1a1a1a !important;
-  border: 1px solid #e0e0e0 !important;
   border-radius: 6px !important;
   font-weight: 500;
   height: 36px;
@@ -212,14 +160,8 @@
   font-size: 0.9rem;
 }
 
-.open-project-btn:hover {
-  background: #333333 !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
 .project-menu-btn {
-  color: #666 !important;
+  color: var(--secondary-text-color) !important;
   border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 14px !important;
@@ -232,12 +174,13 @@
 }
 
 .project-menu-btn:hover {
-  color: #1a1a1a !important;
-  background: #f8f9fa;
-  border-color: #d0d0d0 !important;
+  color: var(--text-color) !important;
+  background: var(--hover-bg);
+  border-color: var(--border-color) !important;
   transform: scale(1.05);
 }
 
+/* 空状态 */
 .empty-state {
   display: flex;
   justify-content: center;
@@ -245,117 +188,94 @@
   min-height: 400px;
 }
 
-.empty-content {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
 .empty-title {
-  color: #1a1a1a !important;
   margin: 0 0 1rem 0 !important;
   font-weight: 600 !important;
+  color: var(--text-color) !important;
 }
 
 .empty-description {
-  color: #666 !important;
   margin: 0 !important;
   font-size: 1rem;
   max-width: 400px;
   line-height: 1.6;
+  color: var(--secondary-text-color) !important;
 }
 
 .create-first-project-btn {
-  background: #1a1a1a !important;
-  border: 1px solid #e0e0e0 !important;
-  color: #ffffff !important;
   border-radius: 8px;
   height: 48px;
   font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-
-.create-first-project-btn:hover {
-  background: #333333 !important;
-  border-color: #d0d0d0 !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 模态框样式 */
+/* 模态框 */
 .create-project-modal .ant-modal-content {
   border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: var(--elevated-bg) !important;
+  border: 1px solid var(--border-color) !important;
   backdrop-filter: blur(10px);
 }
 
 .create-project-modal .ant-modal-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-bottom: 1px solid var(--border-color) !important;
   border-radius: 16px 16px 0 0 !important;
   background: transparent !important;
 }
 
 .create-project-modal .ant-modal-title {
-  color: #1a1a1a !important;
+  color: var(--text-color) !important;
   font-weight: 600 !important;
 }
 
 .create-project-modal .ant-modal-close {
-  color: #666 !important;
+  color: var(--secondary-text-color) !important;
 }
 
 .create-project-modal .ant-modal-close:hover {
-  color: #1a1a1a !important;
+  color: var(--text-color) !important;
 }
 
 .create-project-form .ant-form-item-label {
   font-weight: 500 !important;
-  color: #1a1a1a !important;
+  color: var(--text-color) !important;
 }
 
 .form-input,
 .form-textarea {
   border-radius: 8px !important;
-  border: 1px solid #e0e0e0 !important;
+  border: 1px solid var(--border-color) !important;
   transition: all 0.3s ease;
+  background: var(--bg-color) !important;
+  color: var(--text-color) !important;
 }
 
 .form-input:focus,
 .form-textarea:focus {
-  border-color: #667eea !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 15%, transparent) !important;
 }
 
 .cancel-btn {
   border-radius: 8px !important;
-  border: 1px solid #e0e0e0 !important;
-  color: #666 !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--secondary-text-color) !important;
   font-weight: 500;
   height: 44px;
   transition: all 0.3s ease;
+  background: var(--hover-bg) !important;
 }
 
 .cancel-btn:hover {
-  border-color: #d0d0d0 !important;
-  color: #1a1a1a !important;
+  border-color: var(--primary-color) !important;
+  color: var(--text-color) !important;
   transform: translateY(-1px);
 }
 
 .submit-btn {
-  background: #1a1a1a !important;
-  border: 1px solid #e0e0e0 !important;
   border-radius: 8px !important;
   font-weight: 600;
   height: 44px;
   transition: all 0.3s ease;
-}
-
-.submit-btn:hover {
-  background: #333333 !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .form-actions {
@@ -367,41 +287,41 @@
   .dashboard-header {
     padding: 1.5rem 1rem 1rem;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .dashboard-title {
     font-size: 2rem !important;
   }
-  
+
   .welcome-text {
     font-size: 1rem;
   }
-  
+
   .projects-content {
     padding: 1rem;
   }
-  
+
   .projects-grid {
     grid-template-columns: 1fr !important;
   }
-  
+
   .project-card {
     margin-bottom: 1rem;
   }
-  
+
   .create-project-btn {
     padding: 0 1rem;
     font-size: 0.9rem;
   }
-  
+
   .user-menu {
     padding: 0.4rem 0.8rem;
   }
-  
+
   .username {
     font-size: 0.9rem;
   }
@@ -411,194 +331,27 @@
   .dashboard-title {
     font-size: 1.75rem !important;
   }
-  
+
   .welcome-text {
     font-size: 0.95rem;
   }
-  
+
   .projects-content {
     padding: 0.75rem;
   }
-  
+
   .create-project-btn {
     height: 40px;
     font-size: 0.85rem;
     padding: 0 0.75rem;
   }
-  
+
   .user-avatar {
     width: 32px !important;
     height: 32px !important;
   }
-  
+
   .username {
     display: none;
   }
 }
-
-/* 暗色主题支持 */
-@media (prefers-color-scheme: dark) {
-  .dashboard-container {
-    background: #1a1a1a !important;
-  }
-  
-  .dashboard-header {
-    background: #2d2d2d !important;
-    border-bottom-color: #404040 !important;
-  }
-  
-  .dashboard-title {
-    color: #ffffff !important;
-  }
-  
-  .welcome-text {
-    color: #cccccc !important;
-  }
-  
-  .create-project-btn {
-    background: #ffffff !important;
-    border-color: #404040 !important;
-    color: #1a1a1a !important;
-  }
-  
-  .create-project-btn:hover {
-    background: #f0f0f0 !important;
-    border-color: #505050 !important;
-  }
-  
-  .user-menu {
-    background: #2d2d2d !important;
-    border-color: #404040 !important;
-  }
-  
-  .user-menu:hover {
-    background: #3d3d3d !important;
-  }
-  
-  .username {
-    color: #ffffff !important;
-  }
-  
-  .project-card {
-    background: #2d2d2d !important;
-    border: 1px solid #404040 !important;
-  }
-  
-  .project-title {
-    color: #ffffff !important;
-  }
-  
-  .project-description {
-    color: #cccccc !important;
-  }
-  
-  .project-stats {
-    background: #3d3d3d !important;
-    border: 1px solid #505050 !important;
-  }
-  
-  .project-stats .ant-statistic-title {
-    color: #cccccc !important;
-  }
-  
-  .project-stats .ant-statistic-content {
-    color: #ffffff !important;
-  }
-  
-  .project-footer {
-    border-top-color: #404040 !important;
-  }
-  
-  .update-text {
-    color: #cccccc !important;
-  }
-  
-  .footer-icon {
-    color: #cccccc;
-  }
-  
-  .open-project-btn {
-    background: #ffffff !important;
-    border-color: #404040 !important;
-    color: #1a1a1a !important;
-  }
-  
-  .open-project-btn:hover {
-    background: #f0f0f0 !important;
-  }
-  
-  .empty-title {
-    color: #ffffff !important;
-  }
-  
-  .empty-description {
-    color: #cccccc !important;
-  }
-  
-  .create-first-project-btn {
-    background: #ffffff !important;
-    border-color: #404040 !important;
-    color: #1a1a1a !important;
-  }
-  
-  .create-first-project-btn:hover {
-    background: #f0f0f0 !important;
-  }
-  
-  .create-project-modal .ant-modal-content {
-    background: #2d2d2d !important;
-    border: 1px solid #404040 !important;
-  }
-  
-  .create-project-modal .ant-modal-title {
-    color: #ffffff !important;
-  }
-  
-  .create-project-modal .ant-modal-close {
-    color: #cccccc !important;
-  }
-  
-  .create-project-modal .ant-modal-close:hover {
-    color: #ffffff !important;
-  }
-  
-  .create-project-form .ant-form-item-label {
-    color: #ffffff !important;
-  }
-  
-  .form-input,
-  .form-textarea {
-    background: #3d3d3d !important;
-    border-color: #505050 !important;
-    color: #ffffff !important;
-  }
-  
-  .form-input:focus,
-  .form-textarea:focus {
-    border-color: #666666 !important;
-  }
-  
-  .cancel-btn {
-    background: #3d3d3d !important;
-    border-color: #505050 !important;
-    color: #cccccc !important;
-  }
-  
-  .cancel-btn:hover {
-    background: #4d4d4d !important;
-    border-color: #606060 !important;
-    color: #ffffff !important;
-  }
-  
-  .submit-btn {
-    background: #ffffff !important;
-    border-color: #404040 !important;
-    color: #1a1a1a !important;
-  }
-  
-  .submit-btn:hover {
-    background: #f0f0f0 !important;
-  }
-}
-
-/* 移除了动画效果以避免闪烁问题 */

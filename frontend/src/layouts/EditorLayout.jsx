@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import Sidebar from '../Sidebar';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from './ThemeProvider';
+import { useTheme } from '../components/ThemeProvider';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import { getProject } from '../services/projectService';
-import { useNotification } from './NotificationManager';
-import './ProjectEditor.css';
+import { useNotification } from '../components/NotificationManager';
 
 // 路由段落到菜单项标签的映射
 const routeToMenuItem = {
@@ -54,19 +53,16 @@ const menuItems = {
   '项目看板': ['项目总览', '进度追踪', '看板页'],
 };
 
-const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjectsChange }) => {
-  const { id: urlProjectId } = useParams();
+const EditorLayout = () => {
+  const { id: projectId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { projects, fetchProjects } = useAuth();
   const { themeMode, effectiveMode, toggleTheme } = useTheme();
   const { addNotification } = useNotification();
-
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [project, setProject] = useState(propProject || null);
+  const [project, setProject] = useState(null);
   const [isLoadingProject, setIsLoadingProject] = useState(false);
-
-  const projectId = propProject ? propProject.id : parseInt(urlProjectId, 10);
 
   // 根据当前路由计算 activeItem
   const activeItem = useMemo(() => {
@@ -75,19 +71,17 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
     return routeToMenuItem[routeSegment] || '开始写作';
   }, [location.pathname]);
 
-  // 若未通过 prop 传入 project，则尝试从上下文或接口获取
+  // 获取或加载项目信息
   useEffect(() => {
-    if (propProject) {
-      setProject(propProject);
-      return;
-    }
-    const found = projects.find((p) => p.id === projectId);
+    const numericId = parseInt(projectId, 10);
+    const found = projects.find((p) => p.id === numericId);
     if (found) {
       setProject(found);
       return;
     }
+
     setIsLoadingProject(true);
-    getProject(projectId)
+    getProject(numericId)
       .then((data) => setProject(data))
       .catch(() => {
         addNotification({
@@ -95,27 +89,22 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
           type: 'error',
           duration: 3000,
         });
-        if (onBackToDashboard) {
-          onBackToDashboard();
-        } else {
-          navigate('/dashboard');
-        }
+        navigate('/dashboard');
       })
       .finally(() => setIsLoadingProject(false));
-  }, [projectId, propProject, projects, navigate, addNotification, onBackToDashboard]);
+  }, [projectId, projects, navigate, addNotification]);
 
+  // 侧边栏折叠
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
+  // 返回仪表盘
   const handleBackToDashboard = () => {
-    if (onBackToDashboard) {
-      onBackToDashboard();
-    } else {
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
+  // 菜单项点击处理
   const handleSetActiveItem = (item) => {
     const route = menuItemToRoute[item];
     if (route) {
@@ -129,6 +118,7 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
     }
   };
 
+  // 获取主题图标和文本
   const getThemeInfo = () => {
     switch (themeMode) {
       case 'system':
@@ -145,15 +135,18 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
   if (isLoadingProject) {
     return (
       <div className="loading-container">
-        <div className="loading-spinner" style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid var(--border-color)',
-          borderTop: '4px solid var(--primary-color)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <div style={{ color: 'var(--secondary-text-color)', fontSize: '16px', textAlign: 'center' }}>
+        <div
+          className="loading-spinner"
+          style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid var(--border-color)',
+            borderTop: '4px solid var(--primary-color)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}
+        />
+        <div className="text-base text-center" style={{ color: 'var(--secondary-text-color)' }}>
           加载项目中...
         </div>
       </div>
@@ -168,7 +161,7 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
         setActiveItem={handleSetActiveItem}
         isCollapsed={isSidebarCollapsed}
         toggleSidebar={toggleSidebar}
-        currentProject={projectId}
+        currentProject={parseInt(projectId, 10)}
         projects={project ? [project] : []}
         setCurrentProject={() => {}}
         onCreateProject={() => {}}
@@ -194,4 +187,4 @@ const ProjectEditor = ({ user, project: propProject, onBackToDashboard, onProjec
   );
 };
 
-export default ProjectEditor;
+export default EditorLayout;

@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
 import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
+import { useTheme } from './ThemeProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { login, register } from '../services/authService';
 import { STORAGE_KEYS } from '../services/core/authStorage';
 import './AuthPage.css';
 
 const { TabPane } = Tabs;
 
-const AuthPage = ({ onLogin }) => {
+const AuthPage = () => {
+  const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
+  const { isDarkMode, setThemeMode } = useTheme();
   const [activeTab, setActiveTab] = useState('login');
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
@@ -16,7 +22,6 @@ const AuthPage = ({ onLogin }) => {
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showShapeSettings, setShowShapeSettings] = useState(false);
   const [enabledShapes, setEnabledShapes] = useState(() => {
     try {
@@ -64,7 +69,8 @@ const AuthPage = ({ onLogin }) => {
     try {
       const data = await login(values);
       message.success('登录成功');
-      onLogin(data.access_token);
+      await authLogin(data.access_token);
+      navigate('/dashboard');
     } catch (error) {
       message.error(error.message || '登录失败');
     } finally {
@@ -242,11 +248,10 @@ const AuthPage = ({ onLogin }) => {
                 <div className="pwd-strength">
                   <span>密码强度</span>
                   <div className="pwd-strength-bar">
-                    <div className="pwd-strength-fill" style={{
-                      width: `${passwordStrength}%`,
-                      background: passwordStrength < 40 ? '#ff4d4f' :
-                                 passwordStrength < 70 ? '#faad14' : '#52c41a',
-                    }} />
+                    <div
+                      className={`pwd-strength-fill ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`}
+                      style={{ width: `${passwordStrength}%` }}
+                    />
                   </div>
                   <span>{passwordStrength < 40 ? '弱' : passwordStrength < 70 ? '中' : '强'}</span>
                 </div>
@@ -289,7 +294,7 @@ const AuthPage = ({ onLogin }) => {
         </Card>
       
       <div className="auth-footer">
-        <Switch checked={isDarkMode} onChange={setIsDarkMode} checkedChildren="🌙" unCheckedChildren="☀️" />
+        <Switch checked={isDarkMode} onChange={(checked) => setThemeMode(checked ? 'dark' : 'light')} checkedChildren="🌙" unCheckedChildren="☀️" />
         <div style={{marginTop: '8px'}}>AINovel v1.0.0</div>
       </div>
 

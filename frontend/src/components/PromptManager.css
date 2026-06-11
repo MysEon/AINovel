@@ -52,7 +52,7 @@
 
 /* 编辑和预览模态框样式 */
 .ant-modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   border-bottom: none;
 }
 
@@ -103,7 +103,7 @@
 }
 
 .prompt-manager-toolbar .ant-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   border: none;
 }
 

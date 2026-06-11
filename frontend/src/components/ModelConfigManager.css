@@ -36,7 +36,7 @@
 
 .manager-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--text-color);
   font-size: 1.1rem;
   font-weight: 600;
 }
@@ -89,7 +89,7 @@
 .btn-icon {
   background: none;
   border: none;
-  color: #666;
+  color: var(--secondary-text-color);
   cursor: pointer;
   padding: 8px;
   border-radius: 4px;
@@ -98,7 +98,7 @@
 
 .btn-icon:hover {
   background-color: #f0f0f0;
-  color: #333;
+  color: var(--text-color);
 }
 
 .btn-icon.btn-danger {
@@ -115,7 +115,7 @@
   align-items: center;
   justify-content: center;
   height: 200px;
-  color: #666;
+  color: var(--secondary-text-color);
 }
 
 .spinner {
@@ -139,7 +139,7 @@
 .config-form h3 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #333;
+  color: var(--text-color);
 }
 
 .error-messages {
@@ -187,13 +187,13 @@
 .form-group label {
   margin-bottom: 8px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-color);
 }
 
 .form-group input,
 .form-group select {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.3s ease;
@@ -291,7 +291,7 @@ input:checked + .slider:before {
   border: none;
   white-space: nowrap;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   color: white;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
@@ -384,13 +384,13 @@ input:checked + .slider:before {
 .configs-list h3 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #333;
+  color: var(--text-color);
 }
 
 .no-configs {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--secondary-text-color);
 }
 
 .no-configs p {
@@ -419,7 +419,7 @@ input:checked + .slider:before {
 }
 
 .config-card {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   background: #fafafa;
@@ -440,7 +440,7 @@ input:checked + .slider:before {
 
 .config-header h4 {
   margin: 0;
-  color: #333;
+  color: var(--text-color);
   font-size: 18px;
 }
 
@@ -463,12 +463,12 @@ input:checked + .slider:before {
 }
 
 .config-item .label {
-  color: #666;
+  color: var(--secondary-text-color);
   font-weight: 500;
 }
 
 .config-item .value {
-  color: #333;
+  color: var(--text-color);
   font-family: 'Courier New', monospace;
   background: #f0f0f0;
   padding: 2px 6px;
@@ -477,7 +477,7 @@ input:checked + .slider:before {
 
 /* 深色主题支持 */
 .dark-theme .model-config-manager {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-track {
@@ -485,7 +485,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--text-color);
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-thumb:hover {
@@ -493,7 +493,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .manager-header h2 {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .config-form {
@@ -502,7 +502,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .config-form h3 {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .error-messages {
@@ -515,14 +515,14 @@ input:checked + .slider:before {
 }
 
 .dark-theme .form-group label {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .form-group input,
 .dark-theme .form-group select {
   background-color: #3d3d3d;
-  border-color: #555;
-  color: #e0e0e0;
+  border-color: var(--text-color);
+  color: var(--border-color);
 }
 
 .dark-theme .form-group input:focus,
@@ -537,7 +537,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .configs-list h3 {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .no-configs {
@@ -546,7 +546,7 @@ input:checked + .slider:before {
 
 .dark-theme .config-card {
   background: #3d3d3d;
-  border-color: #555;
+  border-color: var(--text-color);
 }
 
 .dark-theme .config-card:hover {
@@ -554,7 +554,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .config-header h4 {
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .config-item .label {
@@ -562,7 +562,7 @@ input:checked + .slider:before {
 }
 
 .dark-theme .config-item .value {
-  color: #e0e0e0;
+  color: var(--border-color);
   background: #2d2d2d;
 }
 
@@ -572,16 +572,16 @@ input:checked + .slider:before {
 
 .dark-theme .btn-icon:hover {
   background-color: #3d3d3d;
-  color: #e0e0e0;
+  color: var(--border-color);
 }
 
 .dark-theme .form-actions {
-  border-top-color: #555;
+  border-top-color: var(--text-color);
 }
 
 /* 深色主题按钮样式 */
 .dark-theme .test-connection-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
@@ -603,13 +603,13 @@ input:checked + .slider:before {
 .dark-theme .cancel-btn {
   background: #3d3d3d;
   color: #b0b0b0;
-  border-color: #555;
+  border-color: var(--text-color);
 }
 
 .dark-theme .cancel-btn:hover {
   background: #4d4d4d;
-  color: #e0e0e0;
-  border-color: #666;
+  color: var(--border-color);
+  border-color: var(--secondary-text-color);
 }
 
 /* 响应式设计 */

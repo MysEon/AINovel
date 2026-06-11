@@ -13,17 +13,17 @@
 }
 
 .character-manager::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--hover-bg);
   border-radius: 4px;
 }
 
 .character-manager::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 .character-manager::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--secondary-text-color);
 }
 
 /* Header */
@@ -62,10 +62,13 @@
   border-radius: 10px;
   transition: all 0.25s ease;
   cursor: pointer;
+  background: var(--elevated-bg);
+  border: 1px solid var(--border-color);
 }
 
 .character-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
 }
 
 .character-card.expanded {
@@ -84,7 +87,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,10 +105,12 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
+  color: var(--text-color);
 }
 
 .character-card-desc {
   font-size: 12px;
+  color: var(--secondary-text-color);
 }
 
 .character-card-actions {
@@ -134,11 +139,11 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 12px;
-  color: #888;
+  color: var(--secondary-text-color);
 }
 
 .quick-item {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--menu-item-bg);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -147,7 +152,7 @@
 .character-card-detail {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -161,7 +166,7 @@
 
 .detail-label {
   font-size: 13px;
-  color: #666;
+  color: var(--secondary-text-color);
 }
 
 .detail-content {
@@ -169,6 +174,7 @@
   line-height: 1.6;
   margin: 0 !important;
   white-space: pre-wrap;
+  color: var(--text-color);
 }
 
 /* Params grid in expanded card */
@@ -177,7 +183,7 @@
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--menu-item-bg);
   border-radius: 8px;
 }
 
@@ -189,11 +195,13 @@
 
 .param-label {
   font-size: 11px;
+  color: var(--secondary-text-color);
 }
 
 .param-value {
   font-size: 13px;
   font-weight: 500;
+  color: var(--text-color);
 }
 
 /* Dimension bars in expanded card */
@@ -219,7 +227,7 @@
 .dim-name {
   width: 32px;
   font-size: 12px;
-  color: #666;
+  color: var(--secondary-text-color);
   text-align: right;
   flex-shrink: 0;
 }
@@ -227,7 +235,7 @@
 .dim-bar-bg {
   flex: 1;
   height: 8px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--border-color);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -236,12 +244,13 @@
   height: 100%;
   border-radius: 4px;
   transition: width 0.3s ease;
+  background: var(--gradient-primary);
 }
 
 .dim-val {
   width: 28px;
   font-size: 12px;
-  color: #888;
+  color: var(--secondary-text-color);
   text-align: right;
   flex-shrink: 0;
 }
@@ -263,52 +272,5 @@
   margin-top: 8px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
-}
-
-/* ── Dark Theme ── */
-.dark-theme .character-manager-header h4 {
-  color: #e0e0e0;
-}
-
-.dark-theme .character-card {
-  background: #1e1e2e;
-  border-color: #2d2d3d;
-}
-
-.dark-theme .character-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.dark-theme .character-card-detail {
-  border-top-color: #2d2d3d;
-}
-
-.dark-theme .detail-label {
-  color: #aaa;
-}
-
-.dark-theme .quick-item {
-  background: rgba(255, 255, 255, 0.08);
-  color: #bbb;
-}
-
-.dark-theme .detail-params {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.dark-theme .dim-name {
-  color: #aaa;
-}
-
-.dark-theme .dim-bar-bg {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark-theme .dim-val {
-  color: #aaa;
-}
-
-.dark-theme .gender-journey-preview {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--menu-item-bg);
 }

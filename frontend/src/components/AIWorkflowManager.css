@@ -1,7 +1,7 @@
 .ai-workflow-manager {
   padding: 2rem;
-  background-color: #ffffff;
-  color: #333333;
+  background-color: var(--bg-color);
+  color: var(--text-color);
   min-height: 100%;
 }
 
@@ -11,13 +11,13 @@
 }
 
 .workflow-header h2 {
-  color: #2c3e50;
+  color: var(--text-color);
   margin-bottom: 0.5rem;
   font-size: 2rem;
 }
 
 .workflow-header p {
-  color: #7f8c8d;
+  color: var(--secondary-text-color);
   font-size: 1.1rem;
 }
 
@@ -29,8 +29,8 @@
 }
 
 .workflow-card {
-  background: #ffffff;
-  border: 2px solid #e9ecef;
+  background: var(--bg-color);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -45,24 +45,24 @@
 }
 
 .workflow-card.active {
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 .workflow-card.status-running {
-  border-color: #17a2b8;
+  border-color: var(--primary-color);
 }
 
 .workflow-card.status-completed {
-  border-color: #28a745;
+  border-color: var(--success-color);
 }
 
 .workflow-card.status-failed {
-  border-color: #dc3545;
+  border-color: var(--error-color);
 }
 
 .workflow-card.status-stopped {
-  border-color: #ffc107;
+  border-color: var(--warning-color);
 }
 
 .workflow-header {
@@ -75,7 +75,7 @@
 .workflow-icon {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -90,35 +90,35 @@
 
 .workflow-info h3 {
   margin: 0 0 0.25rem 0;
-  color: #2c3e50;
+  color: var(--text-color);
   font-size: 1.25rem;
 }
 
 .workflow-info p {
   margin: 0;
-  color: #7f8c8d;
+  color: var(--secondary-text-color);
   font-size: 0.9rem;
 }
 
 .workflow-status {
   font-size: 1.5rem;
-  color: #6c757d;
+  color: var(--secondary-text-color);
 }
 
 .workflow-card.status-running .workflow-status {
-  color: #17a2b8;
+  color: var(--primary-color);
 }
 
 .workflow-card.status-completed .workflow-status {
-  color: #28a745;
+  color: var(--success-color);
 }
 
 .workflow-card.status-failed .workflow-status {
-  color: #dc3545;
+  color: var(--error-color);
 }
 
 .workflow-card.status-stopped .workflow-status {
-  color: #ffc107;
+  color: var(--warning-color);
 }
 
 .workflow-steps {
@@ -127,7 +127,7 @@
 
 .workflow-steps h4 {
   margin: 0 0 0.75rem 0;
-  color: #495057;
+  color: var(--text-color);
   font-size: 1rem;
   font-weight: 600;
 }
@@ -144,24 +144,24 @@
   gap: 0.75rem;
   padding: 0.5rem;
   border-radius: 8px;
-  background-color: #f8f9fa;
+  background-color: var(--hover-bg);
   transition: all 0.2s ease;
 }
 
 .step-item.active {
-  background-color: #e3f2fd;
-  border-left: 3px solid #007bff;
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  border-left: 3px solid var(--primary-color);
 }
 
 .step-item.completed {
-  background-color: #e8f5e8;
-  border-left: 3px solid #28a745;
+  background-color: color-mix(in srgb, var(--success-color) 10%, transparent);
+  border-left: 3px solid var(--success-color);
 }
 
 .step-icon {
   width: 24px;
   height: 24px;
-  background-color: #6c757d;
+  background-color: var(--secondary-text-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -171,11 +171,11 @@
 }
 
 .step-item.active .step-icon {
-  background-color: #007bff;
+  background-color: var(--primary-color);
 }
 
 .step-item.completed .step-icon {
-  background-color: #28a745;
+  background-color: var(--success-color);
 }
 
 .step-info {
@@ -187,12 +187,12 @@
 
 .step-name {
   font-weight: 500;
-  color: #495057;
+  color: var(--text-color);
 }
 
 .step-progress {
   font-size: 0.8rem;
-  color: #007bff;
+  color: var(--primary-color);
   font-weight: 600;
 }
 
@@ -203,7 +203,7 @@
 .progress-bar {
   width: 100%;
   height: 8px;
-  background-color: #e9ecef;
+  background-color: var(--border-color);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -211,7 +211,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #007bff, #0056b3);
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -224,12 +224,12 @@
 }
 
 .progress-text {
-  color: #495057;
+  color: var(--text-color);
   font-weight: 500;
 }
 
 .duration {
-  color: #6c757d;
+  color: var(--secondary-text-color);
 }
 
 .workflow-actions {
@@ -253,30 +253,30 @@
 }
 
 .action-btn.primary {
-  background-color: #007bff;
+  background-color: var(--primary-color);
   color: white;
 }
 
 .action-btn.primary:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
 }
 
 .action-btn.primary.stop {
-  background-color: #dc3545;
+  background-color: var(--error-color);
 }
 
 .action-btn.primary.stop:hover:not(:disabled) {
-  background-color: #c82333;
+  background-color: color-mix(in srgb, var(--error-color) 85%, black);
 }
 
 .action-btn.secondary {
-  background-color: #6c757d;
+  background-color: var(--secondary-text-color);
   color: white;
 }
 
 .action-btn.secondary:hover:not(:disabled) {
-  background-color: #5a6268;
+  background-color: var(--text-color);
   transform: translateY(-1px);
 }
 
@@ -301,7 +301,7 @@
 }
 
 .workflow-config-dialog {
-  background: white;
+  background: var(--elevated-bg);
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -315,12 +315,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .dialog-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: var(--text-color);
 }
 
 .close-btn {
@@ -328,7 +328,7 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6c757d;
+  color: var(--secondary-text-color);
   width: 32px;
   height: 32px;
   display: flex;
@@ -339,8 +339,8 @@
 }
 
 .close-btn:hover {
-  background-color: #f8f9fa;
-  color: #495057;
+  background-color: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .dialog-content {
@@ -353,7 +353,7 @@
 
 .config-section h4 {
   margin: 0 0 1rem 0;
-  color: #495057;
+  color: var(--text-color);
   font-size: 1.1rem;
 }
 
@@ -365,7 +365,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #495057;
+  color: var(--text-color);
   font-weight: 500;
   cursor: pointer;
 }
@@ -373,7 +373,7 @@
 .config-item input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #007bff;
+  accent-color: var(--primary-color);
 }
 
 .config-item input[type="number"] {
@@ -389,12 +389,12 @@
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--border-color);
 }
 
 .cancel-btn {
   padding: 0.5rem 1rem;
-  background-color: #6c757d;
+  background-color: var(--secondary-text-color);
   color: white;
   border: none;
   border-radius: 6px;
@@ -409,7 +409,7 @@
 
 .save-btn {
   padding: 0.5rem 1rem;
-  background-color: #007bff;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 6px;
@@ -429,13 +429,13 @@
   align-items: center;
   justify-content: center;
   height: 200px;
-  color: #6c757d;
+  color: var(--secondary-text-color);
 }
 
 .ai-workflow-manager.loading .spinner {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #007bff;
+  color: var(--primary-color);
 }
 
 /* 响应式设计 */
@@ -500,11 +500,11 @@
 /* 暗色主题 */
 .dark-theme .ai-workflow-manager {
   background-color: #2d2d2d;
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .workflow-header h2 {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .workflow-header p {
@@ -514,7 +514,7 @@
 .dark-theme .workflow-card {
   background-color: #3d3d3d;
   border-color: #4d4d4d;
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .workflow-card:hover {
@@ -522,11 +522,11 @@
 }
 
 .dark-theme .workflow-card.active {
-  border-color: #007bff;
+  border-color: var(--primary-color);
 }
 
 .dark-theme .workflow-info h3 {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .workflow-info p {
@@ -546,7 +546,7 @@
 }
 
 .dark-theme .step-name {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .progress-bar {
@@ -554,7 +554,7 @@
 }
 
 .dark-theme .progress-text {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .duration {
@@ -563,7 +563,7 @@
 
 .dark-theme .workflow-config-dialog {
   background-color: #3d3d3d;
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .dialog-header {
@@ -571,7 +571,7 @@
 }
 
 .dark-theme .dialog-header h3 {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .close-btn {
@@ -580,20 +580,20 @@
 
 .dark-theme .close-btn:hover {
   background-color: #4d4d4d;
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .config-section h4 {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .config-item label {
-  color: #ffffff;
+  color: var(--bg-color);
 }
 
 .dark-theme .config-item input[type="number"] {
   background-color: #4d4d4d;
-  color: #ffffff;
+  color: var(--bg-color);
   border-color: #5d5d5d;
 }
 
@@ -602,11 +602,11 @@
 }
 
 .dark-theme .cancel-btn {
-  background-color: #6c757d;
+  background-color: var(--secondary-text-color);
 }
 
 .dark-theme .save-btn {
-  background-color: #007bff;
+  background-color: var(--primary-color);
 }
 
 .dark-theme .ai-workflow-manager.loading {
