@@ -7,25 +7,23 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-def _pre_hash(password: str) -> str:
+def _pre_hash(password: str) -> bytes:
     """SHA256 预哈希：绕过 bcrypt 72 字节限制，保证输入永远 ≤ 64 字符"""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(_pre_hash(plain_password), hashed_password)
+    return bcrypt.checkpw(_pre_hash(plain_password), hashed_password.encode("utf-8"))
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(_pre_hash(password))
+    return bcrypt.hashpw(_pre_hash(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def create_access_token(

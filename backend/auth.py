@@ -7,13 +7,12 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 
-# 密码加密配置
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 密码加密配置（直接使用 bcrypt，passlib 与 bcrypt>=4.1 不兼容）
 
 # JWT配置
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
@@ -27,13 +26,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     验证密码
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 def get_password_hash(password: str) -> str:
     """
     生成密码哈希
     """
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
