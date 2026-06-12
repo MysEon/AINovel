@@ -4601,6 +4601,158 @@
   background: color-mix(in srgb, var(--desk-paper) 28%, transparent);
 }
 
+/* Final AI settings popover polish */
+.writing-editor .editor-footer .footer-ai-options {
+  position: relative;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-line) 82%, transparent);
+  background: color-mix(in srgb, var(--desk-paper) 34%, transparent);
+  color: var(--desk-muted);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only:hover,
+.writing-editor .editor-footer .footer-ai-options[open] .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-teal) 64%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 18%, var(--desk-paper));
+  color: var(--desk-teal);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline {
+  right: -0.45rem;
+  bottom: calc(100% + 0.85rem);
+  width: min(332px, calc(100vw - 32px));
+  min-width: 0;
+  gap: 0.7rem !important;
+  padding: 0.72rem !important;
+  border-radius: 8px !important;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 94%, transparent), color-mix(in srgb, var(--desk-shell) 96%, transparent)),
+    color-mix(in srgb, var(--desk-panel) 92%, black 8%) !important;
+  box-shadow:
+    0 18px 44px color-mix(in srgb, black 38%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent) !important;
+  backdrop-filter: blur(22px);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::before {
+  content: "AI 辅助设置";
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 0.1rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--desk-line) 68%, transparent);
+  color: var(--desk-ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::after {
+  content: "";
+  position: absolute;
+  right: 1.05rem;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  background: color-mix(in srgb, var(--desk-shell) 96%, transparent);
+  transform: rotate(45deg);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-selector {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.45rem !important;
+  width: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-label {
+  display: flex !important;
+  align-items: center;
+  padding: 0 !important;
+  color: var(--desk-muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-buttons {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.25rem !important;
+  width: 100% !important;
+  padding: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 74%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-paper) 30%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button {
+  width: 100% !important;
+  min-height: 36px !important;
+  justify-content: center !important;
+  padding: 0 0.7rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--desk-muted) !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+  transition: all 0.24s ease;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button:hover {
+  color: var(--desk-ink) !important;
+  background: color-mix(in srgb, var(--desk-paper) 46%, transparent) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button.active {
+  border-color: color-mix(in srgb, var(--desk-accent) 72%, transparent) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--desk-accent) 92%, white 8%), var(--desk-accent)) !important;
+  color: var(--active-menu-text) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--desk-accent) 26%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0 0.8rem !important;
+  border-radius: 8px !important;
+  border-color: color-mix(in srgb, var(--desk-line) 74%, transparent) !important;
+  background: color-mix(in srgb, var(--desk-paper) 28%, transparent) !important;
+  color: var(--desk-ink) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle svg {
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle span {
+  display: inline !important;
+  margin: 0 !important;
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle:hover {
+  border-color: color-mix(in srgb, var(--desk-teal) 70%, var(--desk-line)) !important;
+  background: color-mix(in srgb, var(--desk-teal) 16%, var(--desk-paper)) !important;
+  color: var(--desk-teal) !important;
+}
+
 .restoration-progress-bar {
   display: block;
   width: 100%;
