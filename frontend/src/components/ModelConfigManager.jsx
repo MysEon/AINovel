@@ -355,257 +355,272 @@ const ModelConfigManager = () => {
       )}
 
       <Modal
-        title={editingConfig ? '编辑配置' : '新建配置'}
+        title={null}
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
-        width={800}
+        width={880}
+        centered
+        className="model-config-modal"
+        closeIcon={<CloseOutlined />}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="配置名称"
-                rules={[{ required: true, message: '请输入配置名称' }]}
-              >
-                <Input placeholder="输入配置名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="model_type"
-                label="模型类型"
-                rules={[{ required: true, message: '请选择模型类型' }]}
-              >
-                <Select placeholder="选择模型类型" onChange={() => setModelList([])}>
-                  {modelConfigService.getModelTypes().map(type => (
-                    <Option key={type.value} value={type.value}>
-                      {type.label}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="api_key"
-                label="API密钥"
-                rules={[{ required: !editingConfig, message: '请输入API密钥' }]}
-                extra={editingConfig ? (
-                  <div>
-                    <div style={{ marginBottom: '4px' }}>
-                      <span style={{ color: 'var(--secondary-text-color)', fontSize: '12px' }}>
-                        当前密钥: {editingConfig.api_key_masked}
-                      </span>
-                    </div>
-                    <div style={{ color: 'var(--muted-text-color)', fontSize: '11px' }}>
-                      💡 留空保持原密钥，输入新密钥则替换
-                    </div>
-                  </div>
-                ) : ''}
-              >
-                <Input.Password 
-                  placeholder={editingConfig ? "输入新密钥（可选）" : "输入API密钥"} 
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="模型名称"
-                extra={modelType !== 'custom' && "点击右侧按钮获取模型列表"}
-              >
-                <Space.Compact style={{ width: '100%' }}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="model-config-form-modern">
+          <div className="model-config-modal-hero">
+            <div className="model-config-kicker">
+              <ApiOutlined />
+              <span>{editingConfig ? '编辑模型通道' : '新建模型通道'}</span>
+            </div>
+            <h2>{editingConfig ? '调整模型配置' : '创建模型配置'}</h2>
+            <p>集中管理服务商、密钥与生成参数，保存后可在写作助手中直接调用。</p>
+          </div>
+
+          <div className="model-config-form-body">
+            <section className="model-config-section">
+              <div className="model-config-section-head">
+                <span>连接信息</span>
+                <small>服务商、密钥、模型来源</small>
+              </div>
+              <Row gutter={[16, 8]}>
+                <Col xs={24} md={12}>
                   <Form.Item
-                    name="model_name"
-                    noStyle
-                    rules={[{ required: modelType === 'custom', message: '请输入自定义模型名称' }]}
+                    name="name"
+                    label="配置名称"
+                    rules={[{ required: true, message: '请输入配置名称' }]}
                   >
-                    {modelType === 'custom' ? (
-                      <Input placeholder="输入自定义模型名称" />
-                    ) : (
-                      <Select placeholder="选择模型" allowClear loading={fetchingModels}>
-                        {modelList.map(model => (
-                          <Option key={model.value} value={model.value}>
-                            {model.label}
-                          </Option>
-                        ))}
-                      </Select>
-                    )}
+                    <Input placeholder="输入配置名称" />
                   </Form.Item>
-                  {modelType !== 'custom' && (
-                    <Button 
-                      icon={<SyncOutlined />} 
-                      onClick={handleFetchModels} 
-                      loading={fetchingModels}
-                      style={{ 
-                        height: '32px',
-                        borderTopLeftRadius: 0,
-                        borderBottomLeftRadius: 0
-                      }}
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="model_type"
+                    label="模型类型"
+                    rules={[{ required: true, message: '请选择模型类型' }]}
+                  >
+                    <Select placeholder="选择模型类型" onChange={() => setModelList([])}>
+                      {modelConfigService.getModelTypes().map(type => (
+                        <Option key={type.value} value={type.value}>
+                          {type.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="api_key"
+                    label="API密钥"
+                    rules={[{ required: !editingConfig, message: '请输入API密钥' }]}
+                    extra={editingConfig ? (
+                      <div className="model-config-field-note">
+                        <span>当前密钥: {editingConfig.api_key_masked}</span>
+                        <span>留空保持原密钥，输入新密钥则替换</span>
+                      </div>
+                    ) : ''}
+                  >
+                    <Input.Password
+                      placeholder={editingConfig ? "输入新密钥（可选）" : "输入API密钥"}
                     />
-                  )}
-                </Space.Compact>
-              </Form.Item>
-            </Col>
-            {modelType === 'custom' && (
-              <Col span={24}>
-                <Form.Item
-                  name="api_url"
-                  label="自定义API URL"
-                  extra="留空使用默认URL"
-                  rules={[{ required: true, message: '自定义模型需要提供API URL' }]}
-                >
-                  <Input placeholder="https://api.example.com/v1" />
-                </Form.Item>
-              </Col>
-            )}
-            <Col span={24}>
-              <Form.Item 
-                name="enable_proxy" 
-                label="启用代理" 
-                valuePropName="checked"
-                extra="开启后需要填写代理地址"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            {enableProxy && (
-              <Col span={24}>
-                <Form.Item
-                  name="proxy_url"
-                  label="代理URL"
-                  extra="请输入代理服务器的URL"
-                  rules={[
-                    { required: true, message: '启用代理时必须填写代理URL' }
-                  ]}
-                >
-                  <Input placeholder="http://127.0.0.1:7890" />
-                </Form.Item>
-              </Col>
-            )}
-            <Col span={12}>
-              <Form.Item label="温度 (0-2)">
-                <Row>
-                  <Col span={12}>
-                    <Form.Item name="temperature" noStyle>
-                      <Slider min={0} max={2} step={0.1} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="模型名称"
+                    extra={modelType !== 'custom' && "点击右侧按钮获取模型列表"}
+                  >
+                    <Space.Compact className="model-picker-compact">
+                      <Form.Item
+                        name="model_name"
+                        noStyle
+                        rules={[{ required: modelType === 'custom', message: '请输入自定义模型名称' }]}
+                      >
+                        {modelType === 'custom' ? (
+                          <Input placeholder="输入自定义模型名称" />
+                        ) : (
+                          <Select placeholder="选择模型" allowClear loading={fetchingModels}>
+                            {modelList.map(model => (
+                              <Option key={model.value} value={model.value}>
+                                {model.label}
+                              </Option>
+                            ))}
+                          </Select>
+                        )}
+                      </Form.Item>
+                      {modelType !== 'custom' && (
+                        <Button
+                          className="model-fetch-button"
+                          icon={<SyncOutlined />}
+                          onClick={handleFetchModels}
+                          loading={fetchingModels}
+                        />
+                      )}
+                    </Space.Compact>
+                  </Form.Item>
+                </Col>
+                {modelType === 'custom' && (
+                  <Col span={24}>
+                    <Form.Item
+                      name="api_url"
+                      label="自定义API URL"
+                      extra="留空使用默认URL"
+                      rules={[{ required: true, message: '自定义模型需要提供API URL' }]}
+                    >
+                      <Input placeholder="https://api.example.com/v1" />
                     </Form.Item>
                   </Col>
-                  <Col span={4}>
-                    <Form.Item name="temperature" noStyle>
-                      <InputNumber min={0} max={2} step={0.1} style={{ margin: '0 16px' }} />
+                )}
+                <Col span={24}>
+                  <Form.Item
+                    name="enable_proxy"
+                    label="启用代理"
+                    valuePropName="checked"
+                    extra="开启后需要填写代理地址"
+                    className="model-config-switch-line"
+                  >
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                {enableProxy && (
+                  <Col span={24}>
+                    <Form.Item
+                      name="proxy_url"
+                      label="代理URL"
+                      extra="请输入代理服务器的URL"
+                      rules={[
+                        { required: true, message: '启用代理时必须填写代理URL' }
+                      ]}
+                    >
+                      <Input placeholder="http://127.0.0.1:7890" />
                     </Form.Item>
                   </Col>
-                </Row>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="max_tokens"
-                label="最大令牌数"
-              >
-                <InputNumber style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Top P (0-1)">
-                <Row>
-                  <Col span={12}>
-                    <Form.Item name="top_p" noStyle>
-                      <Slider min={0} max={1} step={0.1} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item name="top_p" noStyle>
-                      <InputNumber min={0} max={1} step={0.1} style={{ margin: '0 16px' }} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="top_k"
-                label="Top K (0-100)"
-              >
-                <InputNumber style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="频率惩罚 (-2 to 2)">
-                <Row>
-                  <Col span={12}>
-                    <Form.Item name="frequency_penalty" noStyle>
-                      <Slider min={-2} max={2} step={0.1} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item name="frequency_penalty" noStyle>
-                      <InputNumber min={-2} max={2} step={0.1} style={{ margin: '0 16px' }} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="存在惩罚 (-2 to 2)">
-                <Row>
-                  <Col span={12}>
-                    <Form.Item name="presence_penalty" noStyle>
-                      <Slider min={-2} max={2} step={0.1} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item name="presence_penalty" noStyle>
-                      <InputNumber min={-2} max={2} step={0.1} style={{ margin: '0 16px' }} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item
-                name="stop_sequences"
-                label="停止序列"
-                extra="用逗号分隔, 如: ###, END"
-              >
-                <Input placeholder="###, END" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="stream" label="流式输出" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="logprobs" label="对数概率" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="top_logprobs"
-                label="Top Logprobs (0-20)"
-              >
-                <InputNumber min={0} max={20} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
+                )}
+              </Row>
+            </section>
+
+            <section className="model-config-section">
+              <div className="model-config-section-head">
+                <span>生成参数</span>
+                <small>控制创造性、采样范围和上下文长度</small>
+              </div>
+              <Row gutter={[16, 8]}>
+                <Col xs={24} md={12}>
+                  <Form.Item label="温度 (0-2)">
+                    <div className="model-parameter-control">
+                      <Form.Item name="temperature" noStyle>
+                        <Slider min={0} max={2} step={0.1} />
+                      </Form.Item>
+                      <Form.Item name="temperature" noStyle>
+                        <InputNumber min={0} max={2} step={0.1} />
+                      </Form.Item>
+                    </div>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="max_tokens"
+                    label="最大令牌数"
+                  >
+                    <InputNumber className="model-config-number" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="Top P (0-1)">
+                    <div className="model-parameter-control">
+                      <Form.Item name="top_p" noStyle>
+                        <Slider min={0} max={1} step={0.1} />
+                      </Form.Item>
+                      <Form.Item name="top_p" noStyle>
+                        <InputNumber min={0} max={1} step={0.1} />
+                      </Form.Item>
+                    </div>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="top_k"
+                    label="Top K (0-100)"
+                  >
+                    <InputNumber className="model-config-number" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="频率惩罚 (-2 to 2)">
+                    <div className="model-parameter-control">
+                      <Form.Item name="frequency_penalty" noStyle>
+                        <Slider min={-2} max={2} step={0.1} />
+                      </Form.Item>
+                      <Form.Item name="frequency_penalty" noStyle>
+                        <InputNumber min={-2} max={2} step={0.1} />
+                      </Form.Item>
+                    </div>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="存在惩罚 (-2 to 2)">
+                    <div className="model-parameter-control">
+                      <Form.Item name="presence_penalty" noStyle>
+                        <Slider min={-2} max={2} step={0.1} />
+                      </Form.Item>
+                      <Form.Item name="presence_penalty" noStyle>
+                        <InputNumber min={-2} max={2} step={0.1} />
+                      </Form.Item>
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </section>
+
+            <section className="model-config-section">
+              <div className="model-config-section-head">
+                <span>输出选项</span>
+                <small>停止序列、流式响应与概率调试</small>
+              </div>
+              <Row gutter={[16, 8]}>
+                <Col span={24}>
+                  <Form.Item
+                    name="stop_sequences"
+                    label="停止序列"
+                    extra="用逗号分隔, 如: ###, END"
+                  >
+                    <Input placeholder="###, END" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="stream" label="流式输出" valuePropName="checked" className="model-config-switch-line">
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item name="logprobs" label="对数概率" valuePropName="checked" className="model-config-switch-line">
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item
+                    name="top_logprobs"
+                    label="Top Logprobs (0-20)"
+                  >
+                    <InputNumber min={0} max={20} className="model-config-number" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </section>
+          </div>
+
+          <div className="model-config-actions-modern">
             <Button
               icon={<ApiOutlined />}
               onClick={handleTestConnection}
               loading={testingConnection}
+              className="model-test-button"
             >
               测试连接
             </Button>
-            <div>
-              <Button onClick={handleCancel} style={{ marginRight: 8 }}>
+            <div className="model-config-action-buttons">
+              <Button onClick={handleCancel} icon={<CloseOutlined />}>
                 取消
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
                 保存
               </Button>
             </div>

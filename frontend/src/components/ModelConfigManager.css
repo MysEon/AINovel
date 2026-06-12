@@ -1,4 +1,314 @@
 /* ModelConfigManager.css */
+.model-config-modal .ant-modal-content {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--border-color) 74%, transparent);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 96%, white), var(--elevated-bg)),
+    var(--elevated-bg);
+  box-shadow:
+    0 22px 70px color-mix(in srgb, black 24%, transparent),
+    0 1px 0 color-mix(in srgb, white 50%, transparent) inset;
+}
+
+.model-config-modal .ant-modal-close {
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--secondary-text-color);
+  transition: all 0.2s ease;
+}
+
+.model-config-modal .ant-modal-close:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--text-color);
+}
+
+.model-config-modal .ant-modal-body {
+  padding: 0;
+}
+
+.model-config-modal-hero {
+  position: relative;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 11%, transparent), transparent 46%),
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 88%, white), var(--elevated-bg));
+}
+
+.model-config-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 22%, var(--border-color));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--elevated-bg));
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.model-config-modal-hero h2 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.model-config-modal-hero p {
+  max-width: 540px;
+  margin: 8px 0 0;
+  color: var(--secondary-text-color);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.model-config-form-body {
+  max-height: min(66vh, 660px);
+  overflow-y: auto;
+  padding: 18px 22px 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-color) 28%, transparent), transparent),
+    var(--elevated-bg);
+}
+
+.model-config-form-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.model-config-form-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.model-config-form-body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 82%, transparent);
+  background-clip: content-box;
+}
+
+.model-config-section {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--elevated-bg) 92%, var(--bg-color));
+  box-shadow: 0 1px 0 color-mix(in srgb, white 36%, transparent) inset;
+}
+
+.model-config-section:last-child {
+  margin-bottom: 0;
+}
+
+.model-config-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 62%, transparent);
+}
+
+.model-config-section-head span {
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.model-config-section-head small {
+  color: var(--muted-text-color);
+  font-size: 12px;
+}
+
+.model-config-form-modern .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.model-config-form-modern .ant-form-item-label {
+  padding-bottom: 5px;
+}
+
+.model-config-form-modern .ant-form-item-label > label {
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.model-config-form-modern .ant-form-item-explain,
+.model-config-form-modern .ant-form-item-extra {
+  margin-top: 5px;
+  color: var(--muted-text-color);
+  font-size: 11px;
+}
+
+.model-config-form-modern .ant-input,
+.model-config-form-modern .ant-input-number,
+.model-config-form-modern .ant-select-selector,
+.model-config-form-modern .ant-input-affix-wrapper {
+  min-height: 38px;
+  border-color: color-mix(in srgb, var(--border-color) 86%, transparent) !important;
+  border-radius: 6px !important;
+  background: color-mix(in srgb, var(--bg-color) 38%, var(--elevated-bg)) !important;
+  color: var(--text-color) !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+
+.model-config-form-modern .ant-select-single .ant-select-selector {
+  height: 38px;
+}
+
+.model-config-form-modern .ant-select-single .ant-select-selection-item,
+.model-config-form-modern .ant-select-single .ant-select-selection-placeholder {
+  line-height: 36px;
+}
+
+.model-config-form-modern .ant-input:hover,
+.model-config-form-modern .ant-input-number:hover,
+.model-config-form-modern .ant-select-selector:hover,
+.model-config-form-modern .ant-input-affix-wrapper:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 40%, var(--border-color)) !important;
+}
+
+.model-config-form-modern .ant-input:focus,
+.model-config-form-modern .ant-input-number-focused,
+.model-config-form-modern .ant-select-focused .ant-select-selector,
+.model-config-form-modern .ant-input-affix-wrapper-focused {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 14%, transparent) !important;
+}
+
+.model-config-number,
+.model-config-number.ant-input-number {
+  width: 100%;
+}
+
+.model-picker-compact {
+  width: 100%;
+}
+
+.model-fetch-button {
+  width: 40px;
+  height: 38px;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.model-config-field-note {
+  display: grid;
+  gap: 3px;
+}
+
+.model-config-field-note span:first-child {
+  color: var(--secondary-text-color);
+}
+
+.model-config-field-note span:last-child {
+  color: var(--muted-text-color);
+}
+
+.model-parameter-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 14px;
+}
+
+.model-parameter-control .ant-slider {
+  margin: 8px 4px;
+}
+
+.model-parameter-control .ant-slider-track {
+  background: var(--primary-color) !important;
+}
+
+.model-parameter-control .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px var(--primary-color) !important;
+}
+
+.model-config-switch-line .ant-form-item-control-input-content {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+}
+
+.model-config-form-modern .ant-switch {
+  background: color-mix(in srgb, var(--secondary-text-color) 34%, transparent);
+}
+
+.model-config-form-modern .ant-switch.ant-switch-checked {
+  background: var(--primary-color);
+}
+
+.model-config-actions-modern {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  background: color-mix(in srgb, var(--elevated-bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.model-config-actions-modern .ant-btn {
+  height: 38px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.model-config-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.model-test-button {
+  border-color: color-mix(in srgb, var(--primary-color) 24%, var(--border-color));
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--primary-color) 7%, var(--elevated-bg));
+}
+
+.model-test-button:hover {
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.dark-theme .model-config-modal .ant-modal-content {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 92%, white 2%), var(--elevated-bg)),
+    var(--elevated-bg);
+  box-shadow:
+    0 22px 70px color-mix(in srgb, black 58%, transparent),
+    0 1px 0 color-mix(in srgb, white 8%, transparent) inset;
+}
+
+.dark-theme .model-config-modal-hero {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 16%, transparent), transparent 48%),
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 84%, white 3%), var(--elevated-bg));
+}
+
+.dark-theme .model-config-section {
+  background: color-mix(in srgb, var(--elevated-bg) 88%, black);
+  box-shadow: 0 1px 0 color-mix(in srgb, white 7%, transparent) inset;
+}
+
+.dark-theme .model-config-actions-modern {
+  background: color-mix(in srgb, var(--elevated-bg) 86%, transparent);
+}
+
 .model-config-manager {
   padding: 30px;
   max-width: 1600px;
