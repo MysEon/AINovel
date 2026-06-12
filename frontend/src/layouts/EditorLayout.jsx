@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import Sidebar from '../Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../components/ThemeProvider';
-import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
+import { FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
 import { getProject } from '../services/projectService';
 import { useNotification } from '../components/NotificationManager';
 import '../components/ProjectEditor.css';
@@ -170,18 +170,10 @@ const EditorLayout = () => {
         projectName={project?.name || '未知项目'}
         onBackToDashboard={handleBackToDashboard}
         hideBackButton={true}
+        onToggleTheme={toggleTheme}
+        themeInfo={getThemeInfo()}
       />
       <main className="content">
-        <div className="content-actions">
-          <button onClick={handleBackToDashboard} className="back-to-dashboard" title="返回项目列表">
-            <FaArrowLeft />
-            <span>返回项目列表</span>
-          </button>
-          <button onClick={toggleTheme} className="theme-toggle" title="切换主题模式">
-            {getThemeInfo().icon}
-            <span>{getThemeInfo().text}</span>
-          </button>
-        </div>
         <Outlet />
       </main>
     </div>

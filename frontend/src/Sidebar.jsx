@@ -40,7 +40,9 @@ const Sidebar = ({
   hideProjectSelector = false,
   projectName,
   onBackToDashboard,
-  hideBackButton = false
+  hideBackButton = false,
+  onToggleTheme,
+  themeInfo
 }) => {
   return (
     <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -88,6 +90,12 @@ const Sidebar = ({
             <div className="app-title-section">
               <h1>AINovel</h1>
               <span className="app-subtitle">智能小说创作平台</span>
+              {hideProjectSelector && projectName && (
+                <div className="sidebar-project-card" title={projectName}>
+                  <span>当前项目</span>
+                  <strong>{projectName}</strong>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -121,6 +129,33 @@ const Sidebar = ({
 
       {!currentProject && !hideProjectSelector && !isCollapsed && (
         <div className="no-project-message">
+        </div>
+      )}
+
+      {(onBackToDashboard || onToggleTheme) && (
+        <div className="sidebar-utility-panel" aria-label="项目操作">
+          {onBackToDashboard && (
+            <button
+              type="button"
+              className="sidebar-utility-button"
+              onClick={onBackToDashboard}
+              title="返回项目列表"
+            >
+              <FaArrowLeft />
+              {!isCollapsed && <span>返回项目列表</span>}
+            </button>
+          )}
+          {onToggleTheme && themeInfo && (
+            <button
+              type="button"
+              className="sidebar-utility-button"
+              onClick={onToggleTheme}
+              title="切换主题模式"
+            >
+              {themeInfo.icon}
+              {!isCollapsed && <span>{themeInfo.text}</span>}
+            </button>
+          )}
         </div>
       )}
     </nav>
