@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaUpload, FaTimes, FaCheck, FaChevronRight, FaBook, FaExclamationTriangle } from 'react-icons/fa';
 import './BatchChapterPublishDialog.css';
 
@@ -26,15 +27,29 @@ const BatchChapterPublishDialog = ({
 
   // 计算对话框位置
   const getDialogStyle = () => {
-    if (!triggerPosition) return {};
+    if (!triggerPosition) {
+      return {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 1000,
+        '--arrow-display': 'none'
+      };
+    }
     
     const margin = window.innerWidth <= 768 ? 8 : 20; // 边距
     const dialogWidth = Math.min(500, window.innerWidth - margin * 2); // 预估对话框宽度
-    const dialogHeight = Math.min(620, window.innerHeight - margin * 2); // 预估对话框高度
+    const preferredHeight = Math.min(520, window.innerHeight - margin * 2); // 预估对话框高度
+    const triggerCenter = triggerPosition.left + triggerPosition.width / 2;
+    const belowSpace = window.innerHeight - triggerPosition.bottom - margin;
     
-    let left = triggerPosition.left;
-    let top = triggerPosition.bottom + 10;
+    let left = triggerCenter - dialogWidth / 2;
     let arrowPosition = 'top'; // 箭头位置：top 或 bottom
+    const style = {
+      position: 'fixed',
+      zIndex: 1000
+    };
     
     // 确保不超出右边界
     if (left + dialogWidth > window.innerWidth - margin) {
@@ -46,24 +61,29 @@ const BatchChapterPublishDialog = ({
       left = margin;
     }
     
-    // 如果下方空间不够，显示在按钮上方
-    if (top + dialogHeight > window.innerHeight - margin) {
-      top = triggerPosition.top - dialogHeight - 10;
+    // 如果下方空间不够，贴着按钮上方显示。用 bottom 锚定可避免实际高度和预估高度不一致造成间距漂移。
+    if (belowSpace < preferredHeight) {
+      style.bottom = window.innerHeight - triggerPosition.top + 10;
       arrowPosition = 'bottom';
+    } else {
+      style.top = triggerPosition.bottom + 10;
     }
-    
-    // 确保不超出顶部
-    if (top < margin) {
-      top = margin;
+
+    if (style.bottom !== undefined) {
+      const maxBottom = window.innerHeight - margin;
+      if (style.bottom > maxBottom) {
+        style.bottom = maxBottom;
+      }
     }
+
+    const arrowLeft = Math.max(16, Math.min(dialogWidth - 16, triggerCenter - left));
     
     return {
-      position: 'fixed',
-      top: top,
-      left: left,
-      zIndex: 1000,
+      ...style,
+      left,
       '--arrow-position': arrowPosition,
-      '--arrow-left': `${triggerPosition.left + triggerPosition.width / 2 - left}px`
+      '--arrow-left': `${arrowLeft}px`,
+      '--arrow-display': 'block'
     };
   };
 
@@ -178,7 +198,7 @@ const BatchChapterPublishDialog = ({
     const dialogStyle = getDialogStyle();
     const arrowPosition = dialogStyle['--arrow-position'] || 'top';
     
-    return (
+    return createPortal(
       <div className="batch-publish-dialog publishing" style={dialogStyle}>
         {/* 箭头指向触发按钮 */}
         <div className={`dialog-arrow arrow-${arrowPosition}`} />
@@ -199,14 +219,15 @@ const BatchChapterPublishDialog = ({
           </div>
           <p className="publishing-tip">正在发布章节，请稍候...</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   const dialogStyle = getDialogStyle();
   const arrowPosition = dialogStyle['--arrow-position'] || 'top';
   
-  return (
+  return createPortal(
     <div className="batch-publish-dialog" style={dialogStyle}>
       {/* 箭头指向触发按钮 */}
       <div className={`dialog-arrow arrow-${arrowPosition}`} />
@@ -374,7 +395,8 @@ const BatchChapterPublishDialog = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 

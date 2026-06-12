@@ -120,7 +120,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const [publishButtonPosition, setPublishButtonPosition] = useState(null);
 
   const handleBatchPublishClick = (event) => {
-    const rect = event.target.getBoundingClientRect();
+    const trigger = event.currentTarget;
+    const rect = trigger.getBoundingClientRect();
     setPublishButtonPosition({
       top: rect.top,
       left: rect.left,
@@ -129,6 +130,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       width: rect.width,
       height: rect.height
     });
+    trigger.closest('details')?.removeAttribute('open');
     setShowBatchPublish(true);
   };
 
