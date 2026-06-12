@@ -6,7 +6,7 @@ const { TextArea } = Input;
 
 const ChatInput = ({ input, setInput, isLoading, handleSend, handleKeyPress, chatInputRef }) => {
   return (
-    <div className="chat-input-area" style={{ flexShrink: 0 }}>
+    <div className="chat-input-area">
       <div className={`chat-input-wrapper${input.trim() ? ' has-content' : ''}${isLoading ? ' is-loading' : ''}`}>
         <TextArea
           ref={chatInputRef}

@@ -42,7 +42,6 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const {
     modelConfigs,
     selectedModelConfig,
-    isLoadingConfigs,
     fetchModelConfigs,
     handleModelConfigChange
   } = useModelConfigs({ addNotification, configLoaded, globalSelectedConfigId, setGlobalSelectedConfigId });
@@ -195,18 +194,14 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               正在恢复写作状态...
             </div>
             <div className="restoration-progress">
-              <div
-                className="progress-bar"
-                style={{
-                  width: `${restorationProgress}%`,
-                  height: '4px',
-                  backgroundColor: 'var(--primary-color)',
-                  borderRadius: '2px',
-                  transition: 'width 0.3s ease'
-                }}
+              <progress
+                className="restoration-progress-bar"
+                value={restorationProgress}
+                max="100"
+                aria-label="写作状态恢复进度"
               />
             </div>
-            <div className="restoration-details" style={{ fontSize: '12px', color: 'var(--secondary-text-color)', marginTop: '8px' }}>
+            <div className="restoration-details">
               恢复AI设置、聊天记录和编辑器状态
             </div>
           </div>
@@ -228,7 +223,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                 message: '请输入章节标题：',
                 showInput: true,
                 inputValue: '',
-                onInputChange: (value) => {},
+                onInputChange: () => {},
                 inputPlaceholder: '例如：第一章：开始',
                 required: true,
                 type: 'info',
@@ -252,7 +247,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                 />
               ) : (
                 <EditorPanel
+                  currentChapter={currentChapter}
                   content={content}
+                  contentCharCount={contentCharCount}
+                  contentLineCount={contentLineCount}
                   onContentChange={handleContentChange}
                   readOnly={isEditorLocked}
                   isAiAssisted={true}
@@ -267,7 +265,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               <Divider type="vertical" className="ai-layout-divider" />
               {layoutMode === 'left' ? (
                 <EditorPanel
+                  currentChapter={currentChapter}
                   content={content}
+                  contentCharCount={contentCharCount}
+                  contentLineCount={contentLineCount}
                   onContentChange={handleContentChange}
                   readOnly={isEditorLocked}
                   isAiAssisted={true}
@@ -289,7 +290,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           </div>
         ) : (
           <EditorPanel
+            currentChapter={currentChapter}
             content={content}
+            contentCharCount={contentCharCount}
+            contentLineCount={contentLineCount}
             onContentChange={handleContentChange}
             readOnly={isEditorLocked}
             isAiAssisted={false}

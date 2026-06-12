@@ -31,9 +31,8 @@ const AIChatPanel = ({
     <Sider
       width="45%"
       className={`ai-chat-sider-shell ${isLoading ? 'is-active' : ''}`}
-      style={{ background: 'transparent', padding: '0 8px', height: '100%', overflow: 'hidden' }}
     >
-      <div className={`ai-chat-drawer ${isLoading ? 'is-open' : ''}`} style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className={`ai-chat-drawer ${isLoading ? 'is-open' : ''}`}>
         {/* AI快捷操作按钮 - 固定在顶部 */}
         <WritingToolbar
           isLoading={isLoading}
@@ -50,7 +49,7 @@ const AIChatPanel = ({
         />
 
         {/* 聊天消息区域 - 固定高度，可滚动 */}
-        <div className="ai-chat-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div className="ai-chat-body">
           <ChatMessages
             messages={messages}
             messagesContainerRef={messagesContainerRef}

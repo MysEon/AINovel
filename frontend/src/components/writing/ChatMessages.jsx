@@ -9,13 +9,6 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
     <div
       ref={messagesContainerRef}
       className="messages-container ai-chat-container"
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '16px',
-        minHeight: 0, // 关键：允许flex子项收缩
-        maxHeight: 'calc(100vh - 350px)' // 限制最大高度，为footer和其他UI元素预留空间
-      }}
     >
       {messages.map((message) => {
         const isStreamingMessage = message.id === streamingMessageId;
@@ -30,11 +23,6 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
               <Avatar
                 className="chat-message-avatar assistant"
                 icon={<FaRobot />}
-                style={{
-                  backgroundColor: 'var(--primary-color)',
-                  marginRight: '8px',
-                  flexShrink: 0
-                }}
               />
             )}
             <div className={`chat-message-stack ${rowRole}`}>
@@ -69,7 +57,7 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
                     {isStreamingMessage && <span className="stream-caret" aria-hidden="true" />}
                   </div>
                 ) : (
-                  <span className="user-message-text" style={{ whiteSpace: 'pre-wrap' }}>
+                  <span className="user-message-text">
                     {message.content}
                   </span>
                 )}
@@ -82,11 +70,6 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
               <Avatar
                 className="chat-message-avatar user"
                 icon={<FaUser />}
-                style={{
-                  backgroundColor: 'var(--primary-hover)',
-                  marginLeft: '8px',
-                  flexShrink: 0
-                }}
               />
             )}
           </div>

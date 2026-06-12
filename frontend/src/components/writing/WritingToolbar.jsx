@@ -19,12 +19,12 @@ const WritingToolbar = ({
   return (
     <div className="ai-assistant-toolbar-card">
       <div className="ai-assistant-toolbar-header">
-        <div className="ai-assistant-toolbar-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="ai-assistant-toolbar-title">
           <div className="ai-assistant-title-group">
             <span className="ai-assistant-title-text">AI写作助手</span>
             {isLoading && <span className="ai-assistant-live-pill">协作中</span>}
           </div>
-          <div className="ai-assistant-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="ai-assistant-toolbar-actions">
             <Button
               type="text"
               size="small"
@@ -32,17 +32,17 @@ const WritingToolbar = ({
               onClick={onNewChat}
               title="开启新对话"
               disabled={isLoading}
-              style={{ color: 'var(--primary-color)' }}
+              className="ai-toolbar-text-btn"
             >
               新对话
             </Button>
             {selectedModelConfig && (
-              <Tag style={{ marginRight: 8, background: 'var(--primary-color)', color: 'var(--active-menu-text)', borderColor: 'var(--primary-color)' }}>
+              <Tag className="ai-toolbar-tag model">
                 {selectedModelConfig.name}
               </Tag>
             )}
             {selectedPromptTemplate && (
-              <Tag style={{ marginRight: 8, background: 'var(--success-color)', color: 'var(--active-menu-text)', borderColor: 'var(--success-color)' }}>
+              <Tag className="ai-toolbar-tag prompt">
                 {selectedPromptTemplate.name}
               </Tag>
             )}
@@ -56,7 +56,7 @@ const WritingToolbar = ({
                     <Menu.Item key={template.id}>
                       <div>
                         <div>{template.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--muted-text-color)' }}>
+                        <div className="ai-menu-description">
                           {template.description}
                         </div>
                       </div>
@@ -64,7 +64,7 @@ const WritingToolbar = ({
                   ))}
                   {promptTemplates.length === 0 && (
                     <Menu.Item disabled>
-                      <span style={{ color: 'var(--muted-text-color)' }}>暂无可用模板</span>
+                      <span className="ai-menu-empty">暂无可用模板</span>
                     </Menu.Item>
                   )}
                 </Menu>
@@ -77,7 +77,7 @@ const WritingToolbar = ({
                 icon={<FaFileAlt />}
                 title="选择提示词模板"
                 loading={isLoadingTemplates}
-                style={{ color: selectedPromptTemplate ? 'var(--success-color)' : 'var(--muted-text-color)' }}
+                className={`ai-toolbar-icon-btn ${selectedPromptTemplate ? 'selected' : ''}`}
               />
             </Dropdown>
             <Dropdown
@@ -90,7 +90,7 @@ const WritingToolbar = ({
                   ))}
                   {modelConfigs.length === 0 && (
                     <Menu.Item disabled>
-                      <span style={{ color: 'var(--muted-text-color)' }}>暂无可用模型配置</span>
+                      <span className="ai-menu-empty">暂无可用模型配置</span>
                     </Menu.Item>
                   )}
                 </Menu>
@@ -103,6 +103,7 @@ const WritingToolbar = ({
                 icon={<FaCog />}
                 title="选择AI模型"
                 loading={false}
+                className="ai-toolbar-icon-btn"
               />
             </Dropdown>
           </div>
@@ -159,7 +160,7 @@ const WritingToolbar = ({
           </Button>
         </Space>
         {modelConfigs.length === 0 && (
-          <div style={{ marginTop: 8, color: 'var(--muted-text-color)', fontSize: '12px' }}>
+          <div className="ai-model-empty-note">
             请先在设置中配置AI模型
           </div>
         )}

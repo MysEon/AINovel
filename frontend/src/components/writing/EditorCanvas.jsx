@@ -1,12 +1,15 @@
 import React from 'react';
-import { FaBold, FaItalic, FaMagic, FaRobot, FaSpinner } from 'react-icons/fa';
+import { FaBookOpen, FaMagic, FaRobot } from 'react-icons/fa';
 import { Input } from 'antd';
 import AgentStatusBadge from './AgentStatusBadge';
 
 const { TextArea } = Input;
 
 const EditorCanvas = ({
+  currentChapter,
   content,
+  contentCharCount = 0,
+  contentLineCount = 0,
   onContentChange,
   readOnly,
   isGenerating = false,
@@ -19,17 +22,11 @@ const EditorCanvas = ({
   return (
     <div className={`editor-canvas-shell ${isGenerating ? 'is-generating' : ''}`}>
       <div className="editor-canvas-toolbar">
-        <div className="editor-canvas-tools" role="toolbar" aria-label="编辑工具">
-          <button type="button" className="canvas-tool-btn" title="加粗（视觉占位）">
-            <FaBold />
-          </button>
-          <button type="button" className="canvas-tool-btn" title="斜体（视觉占位）">
-            <FaItalic />
-          </button>
-          <button type="button" className="canvas-tool-btn ai" title="AI 助手">
+        <div className="editor-canvas-tools" aria-label="AI 写作状态">
+          <span className="canvas-tool-chip ai">
             <FaMagic />
             <span>AI 助手</span>
-          </button>
+          </span>
         </div>
         <div className="editor-canvas-toolbar-meta">
           {selectedModelName && (
@@ -63,6 +60,21 @@ const EditorCanvas = ({
 
       <div className="editor-paper">
         {readOnly && <div className="editor-lock-overlay modern">编辑区已锁定</div>}
+        <div className="editor-paper-head">
+          <div className="editor-paper-title">
+            <span className="editor-paper-kicker">
+              {currentChapter ? `第 ${currentChapter.chapter_number} 章` : '未选择章节'}
+            </span>
+            <h2>{currentChapter?.title || '新的章节'}</h2>
+          </div>
+          <div className="editor-paper-stats" aria-label="当前章节统计">
+            <span>
+              <FaBookOpen />
+              {contentCharCount} 字
+            </span>
+            <span>{contentLineCount} 行</span>
+          </div>
+        </div>
         <TextArea
           value={content}
           onChange={onContentChange}

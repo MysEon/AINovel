@@ -4008,3 +4008,695 @@
   pointer-events: none;
 }
 
+/* ===== Final focused editor refresh ===== */
+.light-theme .writing-editor {
+  --desk-bg: #f3f0ea;
+  --desk-shell: #e9e4da;
+  --desk-panel: #fbfaf7;
+  --desk-paper: #fffdf8;
+  --desk-paper-soft: #f6f0e6;
+  --desk-ink: #292522;
+  --desk-muted: #746b61;
+  --desk-line: rgba(61, 54, 48, 0.12);
+  --desk-line-strong: rgba(199, 91, 57, 0.32);
+  --desk-accent: #c75b39;
+  --desk-teal: #227c77;
+  --desk-plum: #7b5db8;
+  --desk-shadow: 0 22px 60px rgba(44, 40, 37, 0.14);
+}
+
+.dark-theme .writing-editor,
+.writing-editor {
+  --desk-bg: #101013;
+  --desk-shell: #151519;
+  --desk-panel: #1d1c20;
+  --desk-paper: #18181c;
+  --desk-paper-soft: #202026;
+  --desk-ink: #eee7dc;
+  --desk-muted: #aaa196;
+  --desk-line: rgba(238, 231, 220, 0.08);
+  --desk-line-strong: rgba(217, 119, 6, 0.34);
+  --desk-accent: #d97706;
+  --desk-teal: #4fb7ad;
+  --desk-plum: #a48bdb;
+  --desk-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.writing-editor {
+  min-height: 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--desk-accent) 7%, transparent) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in srgb, var(--desk-line) 80%, transparent) 79px 80px),
+    repeating-linear-gradient(0deg, transparent 0 79px, color-mix(in srgb, var(--desk-line) 52%, transparent) 79px 80px),
+    var(--desk-bg) !important;
+  color: var(--desk-ink);
+}
+
+.writing-editor .editor-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(10px, 1.5vw, 18px) clamp(12px, 1.8vw, 24px) 0;
+  overflow: hidden;
+}
+
+.rich-text-editor,
+.ai-writing-interface.modern-ai-layout {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 72%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 94%, transparent), color-mix(in srgb, var(--desk-shell) 94%, transparent)),
+    var(--desk-shell);
+  box-shadow: var(--desk-shadow);
+  overflow: hidden;
+}
+
+.rich-text-editor {
+  display: flex;
+  padding: clamp(12px, 1.8vw, 24px);
+}
+
+.rich-text-editor::before,
+.ai-writing-interface.modern-ai-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--desk-teal) 10%, transparent) 46%, transparent 47% 53%, color-mix(in srgb, var(--desk-plum) 8%, transparent) 54%, transparent),
+    repeating-linear-gradient(135deg, transparent 0 13px, color-mix(in srgb, var(--desk-line) 56%, transparent) 13px 14px);
+  opacity: 0.24;
+}
+
+.editor-paper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: min(100%, 980px);
+  max-width: 980px;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 92%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--desk-accent) 8%, transparent), transparent 12% 88%, color-mix(in srgb, var(--desk-teal) 7%, transparent)),
+    var(--desk-paper);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+    0 18px 44px color-mix(in srgb, black 22%, transparent);
+  overflow: hidden;
+}
+
+.light-theme .editor-paper {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 44px rgba(44, 40, 37, 0.12);
+}
+
+.editor-paper::before {
+  content: '';
+  position: absolute;
+  top: 82px;
+  bottom: 22px;
+  left: clamp(48px, 7vw, 86px);
+  width: 1px;
+  background: var(--desk-line-strong);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.editor-paper::after {
+  content: '';
+  position: absolute;
+  top: 82px;
+  bottom: 22px;
+  left: calc(clamp(48px, 7vw, 86px) + 7px);
+  width: 1px;
+  background: color-mix(in srgb, var(--desk-teal) 30%, transparent);
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.editor-paper-head {
+  position: relative;
+  z-index: 3;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem clamp(1.1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--desk-line);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--desk-paper-soft) 88%, transparent), transparent),
+    color-mix(in srgb, var(--desk-paper) 86%, var(--desk-shell));
+}
+
+.editor-paper-title {
+  min-width: 0;
+}
+
+.editor-paper-kicker {
+  display: block;
+  margin-bottom: 0.18rem;
+  color: var(--desk-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.editor-paper-title h2 {
+  margin: 0;
+  max-width: 56ch;
+  overflow: hidden;
+  color: var(--desk-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 1.35vw, 1.34rem);
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-paper-stats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.editor-paper-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-height: 28px;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 90%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-paper-soft) 58%, transparent);
+  color: var(--desk-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.content-textarea,
+.editor-canvas-textarea.ant-input {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  width: 100%;
+  height: auto !important;
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0;
+  padding:
+    clamp(24px, 3vw, 42px)
+    clamp(24px, 5vw, 76px)
+    clamp(28px, 4vw, 54px)
+    clamp(66px, 9vw, 120px) !important;
+  background:
+    linear-gradient(90deg, transparent 0 calc(clamp(48px, 7vw, 86px) - 1px), color-mix(in srgb, var(--desk-line-strong) 38%, transparent) calc(clamp(48px, 7vw, 86px) - 1px) clamp(48px, 7vw, 86px), transparent clamp(48px, 7vw, 86px) 100%),
+    repeating-linear-gradient(180deg, transparent 0 34px, color-mix(in srgb, var(--desk-line) 82%, transparent) 34px 35px),
+    var(--desk-paper) !important;
+  box-shadow: none !important;
+  color: var(--desk-ink) !important;
+  caret-color: var(--desk-accent);
+  font-family: var(--font-literary);
+  font-size: clamp(16px, 0.92vw, 18px) !important;
+  line-height: 2.05 !important;
+  resize: none;
+  scrollbar-color: color-mix(in srgb, var(--desk-accent) 50%, var(--desk-line)) transparent;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.content-textarea:focus,
+.editor-canvas-textarea.ant-input:focus,
+.editor-canvas-textarea.ant-input-focused {
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--desk-accent) 24%, transparent) !important;
+}
+
+.content-textarea::placeholder,
+.editor-canvas-textarea.ant-input::placeholder {
+  color: color-mix(in srgb, var(--desk-muted) 72%, transparent);
+}
+
+.content-textarea.locked,
+.editor-canvas-textarea.ant-input[readonly] {
+  color: color-mix(in srgb, var(--desk-ink) 68%, var(--desk-muted)) !important;
+}
+
+.editor-lock-overlay,
+.editor-lock-overlay.modern {
+  z-index: 5;
+  border-color: color-mix(in srgb, var(--desk-accent) 36%, var(--desk-line)) !important;
+  background: color-mix(in srgb, var(--desk-panel) 78%, transparent) !important;
+  color: var(--desk-accent);
+}
+
+.editor-canvas-pane {
+  min-width: 0;
+  height: 100%;
+}
+
+.editor-canvas-shell {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.editor-canvas-toolbar {
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 0 0 0.65rem;
+}
+
+.canvas-tool-btn,
+.canvas-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  background: color-mix(in srgb, var(--desk-panel) 72%, transparent);
+  color: var(--desk-muted);
+  box-shadow: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.35rem 0.58rem;
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.canvas-tool-chip.ai,
+.canvas-tool-btn.ai {
+  color: var(--desk-teal);
+  border-color: color-mix(in srgb, var(--desk-teal) 38%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 12%, transparent);
+}
+
+.canvas-tool-btn:hover {
+  transform: translateY(-1px);
+}
+
+.editor-meta-pill {
+  min-height: 30px;
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--desk-line) 90%, transparent);
+  background: color-mix(in srgb, var(--desk-panel) 68%, transparent);
+  color: var(--desk-muted);
+  padding: 0.22rem 0.55rem;
+}
+
+.editor-meta-pill.generating {
+  border-color: color-mix(in srgb, var(--desk-accent) 36%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-accent) 12%, transparent);
+  color: var(--desk-accent);
+}
+
+.editor-agent-strip {
+  flex-shrink: 0;
+  margin: 0 0 0.65rem;
+}
+
+.editor-completion-bar {
+  flex-shrink: 0;
+  margin-top: 0.65rem;
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--desk-accent) 24%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-panel) 90%, transparent);
+  box-shadow: none;
+}
+
+.ai-writing-interface.modern-ai-layout {
+  padding: clamp(10px, 1.4vw, 18px);
+}
+
+.ai-writing-layout-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  gap: 0.85rem;
+  margin: 0 !important;
+  padding: 0;
+  background: transparent !important;
+}
+
+.ai-layout-divider {
+  display: none !important;
+}
+
+.ai-chat-sider-shell {
+  height: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+.ai-chat-drawer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 92%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-panel) 92%, transparent);
+  box-shadow: none;
+  transform: none;
+  opacity: 1;
+}
+
+.ai-chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-assistant-toolbar-card {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper-soft) 38%, transparent);
+}
+
+.ai-assistant-toolbar-header {
+  min-height: 48px;
+  border-bottom-color: var(--desk-line);
+  padding: 0 0.8rem;
+}
+
+.ai-assistant-toolbar-title,
+.ai-assistant-toolbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.ai-assistant-toolbar-title {
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.42rem 0;
+}
+
+.ai-assistant-toolbar-actions {
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.ai-assistant-title-text {
+  color: var(--desk-ink);
+  font-size: 0.86rem;
+}
+
+.ai-toolbar-text-btn.ant-btn,
+.ai-toolbar-icon-btn.ant-btn {
+  border-radius: 8px !important;
+  color: var(--desk-accent) !important;
+}
+
+.ai-toolbar-icon-btn.ant-btn {
+  color: var(--desk-muted) !important;
+}
+
+.ai-toolbar-icon-btn.selected.ant-btn {
+  color: var(--success-color) !important;
+}
+
+.ai-toolbar-tag.ant-tag {
+  max-width: 120px;
+  margin-right: 0 !important;
+  overflow: hidden;
+  border-radius: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-toolbar-tag.model.ant-tag {
+  border-color: var(--desk-accent);
+  background: var(--desk-accent);
+  color: var(--active-menu-text);
+}
+
+.ai-toolbar-tag.prompt.ant-tag {
+  border-color: var(--success-color);
+  background: var(--success-color);
+  color: var(--active-menu-text);
+}
+
+.ai-menu-description,
+.ai-menu-empty,
+.ai-model-empty-note {
+  color: var(--muted-text-color);
+  font-size: 12px;
+}
+
+.ai-model-empty-note {
+  margin-top: 8px;
+}
+
+.ai-assistant-toolbar-body {
+  padding: 0.6rem 0.8rem 0.7rem;
+}
+
+.ai-toolbar-status-strip {
+  margin-bottom: 0.55rem;
+}
+
+.agent-status-badge,
+.ai-quick-action-btn.ant-btn,
+.chat-input-wrapper,
+.chat-message-bubble,
+.completion-btn,
+.footer-panel,
+.chapter-selector {
+  border-radius: 8px !important;
+}
+
+.ai-chat-container {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding: 1rem !important;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 36px, color-mix(in srgb, var(--desk-line) 42%, transparent) 36px 37px),
+    color-mix(in srgb, var(--desk-paper) 62%, var(--desk-panel));
+}
+
+.chat-message-row {
+  gap: 0.5rem;
+}
+
+.chat-message-avatar.ant-avatar {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.chat-message-avatar.assistant.ant-avatar {
+  background: var(--desk-accent);
+}
+
+.chat-message-avatar.user.ant-avatar {
+  background: var(--desk-teal);
+}
+
+.chat-message-bubble {
+  box-shadow: none;
+}
+
+.chat-message-bubble.assistant {
+  background: color-mix(in srgb, var(--desk-panel) 86%, transparent);
+  border-color: color-mix(in srgb, var(--desk-line) 92%, transparent);
+}
+
+.chat-message-bubble.user {
+  background: color-mix(in srgb, var(--desk-teal) 86%, black 14%);
+}
+
+.user-message-text {
+  white-space: pre-wrap;
+}
+
+.chat-input-area {
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--desk-panel) 94%, transparent) !important;
+  border-top-color: var(--desk-line) !important;
+}
+
+.chat-input-wrapper {
+  background: color-mix(in srgb, var(--desk-paper) 60%, transparent);
+  border-color: color-mix(in srgb, var(--desk-line) 96%, transparent);
+}
+
+.editor-footer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin: 0.5rem clamp(12px, 1.8vw, 24px) clamp(8px, 1.2vw, 14px);
+  padding: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 78%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-panel) 78%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, black 22%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.writing-editor .editor-footer .footer-left {
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.writing-editor .editor-footer .footer-panel {
+  min-height: 44px;
+  padding: 0.42rem 0.5rem;
+  border-color: color-mix(in srgb, var(--desk-line) 76%, transparent);
+  background: color-mix(in srgb, var(--desk-paper) 26%, transparent);
+}
+
+.writing-editor .editor-footer .footer-panel-actions {
+  width: auto;
+}
+
+.writing-editor .editor-footer .footer-options-trigger {
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+.writing-editor .editor-footer .chapter-selector {
+  background: color-mix(in srgb, var(--desk-paper) 28%, transparent);
+  border-color: color-mix(in srgb, var(--desk-line) 82%, transparent);
+}
+
+.writing-editor .editor-footer .chapter-selector select {
+  color: var(--desk-ink);
+}
+
+.writing-editor .editor-footer .footer-metric {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-paper) 28%, transparent);
+}
+
+.restoration-progress-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--studio-border);
+}
+
+.restoration-progress-bar::-webkit-progress-bar {
+  background: var(--studio-border);
+}
+
+.restoration-progress-bar::-webkit-progress-value {
+  background: var(--studio-primary);
+  transition: width 0.3s ease;
+}
+
+.restoration-progress-bar::-moz-progress-bar {
+  background: var(--studio-primary);
+}
+
+@media (max-width: 1200px) {
+  .editor-footer,
+  .editor-footer.is-ai-active {
+    grid-template-columns: 1fr;
+  }
+
+  .writing-editor .editor-footer .footer-left {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .ai-writing-layout-shell {
+    flex-direction: column !important;
+  }
+
+  .ai-chat-sider-shell,
+  .editor-canvas-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ai-chat-sider-shell {
+    min-height: 320px;
+    order: 2;
+  }
+
+  .editor-canvas-pane {
+    min-height: 520px;
+    order: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .writing-editor .editor-content {
+    padding: 0.5rem;
+  }
+
+  .rich-text-editor,
+  .ai-writing-interface.modern-ai-layout {
+    border-radius: 8px;
+  }
+
+  .rich-text-editor,
+  .ai-writing-interface.modern-ai-layout {
+    padding: 0.5rem;
+  }
+
+  .editor-paper-head {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: auto;
+    gap: 0.65rem;
+  }
+
+  .editor-paper-title h2 {
+    white-space: normal;
+  }
+
+  .content-textarea,
+  .editor-canvas-textarea.ant-input {
+    padding: 1.1rem 1rem 1.4rem 1.4rem !important;
+    font-size: 15px !important;
+    line-height: 1.85 !important;
+  }
+
+  .editor-paper::before,
+  .editor-paper::after {
+    display: none;
+  }
+
+  .editor-footer {
+    margin: 0.45rem 0.5rem 0.5rem;
+  }
+}
+
