@@ -29,11 +29,11 @@
 }
 
 .workflow-card {
-  background: var(--bg-color);
+  background: var(--elevated-bg);
   border: 2px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -41,7 +41,7 @@
 
 .workflow-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .workflow-card.active {
@@ -65,7 +65,7 @@
   border-color: var(--warning-color);
 }
 
-.workflow-header {
+.workflow-card-header {
   display: flex;
   align-items: center;
   margin-bottom: 1rem;
@@ -75,12 +75,12 @@
 .workflow-icon {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  border-radius: 12px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--active-menu-text);
   font-size: 1.5rem;
 }
 
@@ -143,7 +143,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background-color: var(--hover-bg);
   transition: all 0.2s ease;
 }
@@ -166,7 +166,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--active-menu-text);
   font-size: 0.8rem;
 }
 
@@ -211,7 +211,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  background: var(--gradient-primary);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -244,7 +244,7 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
@@ -254,7 +254,7 @@
 
 .action-btn.primary {
   background-color: var(--primary-color);
-  color: white;
+  color: var(--active-menu-text);
 }
 
 .action-btn.primary:hover:not(:disabled) {
@@ -272,7 +272,7 @@
 
 .action-btn.secondary {
   background-color: var(--secondary-text-color);
-  color: white;
+  color: var(--active-menu-text);
 }
 
 .action-btn.secondary:hover:not(:disabled) {
@@ -302,12 +302,12 @@
 
 .workflow-config-dialog {
   background: var(--elevated-bg);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .dialog-header {
@@ -379,9 +379,11 @@
 .config-item input[type="number"] {
   width: 80px;
   padding: 0.25rem 0.5rem;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.9rem;
+  background: var(--textarea-bg);
+  color: var(--text-color);
 }
 
 .dialog-actions {
@@ -395,7 +397,7 @@
 .cancel-btn {
   padding: 0.5rem 1rem;
   background-color: var(--secondary-text-color);
-  color: white;
+  color: var(--active-menu-text);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -404,13 +406,13 @@
 }
 
 .cancel-btn:hover {
-  background-color: #5a6268;
+  background-color: var(--text-color);
 }
 
 .save-btn {
   padding: 0.5rem 1rem;
   background-color: var(--primary-color);
-  color: white;
+  color: var(--active-menu-text);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -419,7 +421,7 @@
 }
 
 .save-btn:hover {
-  background-color: #0056b3;
+  background-color: var(--primary-hover);
 }
 
 /* 加载状态 */
@@ -443,35 +445,35 @@
   .ai-workflow-manager {
     padding: 1rem;
   }
-  
+
   .workflow-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .workflow-card {
     padding: 1rem;
   }
-  
-  .workflow-header {
+
+  .workflow-card-header {
     flex-direction: column;
     text-align: center;
     gap: 0.5rem;
   }
-  
+
   .workflow-actions {
     flex-direction: column;
   }
-  
+
   .action-btn {
     justify-content: center;
   }
-  
+
   .workflow-config-dialog {
     width: 95%;
     margin: 1rem;
   }
-  
+
   .dialog-content {
     padding: 1rem;
   }
@@ -481,15 +483,15 @@
   .workflow-header h2 {
     font-size: 1.5rem;
   }
-  
+
   .workflow-header p {
     font-size: 1rem;
   }
-  
+
   .workflow-info h3 {
     font-size: 1.1rem;
   }
-  
+
   .step-info {
     flex-direction: column;
     align-items: flex-start;
@@ -499,26 +501,26 @@
 
 /* 暗色主题 */
 .dark-theme .ai-workflow-manager {
-  background-color: #2d2d2d;
-  color: var(--bg-color);
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .workflow-header h2 {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .workflow-header p {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .workflow-card {
-  background-color: #3d3d3d;
-  border-color: #4d4d4d;
-  color: var(--bg-color);
+  background-color: var(--elevated-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .workflow-card:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .dark-theme .workflow-card.active {
@@ -526,79 +528,79 @@
 }
 
 .dark-theme .workflow-info h3 {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .workflow-info p {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .step-item {
-  background-color: #4d4d4d;
+  background-color: var(--hover-bg);
 }
 
 .dark-theme .step-item.active {
-  background-color: #1e3a5f;
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
 }
 
 .dark-theme .step-item.completed {
-  background-color: #1e3a1e;
+  background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
 }
 
 .dark-theme .step-name {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .progress-bar {
-  background-color: #4d4d4d;
+  background-color: var(--border-color);
 }
 
 .dark-theme .progress-text {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .duration {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .workflow-config-dialog {
-  background-color: #3d3d3d;
-  color: var(--bg-color);
+  background-color: var(--elevated-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .dialog-header {
-  border-bottom-color: #4d4d4d;
+  border-bottom-color: var(--border-color);
 }
 
 .dark-theme .dialog-header h3 {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .close-btn {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .close-btn:hover {
-  background-color: #4d4d4d;
-  color: var(--bg-color);
+  background-color: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .config-section h4 {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .config-item label {
-  color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .config-item input[type="number"] {
-  background-color: #4d4d4d;
-  color: var(--bg-color);
-  border-color: #5d5d5d;
+  background-color: var(--hover-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
 }
 
 .dark-theme .dialog-actions {
-  border-top-color: #4d4d4d;
+  border-top-color: var(--border-color);
 }
 
 .dark-theme .cancel-btn {
@@ -610,7 +612,7 @@
 }
 
 .dark-theme .ai-workflow-manager.loading {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 /* 动画效果 */

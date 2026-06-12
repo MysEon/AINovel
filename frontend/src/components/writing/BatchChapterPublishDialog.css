@@ -14,14 +14,14 @@
 }
 
 .batch-publish-dialog {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-lg);
   max-width: 700px;
   width: 90%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-lg);
   animation: slideIn 0.3s ease-out;
 }
 
@@ -41,23 +41,23 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--sidebar-bg);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .dialog-header h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-color);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .dialog-icon {
-  color: #3b82f6;
+  color: var(--primary-color);
   font-size: 1.1rem;
 }
 
@@ -65,7 +65,7 @@
   background: none;
   border: none;
   font-size: 1.2rem;
-  color: #6b7280;
+  color: var(--secondary-text-color);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -76,8 +76,8 @@
 }
 
 .close-button:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 /* 选择模式 */
@@ -85,8 +85,8 @@
   display: flex;
   gap: 8px;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--elevated-bg);
 }
 
 .mode-button {
@@ -96,10 +96,10 @@
   justify-content: center;
   gap: 6px;
   padding: 10px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: white;
-  color: #374151;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--elevated-bg);
+  color: var(--text-color);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
@@ -107,14 +107,14 @@
 }
 
 .mode-button:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: var(--hover-bg);
+  border-color: var(--secondary-text-color);
 }
 
 .mode-button.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: var(--primary-color);
+  color: var(--active-menu-text);
+  border-color: var(--primary-color);
 }
 
 .mode-button svg {
@@ -127,17 +127,17 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .status-text {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--text-color);
 }
 
 .total-text {
-  color: #6b7280;
+  color: var(--secondary-text-color);
   font-size: 0.875rem;
 }
 
@@ -147,7 +147,7 @@
   overflow-y: auto;
   max-height: 400px;
   padding: 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .loading-state,
@@ -157,14 +157,14 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #6b7280;
+  color: var(--secondary-text-color);
 }
 
 .loading-spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #3b82f6;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 12px;
@@ -180,31 +180,31 @@
   display: flex;
   align-items: flex-start;
   padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
-  background: white;
+  border-bottom: 1px solid var(--hover-bg);
+  background: var(--elevated-bg);
   transition: background-color 0.2s;
   cursor: pointer;
 }
 
 .chapter-item:hover {
-  background: #f8fafc;
+  background: var(--sidebar-bg);
 }
 
 .chapter-item.selected {
-  background: #eff6ff;
-  border-left: 3px solid #3b82f6;
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-color));
+  border-left: 3px solid var(--primary-color);
 }
 
 .chapter-item.current {
-  background: #fef3c7;
-  border-left: 3px solid #f59e0b;
+  background: color-mix(in srgb, var(--warning-color) 10%, var(--bg-color));
+  border-left: 3px solid var(--warning-color);
 }
 
 .chapter-checkbox {
   margin: 0 12px 0 0;
   width: 16px;
   height: 16px;
-  accent-color: #3b82f6;
+  accent-color: var(--primary-color);
   cursor: pointer;
   margin-top: 2px;
 }
@@ -224,21 +224,21 @@
 
 .chapter-title {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--text-color);
   font-size: 0.875rem;
 }
 
 .chapter-order {
-  color: #6b7280;
+  color: var(--secondary-text-color);
   font-size: 0.75rem;
-  background: #f3f4f6;
+  background: var(--hover-bg);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .current-chapter-badge {
-  background: #f59e0b;
-  color: white;
+  background: var(--warning-color);
+  color: var(--active-menu-text);
   font-size: 0.75rem;
   padding: 2px 6px;
   border-radius: 4px;
@@ -252,12 +252,12 @@
 }
 
 .chapter-date {
-  color: #6b7280;
+  color: var(--secondary-text-color);
   font-size: 0.75rem;
 }
 
 .chapter-preview {
-  color: #9ca3af;
+  color: var(--muted-text-color);
   font-size: 0.75rem;
   line-height: 1.4;
   overflow: hidden;
@@ -268,8 +268,8 @@
 /* 进度条 */
 .progress-section {
   padding: 20px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .progress-info {
@@ -278,19 +278,19 @@
   align-items: center;
   margin-bottom: 8px;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--text-color);
 }
 
 .progress-bar {
   height: 8px;
-  background: #e5e7eb;
+  background: var(--border-color);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  background: var(--gradient-primary);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -301,14 +301,14 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 20px 24px;
-  background: #ffffff;
-  border-radius: 0 0 12px 12px;
+  background: var(--elevated-bg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .cancel-button,
 .publish-button {
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
   font-weight: 500;
   border: none;
@@ -322,25 +322,25 @@
 }
 
 .cancel-button {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .cancel-button:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--border-color);
 }
 
 .publish-button {
-  background: #3b82f6;
-  color: white;
+  background: var(--primary-color);
+  color: var(--active-menu-text);
 }
 
 .publish-button:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--primary-hover);
 }
 
 .publish-button:disabled {
-  background: #9ca3af;
+  background: var(--muted-text-color);
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -348,7 +348,7 @@
 .button-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--active-menu-text);
   border-top: 2px solid transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -356,122 +356,122 @@
 
 /* 深色主题支持 */
 .dark-theme .batch-publish-dialog {
-  background: #1f2937;
-  color: #f3f4f6;
+  background: var(--elevated-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .dialog-header {
-  background: #374151;
-  border-color: #4b5563;
+  background: var(--sidebar-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .dialog-header h2 {
-  color: #f3f4f6;
+  color: var(--text-color);
 }
 
 .dark-theme .close-button {
-  color: #9ca3af;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .close-button:hover {
-  background: #4b5563;
-  color: #f3f4f6;
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .selection-modes {
-  background: #1f2937;
-  border-color: #4b5563;
+  background: var(--elevated-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .mode-button {
-  background: #374151;
-  color: #f3f4f6;
-  border-color: #4b5563;
+  background: var(--hover-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
 }
 
 .dark-theme .mode-button:hover {
-  background: #4b5563;
+  background: var(--sidebar-bg);
 }
 
 .dark-theme .mode-button.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: var(--primary-color);
+  color: var(--active-menu-text);
+  border-color: var(--primary-color);
 }
 
 .dark-theme .selection-status {
-  background: #374151;
-  border-color: #4b5563;
+  background: var(--sidebar-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .status-text {
-  color: #f3f4f6;
+  color: var(--text-color);
 }
 
 .dark-theme .total-text {
-  color: #9ca3af;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .chapter-item {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--elevated-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .chapter-item:hover {
-  background: #374151;
+  background: var(--hover-bg);
 }
 
 .dark-theme .chapter-item.selected {
-  background: #1e3a8a;
-  border-left-color: #3b82f6;
+  background: color-mix(in srgb, var(--primary-color) 15%, var(--bg-color));
+  border-left-color: var(--primary-color);
 }
 
 .dark-theme .chapter-item.current {
-  background: #78350f;
-  border-left-color: #f59e0b;
+  background: color-mix(in srgb, var(--warning-color) 15%, var(--bg-color));
+  border-left-color: var(--warning-color);
 }
 
 .dark-theme .chapter-title {
-  color: #f3f4f6;
+  color: var(--text-color);
 }
 
 .dark-theme .chapter-order {
-  color: #9ca3af;
-  background: #374151;
+  color: var(--secondary-text-color);
+  background: var(--hover-bg);
 }
 
 .dark-theme .chapter-date {
-  color: #9ca3af;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .chapter-preview {
-  color: #6b7280;
+  color: var(--muted-text-color);
 }
 
 .dark-theme .progress-section {
-  background: #374151;
-  border-color: #4b5563;
+  background: var(--sidebar-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .progress-info {
-  color: #f3f4f6;
+  color: var(--text-color);
 }
 
 .dark-theme .progress-bar {
-  background: #4b5563;
+  background: var(--border-color);
 }
 
 .dark-theme .dialog-actions {
-  background: #1f2937;
+  background: var(--elevated-bg);
 }
 
 .dark-theme .cancel-button {
-  background: #374151;
-  color: #f3f4f6;
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .cancel-button:hover:not(:disabled) {
-  background: #4b5563;
+  background: var(--border-color);
 }
 
 /* 响应式设计 */
@@ -480,38 +480,38 @@
     width: 95%;
     max-height: 90vh;
   }
-  
+
   .dialog-header {
     padding: 16px 20px;
   }
-  
+
   .dialog-header h2 {
     font-size: 1.1rem;
   }
-  
+
   .selection-modes {
     flex-direction: column;
     gap: 8px;
     padding: 16px 20px;
   }
-  
+
   .mode-button {
     width: 100%;
   }
-  
+
   .chapters-list {
     max-height: 300px;
   }
-  
+
   .chapter-item {
     padding: 12px 16px;
   }
-  
+
   .dialog-actions {
     flex-direction: column;
     padding: 16px 20px;
   }
-  
+
   .cancel-button,
   .publish-button {
     width: 100%;

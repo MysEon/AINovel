@@ -14,17 +14,17 @@
 }
 
 .model-config-manager::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--hover-bg);
   border-radius: 4px;
 }
 
 .model-config-manager::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 .model-config-manager::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--secondary-text-color);
 }
 
 .manager-header {
@@ -60,30 +60,30 @@
 }
 
 .btn-primary {
-  background-color: #007bff;
-  color: white;
+  background-color: var(--primary-color);
+  color: var(--active-menu-text);
 }
 
 .btn-primary:hover {
-  background-color: #0056b3;
+  background-color: var(--primary-hover);
 }
 
 .btn-secondary {
-  background-color: #6c757d;
-  color: white;
+  background-color: var(--secondary-text-color);
+  color: var(--active-menu-text);
 }
 
 .btn-secondary:hover {
-  background-color: #545b62;
+  background-color: var(--text-color);
 }
 
 .btn-danger {
-  background-color: #dc3545;
-  color: white;
+  background-color: var(--error-color);
+  color: var(--active-menu-text);
 }
 
 .btn-danger:hover {
-  background-color: #c82333;
+  background-color: color-mix(in srgb, var(--error-color) 85%, black);
 }
 
 .btn-icon {
@@ -97,16 +97,16 @@
 }
 
 .btn-icon:hover {
-  background-color: #f0f0f0;
+  background-color: var(--hover-bg);
   color: var(--text-color);
 }
 
 .btn-icon.btn-danger {
-  color: #dc3545;
+  color: var(--error-color);
 }
 
 .btn-icon.btn-danger:hover {
-  background-color: #f8d7da;
+  background-color: color-mix(in srgb, var(--error-color) 10%, var(--bg-color));
 }
 
 .loading {
@@ -129,11 +129,11 @@
 }
 
 .config-form {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-lg);
   padding: 35px;
   margin-bottom: 35px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .config-form h3 {
@@ -143,15 +143,15 @@
 }
 
 .error-messages {
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
+  background-color: color-mix(in srgb, var(--error-color) 10%, var(--bg-color));
+  border: 1px solid color-mix(in srgb, var(--error-color) 30%, var(--bg-color));
   border-radius: 4px;
   padding: 12px;
   margin-bottom: 20px;
 }
 
 .error-message {
-  color: #721c24;
+  color: var(--error-color);
   margin: 4px 0;
   font-size: 14px;
 }
@@ -197,13 +197,15 @@
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.3s ease;
+  background: var(--textarea-bg);
+  color: var(--text-color);
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
 }
 
 .form-group input[type="checkbox"] {
@@ -232,7 +234,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--border-color);
   transition: .4s;
   border-radius: 24px;
 }
@@ -244,13 +246,13 @@
   width: 16px;
   left: 4px;
   bottom: 4px;
-  background-color: white;
+  background-color: var(--elevated-bg);
   transition: .4s;
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: #007bff;
+  background-color: var(--primary-color);
 }
 
 input:checked + .slider:before {
@@ -262,7 +264,7 @@ input:checked + .slider:before {
   justify-content: space-between;
   align-items: center;
   padding-top: 25px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
   margin-top: 10px;
   width: 100%;
   box-sizing: border-box;
@@ -291,19 +293,19 @@ input:checked + .slider:before {
   border: none;
   white-space: nowrap;
   box-sizing: border-box;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: var(--gradient-primary);
+  color: var(--active-menu-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 .test-connection-btn:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 40%, transparent);
 }
 
 .test-connection-btn:disabled {
-  background: #ccc;
+  background: var(--muted-text-color);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -325,15 +327,15 @@ input:checked + .slider:before {
   border: none;
   white-space: nowrap;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(17, 153, 142, 0.3);
+  background: var(--success-color);
+  color: var(--active-menu-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--success-color) 30%, transparent);
 }
 
 .save-btn:hover {
-  background: linear-gradient(135deg, #0f8a7f 0%, #2ed670 100%);
+  filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 /* 取消按钮样式 */
@@ -349,18 +351,18 @@ input:checked + .slider:before {
   justify-content: center;
   gap: 8px;
   transition: all 0.3s ease;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border-color);
   white-space: nowrap;
   box-sizing: border-box;
-  background: #f8f9fa;
-  color: #6c757d;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--hover-bg);
+  color: var(--text-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .cancel-btn:hover {
-  background: #e9ecef;
-  color: #495057;
-  border-color: #adb5bd;
+  background: var(--border-color);
+  color: var(--text-color);
+  border-color: var(--secondary-text-color);
   transform: translateY(-1px);
 }
 
@@ -368,17 +370,17 @@ input:checked + .slider:before {
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #ffffff40;
-  border-top: 2px solid #ffffff;
+  border: 2px solid color-mix(in srgb, var(--active-menu-text) 25%, transparent);
+  border-top: 2px solid var(--active-menu-text);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .configs-list {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-lg);
   padding: 35px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .configs-list h3 {
@@ -420,14 +422,14 @@ input:checked + .slider:before {
 
 .config-card {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 20px;
-  background: #fafafa;
+  background: var(--hover-bg);
   transition: all 0.3s ease;
 }
 
 .config-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-2px);
 }
 
@@ -470,145 +472,143 @@ input:checked + .slider:before {
 .config-item .value {
   color: var(--text-color);
   font-family: 'Courier New', monospace;
-  background: #f0f0f0;
+  background: var(--sidebar-bg);
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 /* 深色主题支持 */
 .dark-theme .model-config-manager {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-track {
-  background: #2d2d2d;
+  background: var(--sidebar-bg);
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-thumb {
-  background: var(--text-color);
+  background: var(--border-color);
 }
 
 .dark-theme .model-config-manager::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--secondary-text-color);
 }
 
 .dark-theme .manager-header h2 {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .config-form {
-  background: #2d2d2d;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: var(--elevated-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .dark-theme .config-form h3 {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .error-messages {
-  background-color: #721c24;
-  border-color: #842029;
+  background-color: color-mix(in srgb, var(--error-color) 15%, var(--bg-color));
+  border-color: color-mix(in srgb, var(--error-color) 40%, var(--bg-color));
 }
 
 .dark-theme .error-message {
-  color: #f8d7da;
+  color: var(--error-color);
 }
 
 .dark-theme .form-group label {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .form-group input,
 .dark-theme .form-group select {
-  background-color: #3d3d3d;
-  border-color: var(--text-color);
-  color: var(--border-color);
+  background-color: var(--hover-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .form-group input:focus,
 .dark-theme .form-group select:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
 }
 
 .dark-theme .configs-list {
-  background: #2d2d2d;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: var(--elevated-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .dark-theme .configs-list h3 {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .no-configs {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .config-card {
-  background: #3d3d3d;
-  border-color: var(--text-color);
+  background: var(--hover-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .config-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .dark-theme .config-header h4 {
-  color: var(--border-color);
+  color: var(--text-color);
 }
 
 .dark-theme .config-item .label {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .config-item .value {
-  color: var(--border-color);
-  background: #2d2d2d;
+  color: var(--text-color);
+  background: var(--sidebar-bg);
 }
 
 .dark-theme .btn-icon {
-  color: #b0b0b0;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .btn-icon:hover {
-  background-color: #3d3d3d;
-  color: var(--border-color);
+  background-color: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .form-actions {
-  border-top-color: var(--text-color);
+  border-top-color: var(--border-color);
 }
 
 /* 深色主题按钮样式 */
 .dark-theme .test-connection-btn {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  background: var(--gradient-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 40%, transparent);
 }
 
 .dark-theme .test-connection-btn:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 50%, transparent);
 }
 
 .dark-theme .save-btn {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  box-shadow: 0 2px 8px rgba(17, 153, 142, 0.4);
+  background: var(--success-color);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .dark-theme .save-btn:hover {
-  background: linear-gradient(135deg, #0f8a7f 0%, #2ed670 100%);
-  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.5);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--success-color) 50%, transparent);
 }
 
 .dark-theme .cancel-btn {
-  background: #3d3d3d;
-  color: #b0b0b0;
-  border-color: var(--text-color);
+  background: var(--hover-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
 }
 
 .dark-theme .cancel-btn:hover {
-  background: #4d4d4d;
-  color: var(--border-color);
+  background: var(--border-color);
+  color: var(--text-color);
   border-color: var(--secondary-text-color);
 }
 
@@ -618,33 +618,33 @@ input:checked + .slider:before {
     padding: 15px;
     height: calc(100vh - 100px);
   }
-  
+
   .manager-header {
     flex-direction: column;
     gap: 15px;
     align-items: flex-start;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .configs-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-actions {
     flex-direction: column;
     gap: 15px;
     align-items: stretch;
   }
-  
+
   .action-buttons {
     width: 100%;
     justify-content: flex-end;
     gap: 10px;
   }
-  
+
   .test-connection-btn,
   .save-btn,
   .cancel-btn {
@@ -657,11 +657,11 @@ input:checked + .slider:before {
   .config-form {
     padding: 20px;
   }
-  
+
   .configs-list {
     padding: 20px;
   }
-  
+
   .btn {
     padding: 8px 16px;
     font-size: 13px;

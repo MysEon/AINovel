@@ -152,7 +152,7 @@ const GenderJourneyEditor = ({ form }) => {
             : '性别轨迹：未设定'}
         </Text>
         {currentGender && (
-          <Tag color="geekblue" style={{ marginLeft: 8 }}>
+          <Tag style={{ marginLeft: 8, background: 'var(--primary-color)', color: 'var(--active-menu-text)', borderColor: 'var(--primary-color)' }}>
             当前性别：{currentGender}
           </Tag>
         )}

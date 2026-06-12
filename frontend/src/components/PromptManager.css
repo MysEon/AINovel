@@ -1,35 +1,35 @@
 /* 提示词管理器样式 */
 .prompt-manager-container {
   padding: 24px;
-  background-color: #f5f5f5;
+  background-color: var(--bg-color);
   min-height: 100vh;
 }
 
 .prompt-manager-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .prompt-manager-toolbar {
   margin-bottom: 16px;
   padding: 16px;
-  background-color: #fafafa;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  background-color: var(--sidebar-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
 }
 
 .prompt-manager-table .ant-table-thead > tr > th {
-  background-color: #f8f9fa;
+  background-color: var(--sidebar-bg);
   font-weight: 600;
 }
 
 .prompt-manager-table .ant-table-tbody > tr:hover > td {
-  background-color: #f0f7ff;
+  background-color: var(--hover-bg);
 }
 
 /* 系统模板样式 */
 .prompt-manager-table .system-template {
-  background-color: #f6ffed;
+  background-color: color-mix(in srgb, var(--success-color) 8%, var(--bg-color));
 }
 
 /* 表格操作按钮组 */
@@ -52,65 +52,68 @@
 
 /* 编辑和预览模态框样式 */
 .ant-modal-header {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  background: var(--gradient-primary);
   border-bottom: none;
 }
 
 .ant-modal-header .ant-modal-title {
-  color: white;
+  color: var(--active-menu-text);
   font-weight: 600;
 }
 
 .ant-modal-close {
-  color: white;
+  color: var(--active-menu-text);
 }
 
 .ant-modal-close:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--active-menu-text);
+  opacity: 0.8;
 }
 
 /* 编辑表单样式 */
 .ant-input,
 .ant-select-selector,
 .ant-input {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .ant-input:focus,
 .ant-input:hover,
 .ant-select-selector:focus,
 .ant-select-selector:hover {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
 /* 预览模板样式 */
 .prompt-preview-content {
-  background-color: #f8f9fa;
+  background-color: var(--sidebar-bg);
   padding: 16px;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.6;
+  color: var(--text-color);
 }
 
 /* 工具栏按钮样式 */
 .prompt-manager-toolbar .ant-btn {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   height: 32px;
   font-weight: 500;
 }
 
 .prompt-manager-toolbar .ant-btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  background: var(--gradient-primary);
   border: none;
 }
 
 .prompt-manager-toolbar .ant-btn-primary:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  background: var(--gradient-primary);
+  filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 /* 搜索框样式 */
@@ -120,13 +123,13 @@
 
 .prompt-manager-toolbar .ant-input-search .ant-input-group-addon .ant-btn {
   border-radius: 0 6px 6px 0;
-  background: #667eea;
-  border-color: #667eea;
+  background: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .prompt-manager-toolbar .ant-input-search .ant-input-group-addon .ant-btn:hover {
-  background: #5a6fd8;
-  border-color: #5a6fd8;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 /* 分页样式 */
@@ -136,12 +139,12 @@
 }
 
 .prompt-manager-table .ant-pagination-item-active {
-  background: #667eea;
-  border-color: #667eea;
+  background: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .prompt-manager-table .ant-pagination-item-active a {
-  color: white;
+  color: var(--active-menu-text);
 }
 
 /* 响应式设计 */
@@ -149,12 +152,12 @@
   .prompt-manager-container {
     padding: 16px;
   }
-  
+
   .prompt-manager-toolbar {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .prompt-manager-toolbar .ant-col {
     flex: none;
     width: 100%;
@@ -165,17 +168,17 @@
   .prompt-manager-container {
     padding: 12px;
   }
-  
+
   .prompt-manager-table .ant-table {
     font-size: 12px;
   }
-  
+
   .prompt-manager-table .ant-btn-sm {
     height: 24px;
     padding: 0 6px;
     font-size: 11px;
   }
-  
+
   .prompt-manager-toolbar {
     padding: 12px;
   }
@@ -183,30 +186,30 @@
 
 /* 暗色主题适配 */
 .dark-theme .prompt-manager-container {
-  background-color: #1f1f1f;
+  background-color: var(--bg-color);
 }
 
 .dark-theme .prompt-manager-card {
-  background-color: #2d2d2d;
-  border-color: #404040;
+  background-color: var(--elevated-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .prompt-manager-toolbar {
-  background-color: #2d2d2d;
-  border-color: #404040;
+  background-color: var(--sidebar-bg);
+  border-color: var(--border-color);
 }
 
 .dark-theme .prompt-manager-table .ant-table-thead > tr > th {
-  background-color: #3c3c3c;
-  color: #ffffff;
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .prompt-manager-table .ant-table-tbody > tr:hover > td {
-  background-color: #404040;
+  background-color: var(--hover-bg);
 }
 
 .dark-theme .prompt-preview-content {
-  background-color: #2d2d2d;
-  border-color: #404040;
-  color: #ffffff;
+  background-color: var(--sidebar-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
 }

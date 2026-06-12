@@ -320,7 +320,7 @@ const ModelConfigManager = () => {
                     onConfirm={() => handleDelete(config.id)}
                     okText="删除"
                     cancelText="取消"
-                    icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
+                    icon={<QuestionCircleOutlined style={{ color: 'var(--error-color)' }} />}
                   >
                     <DeleteOutlined 
                       key="delete" 
@@ -332,12 +332,12 @@ const ModelConfigManager = () => {
                 bodyStyle={{ padding: '12px' }}
               >
                 <div style={{ marginBottom: '8px' }}>
-                  <Tag color="blue" style={{ fontSize: '11px' }}>{config.model_type}</Tag>
+                  <Tag style={{ fontSize: '11px', background: 'var(--primary-color)', color: 'var(--active-menu-text)', borderColor: 'var(--primary-color)' }}>{config.model_type}</Tag>
                   {config.enable_proxy && (
-                    <Tag color="green" style={{ fontSize: '11px', marginLeft: '4px' }}>代理</Tag>
+                    <Tag style={{ fontSize: '11px', marginLeft: '4px', background: 'var(--success-color)', color: 'var(--active-menu-text)', borderColor: 'var(--success-color)' }}>代理</Tag>
                   )}
                 </div>
-                <div style={{ fontSize: '12px', lineHeight: '1.4', color: '#666' }}>
+                <div style={{ fontSize: '12px', lineHeight: '1.4', color: 'var(--secondary-text-color)' }}>
                   <div style={{ marginBottom: '4px' }}>
                     <strong>模型:</strong> {config.model_name || '默认'}
                   </div>
@@ -396,11 +396,11 @@ const ModelConfigManager = () => {
                 extra={editingConfig ? (
                   <div>
                     <div style={{ marginBottom: '4px' }}>
-                      <span style={{ color: '#666', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--secondary-text-color)', fontSize: '12px' }}>
                         当前密钥: {editingConfig.api_key_masked}
                       </span>
                     </div>
-                    <div style={{ color: '#999', fontSize: '11px' }}>
+                    <div style={{ color: 'var(--muted-text-color)', fontSize: '11px' }}>
                       💡 留空保持原密钥，输入新密钥则替换
                     </div>
                   </div>

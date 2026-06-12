@@ -80,16 +80,16 @@ class ErrorBoundary extends React.Component {
           justifyContent: 'center',
           height: '100vh',
           padding: '20px',
-          backgroundColor: '#f5f5f5',
+          backgroundColor: 'var(--bg-color)',
           fontFamily: 'Inter, system-ui, sans-serif'
         }}>
           <div style={{
             textAlign: 'center',
             maxWidth: '600px',
-            backgroundColor: 'white',
+            backgroundColor: 'var(--elevated-bg)',
             padding: '40px',
             borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
+            boxShadow: 'var(--shadow-md)'
           }}>
             <div style={{
               fontSize: '48px',
@@ -99,7 +99,7 @@ class ErrorBoundary extends React.Component {
             </div>
             
             <h1 style={{
-              color: '#ff4d4f',
+              color: 'var(--error-color)',
               marginBottom: '16px',
               fontSize: '24px'
             }}>
@@ -107,7 +107,7 @@ class ErrorBoundary extends React.Component {
             </h1>
             
             <p style={{
-              color: '#666',
+              color: 'var(--secondary-text-color)',
               marginBottom: '24px',
               lineHeight: '1.6'
             }}>
@@ -123,8 +123,8 @@ class ErrorBoundary extends React.Component {
               <button
                 onClick={this.handleRetry}
                 style={{
-                  background: '#1890ff',
-                  color: 'white',
+                  background: 'var(--primary-color)',
+                  color: 'var(--active-menu-text)',
                   border: 'none',
                   padding: '12px 24px',
                   borderRadius: '6px',
@@ -139,8 +139,8 @@ class ErrorBoundary extends React.Component {
               <button
                 onClick={this.handleReset}
                 style={{
-                  background: '#52c41a',
-                  color: 'white',
+                  background: 'var(--success-color)',
+                  color: 'var(--active-menu-text)',
                   border: 'none',
                   padding: '12px 24px',
                   borderRadius: '6px',
@@ -157,7 +157,7 @@ class ErrorBoundary extends React.Component {
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details style={{
                 textAlign: 'left',
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--hover-bg)',
                 padding: '16px',
                 borderRadius: '6px',
                 marginTop: '20px'
@@ -173,7 +173,7 @@ class ErrorBoundary extends React.Component {
                 <div style={{
                   fontSize: '12px',
                   fontFamily: 'monospace',
-                  color: '#d73a49',
+                  color: 'var(--error-color)',
                   marginBottom: '10px'
                 }}>
                   <strong>错误信息:</strong> {this.state.error.message}
@@ -182,7 +182,7 @@ class ErrorBoundary extends React.Component {
                 <div style={{
                   fontSize: '12px',
                   fontFamily: 'monospace',
-                  color: '#586069',
+                  color: 'var(--secondary-text-color)',
                   whiteSpace: 'pre-wrap',
                   maxHeight: '200px',
                   overflow: 'auto'
@@ -195,7 +195,7 @@ class ErrorBoundary extends React.Component {
                   <div style={{
                     fontSize: '12px',
                     fontFamily: 'monospace',
-                    color: '#586069',
+                    color: 'var(--secondary-text-color)',
                     whiteSpace: 'pre-wrap',
                     maxHeight: '200px',
                     overflow: 'auto',

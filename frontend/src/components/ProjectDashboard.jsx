@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// Note: antd icons does not have a brush icon; EditOutlined used as fallback
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -24,7 +25,6 @@ import {
   MoreOutlined,
   SunOutlined,
   MoonOutlined,
-  FileTextOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
 import { useNotification } from './NotificationManager';
@@ -169,19 +169,20 @@ const ProjectDashboard = () => {
     }
   ];
 
-  const ProjectCard = ({ project }) => {
+  const ProjectCard = ({ project, index }) => {
     const stats = getProjectStats(project);
 
     return (
       <Card
         className="project-card"
+        data-card-index={index % 6}
         actions={[
           <Button
-            type="primary"
+            type="text"
             onClick={() => navigate(`/project/${project.id}`)}
             className="open-project-btn"
           >
-            打开项目
+            打开
           </Button>
         ]}
         extra={
@@ -213,7 +214,7 @@ const ProjectDashboard = () => {
         <div className="project-stats">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <FileTextOutlined className="text-primary text-sm" />
+              <EditOutlined className="text-primary text-sm" />
               <span className="text-sm font-semibold text-foreground">{stats.wordCount}</span>
               <span className="text-xs text-muted-foreground">字</span>
             </div>
@@ -248,7 +249,7 @@ const ProjectDashboard = () => {
               我的项目
             </Title>
             <Paragraph className="welcome-text">
-              欢迎回来，{user?.name || user?.username || '用户'}
+              欢迎回到书案，{user?.name || user?.username || '用户'}
             </Paragraph>
           </div>
 
@@ -292,7 +293,7 @@ const ProjectDashboard = () => {
               description={
                 <div className="text-center mb-8">
                   <Title level={4} className="empty-title">
-                    还没有项目
+                    白纸一张
                   </Title>
                   <Paragraph className="empty-description">
                     创建您的第一个小说项目，开始您的创作之旅
@@ -312,9 +313,9 @@ const ProjectDashboard = () => {
           </div>
         ) : (
           <Row gutter={[24, 24]} className="projects-grid">
-            {projects.filter(p => p.user_id === user?.id).map(project => (
+            {projects.filter(p => p.user_id === user?.id).map((project, index) => (
               <Col xs={24} sm={24} md={12} lg={8} xl={6} key={project.id}>
-                <ProjectCard project={project} />
+                <ProjectCard project={project} index={index} />
               </Col>
             ))}
           </Row>

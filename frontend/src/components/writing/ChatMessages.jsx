@@ -31,7 +31,7 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
                 className="chat-message-avatar assistant"
                 icon={<FaRobot />}
                 style={{
-                  backgroundColor: '#4f46e5',
+                  backgroundColor: 'var(--primary-color)',
                   marginRight: '8px',
                   flexShrink: 0
                 }}
@@ -83,7 +83,7 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
                 className="chat-message-avatar user"
                 icon={<FaUser />}
                 style={{
-                  backgroundColor: '#0ea5e9',
+                  backgroundColor: 'var(--primary-hover)',
                   marginLeft: '8px',
                   flexShrink: 0
                 }}

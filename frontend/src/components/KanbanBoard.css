@@ -1,13 +1,13 @@
 .kanban-container {
   padding: 2rem;
-  background-color: var(--content-bg, #fff);
-  color: var(--text-color, var(--text-color));
+  background-color: var(--content-bg);
+  color: var(--text-color);
   height: 100%;
 }
 
 .kanban-container h1 {
   margin-top: 0;
-  color: var(--header-text, var(--text-color));
+  color: var(--text-color);
 }
 
 .kanban-placeholder {
@@ -18,35 +18,35 @@
 
 .kanban-column {
   flex: 1;
-  background-color: var(--kanban-column-bg, #f5f5f5);
+  background-color: var(--hover-bg);
   border-radius: 8px;
   padding: 1rem;
 }
 
 .kanban-column h3 {
   margin-top: 0;
-  color: var(--header-text, var(--text-color));
+  color: var(--text-color);
 }
 
 .kanban-card {
-  background-color: var(--kanban-card-bg, #fff);
+  background-color: var(--elevated-bg);
   border-radius: 4px;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 /* 暗色主题适配 */
 .dark-theme .kanban-container {
-  background-color: var(--dark-content-bg, #2d2d2d);
-  color: var(--dark-text-color, #fff);
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .dark-theme .kanban-column {
-  background-color: var(--dark-kanban-column-bg, #3d3d3d);
+  background-color: var(--sidebar-bg);
 }
 
 .dark-theme .kanban-card {
-  background-color: var(--dark-kanban-card-bg, #4d4d4d);
-  color: var(--dark-text-color, #fff);
+  background-color: var(--elevated-bg);
+  color: var(--text-color);
 }

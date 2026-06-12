@@ -20,28 +20,28 @@ const KnowledgeBase = ({ projectId }) => {
       name: '角色知识库',
       icon: '👥',
       description: '管理角色信息、关系图谱、对话风格',
-      color: '#FF6B6B'
+      color: 'var(--primary-color)'
     },
     {
       id: 'worldviews',
       name: '世界观知识库',
       icon: '🌍',
       description: '构建世界观、魔法体系、时间线',
-      color: '#4ECDC4'
+      color: 'var(--success-color)'
     },
     {
       id: 'scenes',
       name: '场景知识库',
       icon: '🏞️',
       description: '场景管理、氛围标签、模板库',
-      color: '#45B7D1'
+      color: 'var(--primary-hover)'
     },
     {
       id: 'techniques',
       name: '创作技巧库',
       icon: '✍️',
       description: '写作技巧、灵感收集、案例分析',
-      color: '#96CEB4'
+      color: 'var(--warning-color)'
     }
   ];
 

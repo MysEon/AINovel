@@ -13,9 +13,9 @@
 }
 
 .universal-dialog {
-  background: var(--background-color, #ffffff);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   min-width: 300px;
   max-width: 90vw;
   max-height: 85vh;
@@ -28,23 +28,23 @@
 }
 
 .universal-dialog-error {
-  border-top: 4px solid #dc3545;
+  border-top: 4px solid var(--error-color);
 }
 
 .universal-dialog-warning {
-  border-top: 4px solid #ffc107;
+  border-top: 4px solid var(--warning-color);
 }
 
 .universal-dialog-success {
-  border-top: 4px solid #28a745;
+  border-top: 4px solid var(--success-color);
 }
 
 .universal-dialog-info {
-  border-top: 4px solid #17a2b8;
+  border-top: 4px solid var(--primary-color);
 }
 
 .universal-dialog-question {
-  border-top: 4px solid #007bff;
+  border-top: 4px solid var(--primary-color);
 }
 
 .universal-dialog-header {
@@ -52,7 +52,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: var(--sidebar-bg);
 }
 
 .universal-dialog-title {
@@ -65,7 +65,7 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-color, #333333);
+  color: var(--text-color);
 }
 
 .universal-dialog-icon {
@@ -73,23 +73,23 @@
 }
 
 .universal-dialog-error .universal-dialog-icon {
-  color: #dc3545;
+  color: var(--error-color);
 }
 
 .universal-dialog-warning .universal-dialog-icon {
-  color: #ffc107;
+  color: var(--warning-color);
 }
 
 .universal-dialog-success .universal-dialog-icon {
-  color: #28a745;
+  color: var(--success-color);
 }
 
 .universal-dialog-info .universal-dialog-icon {
-  color: #17a2b8;
+  color: var(--primary-color);
 }
 
 .universal-dialog-question .universal-dialog-icon {
-  color: #007bff;
+  color: var(--primary-color);
 }
 
 .universal-dialog-close {
@@ -97,14 +97,14 @@
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-  color: #666;
+  color: var(--secondary-text-color);
   padding: 0.5rem;
   border-radius: 4px;
   transition: background-color 0.2s;
 }
 
 .universal-dialog-close:hover {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--hover-bg);
 }
 
 .universal-dialog-content {
@@ -117,7 +117,7 @@
   margin: 0 0 1rem 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: var(--text-color, #333333);
+  color: var(--text-color);
 }
 
 .universal-dialog-custom-content {
@@ -131,22 +131,22 @@
 .universal-dialog-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 1rem;
-  background-color: var(--input-background, #ffffff);
-  color: var(--text-color, #333333);
+  background-color: var(--textarea-bg);
+  color: var(--text-color);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .universal-dialog-input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
 }
 
 .universal-dialog-input::placeholder {
-  color: #999;
+  color: var(--muted-text-color);
 }
 
 .universal-dialog-actions {
@@ -154,7 +154,7 @@
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: var(--sidebar-bg);
 }
 
 .universal-dialog-button {
@@ -173,88 +173,88 @@
 }
 
 .universal-dialog-button.cancel {
-  background-color: #6c757d;
-  color: white;
+  background-color: var(--secondary-text-color);
+  color: var(--active-menu-text);
 }
 
 .universal-dialog-button.cancel:hover:not(:disabled) {
-  background-color: #5a6268;
+  background-color: var(--text-color);
 }
 
 .universal-dialog-button.confirm {
-  background-color: #007bff;
-  color: white;
+  background-color: var(--primary-color);
+  color: var(--active-menu-text);
 }
 
 .universal-dialog-button.confirm:hover:not(:disabled) {
-  background-color: #0056b3;
+  background-color: var(--primary-hover);
 }
 
 .universal-dialog-error .universal-dialog-button.confirm {
-  background-color: #dc3545;
+  background-color: var(--error-color);
 }
 
 .universal-dialog-error .universal-dialog-button.confirm:hover:not(:disabled) {
-  background-color: #c82333;
+  background-color: color-mix(in srgb, var(--error-color) 85%, black);
 }
 
 .universal-dialog-warning .universal-dialog-button.confirm {
-  background-color: #ffc107;
-  color: #212529;
+  background-color: var(--warning-color);
+  color: var(--text-color);
 }
 
 .universal-dialog-warning .universal-dialog-button.confirm:hover:not(:disabled) {
-  background-color: #e0a800;
+  background-color: color-mix(in srgb, var(--warning-color) 85%, black);
 }
 
 .universal-dialog-success .universal-dialog-button.confirm {
-  background-color: #28a745;
+  background-color: var(--success-color);
 }
 
 .universal-dialog-success .universal-dialog-button.confirm:hover:not(:disabled) {
-  background-color: #218838;
+  background-color: color-mix(in srgb, var(--success-color) 85%, black);
 }
 
 /* 暗色主题支持 */
 .dark-theme .universal-dialog {
-  background: #2d2d2d;
-  color: #ffffff;
+  background: var(--elevated-bg);
+  color: var(--text-color);
 }
 
 .dark-theme .universal-dialog-header,
 .dark-theme .universal-dialog-actions {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--sidebar-bg);
 }
 
 .dark-theme .universal-dialog-close {
-  color: #ccc;
+  color: var(--secondary-text-color);
 }
 
 .dark-theme .universal-dialog-close:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--hover-bg);
 }
 
 .dark-theme .universal-dialog-message {
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .dark-theme .universal-dialog-title h3 {
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .dark-theme .universal-dialog-input {
-  background-color: #3d3d3d;
-  color: #ffffff;
-  border-color: #555;
+  background-color: var(--hover-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
 }
 
 .dark-theme .universal-dialog-input::placeholder {
-  color: #aaa;
+  color: var(--muted-text-color);
 }
 
 .dark-theme .universal-dialog-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
 }
 
 /* 章节预览弹窗 - 自适应高度 */
@@ -274,15 +274,15 @@
     min-width: 280px;
     max-width: 95vw;
   }
-  
+
   .universal-dialog-content {
     padding: 1rem;
   }
-  
+
   .universal-dialog-actions {
     flex-direction: column;
   }
-  
+
   .universal-dialog-button {
     width: 100%;
   }

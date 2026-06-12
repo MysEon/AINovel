@@ -1,37 +1,41 @@
 // 设计 Token —— SSOT，供 AntD ConfigProvider 与业务组件统一消费
-// 暗色：沉浸写作风（深灰底 + 琥珀 accent）
-// 亮色：清爽阅读风（白底 + 蓝 accent）
+// 暗色：墨韵·Ink & Moonlight（深墨底 + 暖赭 accent）
+// 亮色：宣纸白底 + 赭石 accent
 
 export const colors = {
-  dark: {
-    bgPrimary: '#0d1117',
-    bgSecondary: '#161b22',
-    bgElevated: '#21262d',
-    fgPrimary: '#e6edf3',
-    fgSecondary: '#8b949e',
-    fgMuted: '#484f58',
-    accent: '#d4940a',
-    accentHover: '#e5a820',
-    accentPressed: '#b37d08',
-    border: '#30363d',
-    success: '#2ea043',
-    warning: '#d29922',
-    error: '#f85149',
-  },
   light: {
-    bgPrimary: '#ffffff',
-    bgSecondary: '#f6f8fa',
-    bgElevated: '#ffffff',
-    fgPrimary: '#1f2328',
-    fgSecondary: '#656d76',
-    fgMuted: '#8c959f',
-    accent: '#0969da',
-    accentHover: '#0550ae',
-    accentPressed: '#033d8b',
-    border: '#d0d7de',
-    success: '#2ea043',
-    warning: '#d29922',
-    error: '#f85149',
+    bgPrimary: '#FAF8F5',
+    bgSecondary: '#F0EBE3',
+    bgElevated: '#FFFFFF',
+    paperFiber: 'rgba(199, 91, 57, 0.06)',
+    sealSoft: 'rgba(199, 91, 57, 0.1)',
+    fgPrimary: '#2C2825',
+    fgSecondary: '#7A6E63',
+    fgMuted: '#9B8E82',
+    accent: '#C75B39',
+    accentHover: '#B5502F',
+    accentPressed: '#9E4528',
+    border: '#DDD5CA',
+    success: '#5A8F5C',
+    warning: '#C4922E',
+    error: '#C4463A',
+  },
+  dark: {
+    bgPrimary: '#1A1714',
+    bgSecondary: '#222019',
+    bgElevated: '#2A2520',
+    paperFiber: 'rgba(212, 145, 92, 0.08)',
+    sealSoft: 'rgba(212, 145, 92, 0.14)',
+    fgPrimary: '#E8E0D6',
+    fgSecondary: '#A89B8E',
+    fgMuted: '#7A6E63',
+    accent: '#D4915C',
+    accentHover: '#E0A06E',
+    accentPressed: '#B87D4E',
+    border: '#3D3630',
+    success: '#6AAF6C',
+    warning: '#D4A43E',
+    error: '#E05A4E',
   },
 };
 
@@ -45,7 +49,7 @@ export const antdTokens = {
       colorText: colors.dark.fgPrimary,
       colorTextSecondary: colors.dark.fgSecondary,
       colorBgElevated: colors.dark.bgElevated,
-      borderRadius: 8,
+      borderRadius: 10,
       colorSuccess: colors.dark.success,
       colorWarning: colors.dark.warning,
       colorError: colors.dark.error,
@@ -57,30 +61,30 @@ export const antdTokens = {
         colorPrimary: colors.dark.accent,
         colorPrimaryHover: colors.dark.accentHover,
         colorPrimaryActive: colors.dark.accentPressed,
-        borderRadius: 8,
+        borderRadius: 10,
         controlHeight: 40,
       },
       Card: {
-        borderRadius: 12,
+        borderRadius: 16,
         colorBgContainer: colors.dark.bgElevated,
         colorBorderSecondary: colors.dark.border,
       },
       Input: {
-        borderRadius: 8,
+        borderRadius: 10,
         colorBorder: colors.dark.border,
         colorPrimaryHover: colors.dark.accent,
         activeBorderColor: colors.dark.accent,
         activeShadow: `0 0 0 2px ${colors.dark.accent}33`,
       },
       Modal: {
-        borderRadius: 12,
+        borderRadius: 16,
         contentBg: colors.dark.bgElevated,
         headerBg: colors.dark.bgSecondary,
       },
       Menu: {
         colorBgContainer: 'transparent',
         colorItemBgSelected: colors.dark.accent,
-        colorItemTextSelected: '#ffffff',
+        colorItemTextSelected: '#1A1714',
       },
       Statistic: {
         contentFontSize: 16,
@@ -97,7 +101,7 @@ export const antdTokens = {
       colorText: colors.light.fgPrimary,
       colorTextSecondary: colors.light.fgSecondary,
       colorBgElevated: colors.light.bgElevated,
-      borderRadius: 8,
+      borderRadius: 10,
       colorSuccess: colors.light.success,
       colorWarning: colors.light.warning,
       colorError: colors.light.error,
@@ -109,30 +113,30 @@ export const antdTokens = {
         colorPrimary: colors.light.accent,
         colorPrimaryHover: colors.light.accentHover,
         colorPrimaryActive: colors.light.accentPressed,
-        borderRadius: 8,
+        borderRadius: 10,
         controlHeight: 40,
       },
       Card: {
-        borderRadius: 12,
+        borderRadius: 16,
         colorBgContainer: colors.light.bgElevated,
         colorBorderSecondary: colors.light.border,
       },
       Input: {
-        borderRadius: 8,
+        borderRadius: 10,
         colorBorder: colors.light.border,
         colorPrimaryHover: colors.light.accent,
         activeBorderColor: colors.light.accent,
         activeShadow: `0 0 0 2px ${colors.light.accent}33`,
       },
       Modal: {
-        borderRadius: 12,
+        borderRadius: 16,
         contentBg: colors.light.bgElevated,
         headerBg: colors.light.bgSecondary,
       },
       Menu: {
         colorBgContainer: 'transparent',
         colorItemBgSelected: colors.light.accent,
-        colorItemTextSelected: '#ffffff',
+        colorItemTextSelected: '#FFFFFF',
       },
       Statistic: {
         contentFontSize: 16,
@@ -144,12 +148,15 @@ export const antdTokens = {
 
 export const radius = {
   sm: 6,
-  md: 8,
-  lg: 12,
+  md: 10,
+  lg: 16,
 };
 
 export const fontFamily =
-  'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+  'Inter, system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+export const displayFontFamily = '"Noto Serif SC", "Source Han Serif SC", Georgia, serif';
+export const literaryFontFamily = '"LXGW WenKai", "霞鹜文楷", "KaiTi", serif';
 
 export const shadows = {
   dark: {
@@ -158,8 +165,8 @@ export const shadows = {
     lg: '0 12px 32px rgba(0, 0, 0, 0.5)',
   },
   light: {
-    sm: '0 1px 2px rgba(31, 35, 40, 0.04)',
-    md: '0 4px 12px rgba(31, 35, 40, 0.08)',
-    lg: '0 12px 32px rgba(31, 35, 40, 0.12)',
+    sm: '0 1px 2px rgba(44, 40, 37, 0.05)',
+    md: '0 4px 12px rgba(44, 40, 37, 0.08)',
+    lg: '0 12px 32px rgba(44, 40, 37, 0.12)',
   },
 };

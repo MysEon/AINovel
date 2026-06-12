@@ -45,23 +45,23 @@
 }
 
 .ai-action-btn.analysis {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--active-menu-text);
 }
 
 .ai-action-btn.analysis:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 40%, transparent);
 }
 
 .ai-action-btn.insights {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--active-menu-text);
 }
 
 .ai-action-btn.insights:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 40%, transparent);
 }
 
 .ai-action-btn:disabled {
@@ -84,13 +84,13 @@
 }
 
 .module-card {
-  background: white;
-  border-radius: 16px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-lg);
   padding: 20px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s var(--ease-in-out);
   border: 2px solid transparent;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
   min-width: 200px;
@@ -116,7 +116,7 @@
 
 .module-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .module-card:hover::before {
@@ -127,7 +127,7 @@
   border-color: var(--module-color);
   background: linear-gradient(135deg, var(--module-color)08, var(--module-color)15);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .module-card.active::before {
@@ -177,22 +177,22 @@
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--text-color) 30%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(0,0,0,0);
+    box-shadow: 0 0 0 6px transparent;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0,0,0,0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
 /* 知识内容区域 - 新的卡片式布局 */
 .knowledge-content {
-  background: white;
-  border-radius: 16px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-lg);
   padding: 25px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-sm);
   min-height: 500px;
   position: relative;
   overflow: hidden;
@@ -205,7 +205,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4);
+  background: var(--gradient-ink);
   opacity: 0.8;
 }
 
@@ -214,12 +214,12 @@
 }
 
 .ai-analysis-panel {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  border-radius: 12px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  color: white;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  color: var(--active-menu-text);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 .ai-analysis-header {
@@ -242,9 +242,9 @@
 }
 
 .close-analysis {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--active-menu-text) 20%, transparent);
   border: none;
-  color: white;
+  color: var(--active-menu-text);
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -257,7 +257,7 @@
 }
 
 .close-analysis:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--active-menu-text) 30%, transparent);
   transform: scale(1.1);
 }
 
@@ -271,7 +271,7 @@
 }
 
 .ai-analysis-structured h4 {
-  color: #fff;
+  color: var(--active-menu-text);
   margin-bottom: 0.5rem;
   font-size: 1.1rem;
 }
@@ -279,8 +279,8 @@
 .suggestions-list,
 .insights-list,
 .recommendations-list {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--active-menu-text) 10%, transparent);
+  border-radius: var(--radius-sm);
   padding: 1rem;
   margin-bottom: 1rem;
 }
@@ -289,7 +289,7 @@
 .insights-list h4,
 .recommendations-list h4 {
   margin-bottom: 0.75rem;
-  color: #fff;
+  color: var(--active-menu-text);
   font-size: 1rem;
 }
 
@@ -304,7 +304,8 @@
 .insights-list li,
 .recommendations-list li {
   margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--active-menu-text);
+  opacity: 0.9;
 }
 
 .suggestions-list li:last-child,
@@ -354,7 +355,7 @@
   left: 0;
   width: 60px;
   height: 2px;
-  background: linear-gradient(90deg, var(--primary-color), #2ecc71);
+  background: var(--gradient-primary);
 }
 
 .knowledge-overview-header h3 {
@@ -365,13 +366,13 @@
 }
 
 .stats-badge {
-  background: linear-gradient(135deg, var(--primary-color), #2ecc71);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--active-menu-text);
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 /* 角色知识库总览样式 */
@@ -382,11 +383,11 @@
 }
 
 .character-summary-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
   padding: 15px;
-  border-left: 4px solid #FF6B6B;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--primary-color);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -395,7 +396,7 @@
 
 .character-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .character-avatar {
@@ -405,12 +406,13 @@
 .avatar-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+  background: var(--gradient-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  color: var(--active-menu-text);
 }
 
 .character-summary-info {
@@ -441,8 +443,8 @@
 }
 
 .character-tags .tag {
-  background: #FF6B6B;
-  color: white;
+  background: var(--primary-color);
+  color: var(--active-menu-text);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -472,16 +474,17 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.8rem;
+  color: var(--text-color);
 }
 
 .edit-btn:hover {
   background: var(--primary-color);
-  color: white;
+  color: var(--active-menu-text);
 }
 
 .delete-btn:hover {
-  background: #e74c3c;
-  color: white;
+  background: var(--error-color);
+  color: var(--active-menu-text);
 }
 
 .character-info {
@@ -491,7 +494,7 @@
 .character-info p {
   margin: 5px 0;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-color);
 }
 
 .character-info strong {
@@ -505,9 +508,10 @@
 }
 
 .relations-list {
-  background: white;
+  background: var(--elevated-bg);
   border-radius: 4px;
   padding: 10px;
+  border: 1px solid var(--border-color);
 }
 
 .relation-item {
@@ -519,8 +523,8 @@
 }
 
 .relation-type {
-  background: #FF6B6B;
-  color: white;
+  background: var(--primary-color);
+  color: var(--active-menu-text);
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 0.8rem;
@@ -533,7 +537,7 @@
 }
 
 .no-relations {
-  color: #999;
+  color: var(--muted-text-color);
   font-style: italic;
   text-align: center;
   padding: 10px;
@@ -547,11 +551,11 @@
 }
 
 .worldview-summary-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
   padding: 15px;
-  border-left: 4px solid #4ECDC4;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--success-color);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   display: flex;
   align-items: flex-start;
@@ -560,19 +564,20 @@
 
 .worldview-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .worldview-icon {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #4ECDC4, #6EE7DF);
+  background: var(--success-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  color: var(--active-menu-text);
 }
 
 .worldview-summary-info {
@@ -603,8 +608,8 @@
 }
 
 .feature-tag {
-  background: #4ECDC4;
-  color: white;
+  background: var(--success-color);
+  color: var(--active-menu-text);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -629,7 +634,7 @@
 .worldview-info p {
   margin: 5px 0;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-color);
 }
 
 .worldview-rules h5 {
@@ -639,9 +644,10 @@
 }
 
 .rules-list {
-  background: white;
+  background: var(--elevated-bg);
   border-radius: 4px;
   padding: 10px;
+  border: 1px solid var(--border-color);
 }
 
 .rule-item {
@@ -652,8 +658,8 @@
 }
 
 .rule-name {
-  background: #4ECDC4;
-  color: white;
+  background: var(--success-color);
+  color: var(--active-menu-text);
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 0.8rem;
@@ -665,7 +671,7 @@
 }
 
 .no-rules {
-  color: #999;
+  color: var(--muted-text-color);
   font-style: italic;
   text-align: center;
   padding: 10px;
@@ -679,11 +685,11 @@
 }
 
 .scene-summary-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
   padding: 15px;
-  border-left: 4px solid #45B7D1;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--primary-hover);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -692,19 +698,20 @@
 
 .scene-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .scene-icon {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #45B7D1, #6BC5E8);
+  background: var(--primary-hover);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  color: var(--active-menu-text);
 }
 
 .scene-summary-info {
@@ -736,16 +743,16 @@
 }
 
 .usage-count {
-  background: #45B7D1;
-  color: white;
+  background: var(--primary-hover);
+  color: var(--active-menu-text);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
 }
 
 .location-tag {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-color));
+  color: var(--primary-color);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -770,7 +777,7 @@
 .scene-info p {
   margin: 5px 0;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-color);
 }
 
 .scene-tags h5 {
@@ -786,15 +793,15 @@
 }
 
 .tag {
-  background: #45B7D1;
-  color: white;
+  background: var(--primary-hover);
+  color: var(--active-menu-text);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
 }
 
 .no-tags {
-  color: #999;
+  color: var(--muted-text-color);
   font-style: italic;
   text-align: center;
   padding: 10px;
@@ -808,11 +815,11 @@
 }
 
 .technique-summary-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--elevated-bg);
+  border-radius: var(--radius-md);
   padding: 15px;
-  border-left: 4px solid #96CEB4;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border-left: 4px solid var(--warning-color);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   display: flex;
   align-items: flex-start;
@@ -821,19 +828,20 @@
 
 .technique-summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .technique-icon {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #96CEB4, #A8D5C4);
+  background: var(--warning-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  color: var(--active-menu-text);
 }
 
 .technique-summary-info {
@@ -849,8 +857,8 @@
 }
 
 .technique-category-badge {
-  background: #96CEB4;
-  color: white;
+  background: var(--warning-color);
+  color: var(--active-menu-text);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -877,8 +885,8 @@
 }
 
 .technique-count {
-  background: #e8f5e8;
-  color: #2e7d32;
+  background: color-mix(in srgb, var(--success-color) 10%, var(--bg-color));
+  color: var(--success-color);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -897,23 +905,24 @@
 }
 
 .technique-category {
-  background: #96CEB4;
-  color: white;
+  background: var(--warning-color);
+  color: var(--active-menu-text);
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
 }
 
 .techniques-list {
-  background: white;
+  background: var(--elevated-bg);
   border-radius: 4px;
   padding: 10px;
+  border: 1px solid var(--border-color);
 }
 
 .technique-item {
   margin-bottom: 15px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .technique-item:last-child {
@@ -929,13 +938,13 @@
 }
 
 .technique-item p {
-  color: #555;
+  color: var(--text-color);
   font-size: 0.9rem;
   margin-bottom: 10px;
 }
 
 .technique-examples {
-  background: #f8f9fa;
+  background: var(--hover-bg);
   padding: 8px;
   border-radius: 4px;
 }
@@ -967,6 +976,7 @@
   font-size: 4rem;
   margin-bottom: 20px;
   opacity: 0.5;
+  color: var(--border-color);
 }
 
 .empty-state p {
@@ -977,7 +987,7 @@
 
 .empty-hint {
   font-size: 0.9rem;
-  color: #95a5a6;
+  color: var(--muted-text-color);
 }
 
 /* 查看更多样式 */
@@ -985,19 +995,19 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 20px;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  border-radius: 12px;
-  color: #6c757d;
+  background: var(--hover-bg);
+  border-radius: var(--radius-md);
+  color: var(--secondary-text-color);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 2px dashed #dee2e6;
+  border: 2px dashed var(--border-color);
 }
 
 .view-more:hover {
-  background: linear-gradient(135deg, #e9ecef, #dee2e6);
-  color: #495057;
-  border-color: #adb5bd;
+  background: var(--sidebar-bg);
+  color: var(--text-color);
+  border-color: var(--secondary-text-color);
   transform: translateY(-1px);
 }
 
@@ -1006,7 +1016,7 @@
   .knowledge-modules {
     gap: 12px;
   }
-  
+
   .module-card {
     max-width: 240px;
     min-width: 180px;
@@ -1017,12 +1027,12 @@
   .knowledge-base {
     padding: 15px;
   }
-  
+
   .knowledge-modules {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .module-card {
     max-width: none;
     min-width: auto;
@@ -1031,50 +1041,50 @@
     align-items: center;
     padding: 15px;
   }
-  
+
   .module-icon {
     font-size: 2rem;
     margin-bottom: 0;
     margin-right: 15px;
   }
-  
+
   .module-info {
     flex: 1;
   }
-  
+
   .module-info h3 {
     font-size: 1.1rem;
   }
-  
+
   .knowledge-content {
     padding: 20px;
     min-height: 400px;
   }
-  
+
   .ai-actions {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .ai-action-btn {
     width: 100%;
     max-width: 300px;
     justify-content: center;
   }
-  
+
   .characters-grid,
   .worldviews-grid,
   .scenes-grid,
   .techniques-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .knowledge-section-header {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
   }
-  
+
   .character-header,
   .worldview-header,
   .scene-header {
@@ -1082,17 +1092,17 @@
     align-items: flex-start;
     gap: 10px;
   }
-  
+
   .ai-analysis-panel {
     padding: 1rem;
   }
-  
+
   .ai-analysis-header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .suggestions-list,
   .insights-list,
   .recommendations-list {

@@ -567,6 +567,35 @@
 - `backend/tests/integration/test_checkpointer_resume.py`（新建）
 - `backend/tests/integration/test_sse_streaming.py`（新建）
 
+## UI Token 层实施 — 墨韵·Ink & Moonlight 设计系统 — 2026-06-12
+
+### 完成内容
+1. **Phase 1: Token 层实施**
+   - 重写 `frontend/src/index.css` 全部 CSS 变量，从 GitHub 风格替换为"墨韵·Ink & Moonlight"设计系统
+   - 亮色模式：宣纸白底 `#FAF8F5` + 赭石 accent `#C75B39`
+   - 暗色模式：深墨底 `#1A1714` + 暖金 accent `#D4915C`
+   - 新增动画变量（ease-out-expo、ease-spring、duration 系列）
+   - 新增 `--gradient-ink` 渐变变量
+   - 新增 `--font-display` 和 `--font-literary` 到 Tailwind `@theme` 块
+   - 重写 `frontend/src/theme/tokens.js` 全部 JS Token
+     - `colors` 对象对齐新色值
+     - `antdTokens` 对齐新色值（borderRadius 10、Card borderRadius 16 等）
+     - `radius` 更新为 sm:6 / md:10 / lg:16
+     - `fontFamily` 更新为 Inter + 中文字体栈
+     - `shadows` 对齐新色值
+   - 更新 `frontend/index.html` 添加字体 CDN 链接
+     - Noto Serif SC（标题专用）
+     - LXGW WenKai（写作编辑器专用）
+
+### 修改文件
+- `frontend/src/index.css`
+- `frontend/src/theme/tokens.js`
+- `frontend/index.html`
+
+### 验证结果
+- ESLint: 通过（0 errors，10 warnings 为既有问题）
+- Vite Build: 通过（9.67s）
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式

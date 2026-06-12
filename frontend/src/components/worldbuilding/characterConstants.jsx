@@ -18,12 +18,12 @@ export const ALIGNMENT_OPTIONS = [
 ];
 
 export const DIMENSION_KEYS = [
-  { key: '智力', color: '#1890ff' },
-  { key: '体力', color: '#52c41a' },
-  { key: '魅力', color: '#eb2f96' },
-  { key: '敏捷', color: '#faad14' },
-  { key: '意志', color: '#722ed1' },
-  { key: '幸运', color: '#13c2c2' },
+  { key: '智力', color: 'var(--primary-color)' },
+  { key: '体力', color: 'var(--success-color)' },
+  { key: '魅力', color: 'var(--error-color)' },
+  { key: '敏捷', color: 'var(--warning-color)' },
+  { key: '意志', color: 'var(--primary-hover)' },
+  { key: '幸运', color: 'var(--primary-color)' },
 ];
 
 export const GENDER_PROFILE_KEY = 'identity.gender_profile';

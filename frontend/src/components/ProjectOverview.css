@@ -37,13 +37,13 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 30%, transparent);
 }
 
 .btn-primary:hover {
-  background: #4a90e2;
+  background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(88, 166, 255, 0.4);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary-color) 40%, transparent);
 }
 
 .btn-secondary {
@@ -92,7 +92,7 @@
 .stat-icon {
   font-size: 2rem;
   color: var(--primary-color);
-  background: rgba(88, 166, 255, 0.1);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
   width: 60px;
   height: 60px;
   border-radius: 50%;

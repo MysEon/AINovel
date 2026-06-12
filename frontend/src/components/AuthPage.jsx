@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
@@ -29,6 +29,26 @@ const AuthPage = () => {
       return saved ? JSON.parse(saved) : SHAPE_LIST.map(s => s.key);
     } catch { return SHAPE_LIST.map(s => s.key); }
   });
+
+  const [displayedSlogan, setDisplayedSlogan] = useState('');
+  const fullSlogan = '用 AI 重新定义创作';
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setDisplayedSlogan(fullSlogan);
+      return;
+    }
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i < fullSlogan.length) {
+        setDisplayedSlogan(fullSlogan.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(timer);
+      }
+    }, 80);
+    return () => clearInterval(timer);
+  }, []);
 
   const toggleShape = (key) => {
     setEnabledShapes(prev => {
@@ -102,7 +122,14 @@ const AuthPage = () => {
         <div className="auth-brand">
           <div className="brand-icon">✦</div>
           <h1 className="brand-title">AINovel</h1>
-          <p className="brand-slogan">用 AI 重新定义创作</p>
+          <p className={`brand-slogan ${displayedSlogan.length === fullSlogan.length ? 'done' : ''}`}>
+            {displayedSlogan}
+          </p>
+          <div className="brand-features">
+            <div className="brand-feature delay-0">✦ AI 智能续写</div>
+            <div className="brand-feature delay-1">✦ 角色世界观构建</div>
+            <div className="brand-feature delay-2">✦ 多模型协作</div>
+          </div>
         </div>
 
         <div className="auth-spacer" />
@@ -295,7 +322,7 @@ const AuthPage = () => {
       
       <div className="auth-footer">
         <Switch checked={isDarkMode} onChange={(checked) => setThemeMode(checked ? 'dark' : 'light')} checkedChildren="🌙" unCheckedChildren="☀️" />
-        <div style={{marginTop: '8px'}}>AINovel v1.0.0</div>
+        <div className="auth-version">AINovel v1.0.0</div>
       </div>
 
       <div className="shape-settings">

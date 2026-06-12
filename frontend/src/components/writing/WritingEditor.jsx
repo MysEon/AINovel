@@ -242,8 +242,8 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             </button>
           </div>
         ) : aiAssisted ? (
-          <div className="ai-writing-interface modern-ai-layout" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, maxHeight: 'calc(100vh - 200px)' }}>
-            <Layout className="ai-writing-layout-shell" style={{ flex: 1, background: 'transparent', margin: '8px', minHeight: 0 }}>
+          <div className="ai-writing-interface modern-ai-layout">
+            <Layout className="ai-writing-layout-shell">
               {layoutMode === 'left' ? (
                 <AIChatPanel
                   {...aiWriting}
@@ -264,7 +264,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                   onRewrite={aiWriting.handleRewriteGeneratedResult}
                 />
               )}
-              <Divider type="vertical" className="ai-layout-divider" style={{ margin: '0 4px' }} />
+              <Divider type="vertical" className="ai-layout-divider" />
               {layoutMode === 'left' ? (
                 <EditorPanel
                   content={content}
@@ -296,7 +296,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
           />
         )}
       </div>
-      <div className="editor-footer">
+      <div className={`editor-footer ${aiAssisted ? 'is-ai-active' : ''}`}>
         <div className="footer-left">
           <ChapterList
             chapters={chapters}

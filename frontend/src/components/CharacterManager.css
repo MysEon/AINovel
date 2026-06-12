@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--active-menu-text);
   font-size: 18px;
   flex-shrink: 0;
 }

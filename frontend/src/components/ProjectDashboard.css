@@ -1,10 +1,16 @@
 .dashboard-container {
   min-height: 100vh;
   font-family: var(--font-family);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 54%, transparent), transparent 320px),
+    var(--bg-color);
 }
 
 .dashboard-header {
-  padding: 2rem 2rem 1rem;
+  padding: 2rem 2rem 1.25rem;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--elevated-bg) 70%, transparent), transparent 72%),
+    var(--paper-fiber) !important;
 }
 
 .header-content {
@@ -28,6 +34,7 @@
   font-size: 2.5rem !important;
   letter-spacing: -0.02em;
   color: var(--text-color) !important;
+  font-family: var(--font-display) !important;
 }
 
 .welcome-text {
@@ -44,9 +51,12 @@
 }
 
 .create-project-btn {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   height: 48px;
   font-weight: 600;
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary-color) 20%, transparent);
 }
 
 .user-menu {
@@ -82,6 +92,16 @@
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  position: relative;
+}
+
+.projects-content::before {
+  content: '';
+  display: block;
+  height: 8px;
+  margin: 0 0 1.5rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--border-color) 82%, var(--primary-color)), transparent);
 }
 
 .projects-grid {
@@ -90,23 +110,54 @@
 
 /* 项目卡片 */
 .project-card {
-  border-radius: 12px !important;
+  border-radius: var(--radius-md) !important;
   border: 1px solid var(--border-color) !important;
-  background: var(--elevated-bg) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 4px solid var(--primary-color) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 96%, var(--primary-color) 4%), var(--elevated-bg)) !important;
+  transition: all 0.2s var(--ease-in-out);
   overflow: hidden;
   height: 100%;
   box-shadow: var(--shadow-sm);
+  animation: fadeInUp 0.5s var(--ease-out-expo) both;
+  position: relative;
+}
+
+.project-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 28%, transparent));
+  opacity: 0.85;
+  transition: width 0.2s var(--ease-in-out), opacity 0.2s var(--ease-in-out);
 }
 
 .project-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-md);
-  border-color: var(--primary-color) !important;
+  border-top-width: 8px !important;
+}
+
+.project-card:hover::before {
+  width: 9px;
+  opacity: 1;
+}
+
+.project-card[data-card-index="0"] { animation-delay: 0ms; }
+.project-card[data-card-index="1"] { animation-delay: 80ms; }
+.project-card[data-card-index="2"] { animation-delay: 160ms; }
+.project-card[data-card-index="3"] { animation-delay: 240ms; }
+.project-card[data-card-index="4"] { animation-delay: 320ms; }
+.project-card[data-card-index="5"] { animation-delay: 400ms; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .project-card .ant-card-body {
-  padding: 1rem !important;
+  padding: 1.15rem 1.1rem 1rem 1.35rem !important;
 }
 
 .project-card .ant-card-actions {
@@ -124,6 +175,7 @@
   font-weight: 600 !important;
   font-size: 1.1rem !important;
   line-height: 1.2;
+  font-family: var(--font-display) !important;
 }
 
 .project-description {
@@ -138,7 +190,7 @@
 .project-stats {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: var(--hover-bg);
+  background: color-mix(in srgb, var(--hover-bg) 82%, transparent);
   border-radius: 8px;
   border: 1px solid var(--border-color);
 }
@@ -153,11 +205,24 @@
 }
 
 .open-project-btn {
-  border-radius: 6px !important;
-  font-weight: 500;
+  border-radius: 999px !important;
+  font-weight: 700;
   height: 36px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.9rem;
+  color: var(--primary-color) !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.open-project-btn::after {
+  content: ' →';
+  transition: transform 0.2s var(--ease-in-out);
+  display: inline-block;
+}
+
+.open-project-btn:hover::after {
+  transform: translateX(4px);
 }
 
 .project-menu-btn {
@@ -192,6 +257,7 @@
   margin: 0 0 1rem 0 !important;
   font-weight: 600 !important;
   color: var(--text-color) !important;
+  font-family: var(--font-display) !important;
 }
 
 .empty-description {
@@ -280,6 +346,14 @@
 
 .form-actions {
   margin-bottom: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* 响应式设计 */

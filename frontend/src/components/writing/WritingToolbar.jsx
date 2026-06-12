@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaPlus, FaFileAlt, FaCog, FaMagic, FaLightbulb, FaSpinner, FaUsers } from 'react-icons/fa';
-import { Button, Space, Tag, Dropdown, Menu, Card } from 'antd';
+import { Button, Space, Tag, Dropdown, Menu } from 'antd';
 import AgentStatusBadge from './AgentStatusBadge';
 
 const WritingToolbar = ({
@@ -17,9 +17,8 @@ const WritingToolbar = ({
   onPromptTemplateSelect
 }) => {
   return (
-    <Card
-      className="ai-assistant-toolbar-card"
-      title={
+    <div className="ai-assistant-toolbar-card">
+      <div className="ai-assistant-toolbar-header">
         <div className="ai-assistant-toolbar-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="ai-assistant-title-group">
             <span className="ai-assistant-title-text">AI写作助手</span>
@@ -33,17 +32,17 @@ const WritingToolbar = ({
               onClick={onNewChat}
               title="开启新对话"
               disabled={isLoading}
-              style={{ color: '#1890ff' }}
+              style={{ color: 'var(--primary-color)' }}
             >
               新对话
             </Button>
             {selectedModelConfig && (
-              <Tag color="blue" style={{ marginRight: 8 }}>
+              <Tag style={{ marginRight: 8, background: 'var(--primary-color)', color: 'var(--active-menu-text)', borderColor: 'var(--primary-color)' }}>
                 {selectedModelConfig.name}
               </Tag>
             )}
             {selectedPromptTemplate && (
-              <Tag color="green" style={{ marginRight: 8 }}>
+              <Tag style={{ marginRight: 8, background: 'var(--success-color)', color: 'var(--active-menu-text)', borderColor: 'var(--success-color)' }}>
                 {selectedPromptTemplate.name}
               </Tag>
             )}
@@ -57,7 +56,7 @@ const WritingToolbar = ({
                     <Menu.Item key={template.id}>
                       <div>
                         <div>{template.name}</div>
-                        <div style={{ fontSize: '12px', color: '#999' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--muted-text-color)' }}>
                           {template.description}
                         </div>
                       </div>
@@ -65,7 +64,7 @@ const WritingToolbar = ({
                   ))}
                   {promptTemplates.length === 0 && (
                     <Menu.Item disabled>
-                      <span style={{ color: '#999' }}>暂无可用模板</span>
+                      <span style={{ color: 'var(--muted-text-color)' }}>暂无可用模板</span>
                     </Menu.Item>
                   )}
                 </Menu>
@@ -78,7 +77,7 @@ const WritingToolbar = ({
                 icon={<FaFileAlt />}
                 title="选择提示词模板"
                 loading={isLoadingTemplates}
-                style={{ color: selectedPromptTemplate ? '#52c41a' : '#8c8c8c' }}
+                style={{ color: selectedPromptTemplate ? 'var(--success-color)' : 'var(--muted-text-color)' }}
               />
             </Dropdown>
             <Dropdown
@@ -91,7 +90,7 @@ const WritingToolbar = ({
                   ))}
                   {modelConfigs.length === 0 && (
                     <Menu.Item disabled>
-                      <span style={{ color: '#999' }}>暂无可用模型配置</span>
+                      <span style={{ color: 'var(--muted-text-color)' }}>暂无可用模型配置</span>
                     </Menu.Item>
                   )}
                 </Menu>
@@ -108,68 +107,64 @@ const WritingToolbar = ({
             </Dropdown>
           </div>
         </div>
-      }
-      style={{
-        borderRadius: '8px 8px 0 0',
-        flexShrink: 0
-      }}
-      bodyStyle={{ padding: '12px 16px' }}
-    >
-      <div className="ai-toolbar-status-strip" aria-live="polite">
-        {agentStatuses.map((agent) => (
-          <AgentStatusBadge
-            key={`panel-${agent.id}`}
-            name={agent.name}
-            status={agent.status}
-            active={agent.active}
-            tone={agent.tone}
-          />
-        ))}
       </div>
-      <Space wrap>
-        <Button
-          className="ai-quick-action-btn"
-          icon={<FaMagic />}
-          onClick={() => onAIAction('outline')}
-          disabled={isLoading || modelConfigs.length === 0}
-          size="small"
-        >
-          大纲
-        </Button>
-        <Button
-          className="ai-quick-action-btn"
-          icon={<FaLightbulb />}
-          onClick={() => onAIAction('suggestions')}
-          disabled={isLoading || modelConfigs.length === 0}
-          size="small"
-        >
-          建议
-        </Button>
-        <Button
-          className="ai-quick-action-btn"
-          icon={<FaSpinner />}
-          onClick={() => onAIAction('optimize')}
-          disabled={isLoading || modelConfigs.length === 0}
-          size="small"
-        >
-          优化
-        </Button>
-        <Button
-          className="ai-quick-action-btn"
-          icon={<FaUsers />}
-          onClick={() => onAIAction('ideas')}
-          disabled={isLoading || modelConfigs.length === 0}
-          size="small"
-        >
-          创意
-        </Button>
-      </Space>
-      {modelConfigs.length === 0 && (
-        <div style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-          请先在设置中配置AI模型
+      <div className="ai-assistant-toolbar-body">
+        <div className="ai-toolbar-status-strip" aria-live="polite">
+          {agentStatuses.map((agent) => (
+            <AgentStatusBadge
+              key={`panel-${agent.id}`}
+              name={agent.name}
+              status={agent.status}
+              active={agent.active}
+              tone={agent.tone}
+            />
+          ))}
         </div>
-      )}
-    </Card>
+        <Space wrap>
+          <Button
+            className="ai-quick-action-btn"
+            icon={<FaMagic />}
+            onClick={() => onAIAction('outline')}
+            disabled={isLoading || modelConfigs.length === 0}
+            size="small"
+          >
+            大纲
+          </Button>
+          <Button
+            className="ai-quick-action-btn"
+            icon={<FaLightbulb />}
+            onClick={() => onAIAction('suggestions')}
+            disabled={isLoading || modelConfigs.length === 0}
+            size="small"
+          >
+            建议
+          </Button>
+          <Button
+            className="ai-quick-action-btn"
+            icon={<FaSpinner />}
+            onClick={() => onAIAction('optimize')}
+            disabled={isLoading || modelConfigs.length === 0}
+            size="small"
+          >
+            优化
+          </Button>
+          <Button
+            className="ai-quick-action-btn"
+            icon={<FaUsers />}
+            onClick={() => onAIAction('ideas')}
+            disabled={isLoading || modelConfigs.length === 0}
+            size="small"
+          >
+            创意
+          </Button>
+        </Space>
+        {modelConfigs.length === 0 && (
+          <div style={{ marginTop: 8, color: 'var(--muted-text-color)', fontSize: '12px' }}>
+            请先在设置中配置AI模型
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

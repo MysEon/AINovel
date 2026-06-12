@@ -19,7 +19,7 @@ const EditorPanel = ({
 }) => {
   if (isAiAssisted) {
     return (
-      <Content className="editor-canvas-pane" style={{ padding: '0 8px' }}>
+      <Content className="editor-canvas-pane">
         <EditorCanvas
           content={content}
           onContentChange={(e) => onContentChange(e.target.value)}

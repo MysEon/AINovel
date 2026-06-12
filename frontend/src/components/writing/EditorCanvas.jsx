@@ -63,28 +63,19 @@ const EditorCanvas = ({
 
       <div className="editor-paper">
         {readOnly && <div className="editor-lock-overlay modern">编辑区已锁定</div>}
-        <div className="editor-paper-inner">
-          <TextArea
-            value={content}
-            onChange={onContentChange}
-            placeholder="在这里创作你的小说内容..."
-            readOnly={readOnly}
-            className="editor-canvas-textarea"
-            style={{
-              height: '100%',
-              border: 'none',
-              resize: 'none',
-              boxShadow: 'none',
-              background: 'transparent'
-            }}
-          />
-          {isGenerating && (
-            <div className="editor-streaming-hint" aria-hidden="true">
-              <span className="editor-streaming-dot" />
-              <span className="editor-streaming-caret" />
-            </div>
-          )}
-        </div>
+        <TextArea
+          value={content}
+          onChange={onContentChange}
+          placeholder="在这里创作你的小说内容..."
+          readOnly={readOnly}
+          className="editor-canvas-textarea"
+        />
+        {isGenerating && (
+          <div className="editor-streaming-hint" aria-hidden="true">
+            <span className="editor-streaming-dot" />
+            <span className="editor-streaming-caret" />
+          </div>
+        )}
       </div>
 
       {showCompletionActions && (

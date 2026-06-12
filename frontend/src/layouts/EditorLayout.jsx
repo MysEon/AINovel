@@ -6,6 +6,7 @@ import { useTheme } from '../components/ThemeProvider';
 import { FaSun, FaMoon, FaDesktop, FaArrowLeft } from 'react-icons/fa';
 import { getProject } from '../services/projectService';
 import { useNotification } from '../components/NotificationManager';
+import '../components/ProjectEditor.css';
 
 // 路由段落到菜单项标签的映射
 const routeToMenuItem = {

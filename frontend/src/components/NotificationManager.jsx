@@ -66,15 +66,15 @@ export const NotificationProvider = ({ children }) => {
     const getIcon = () => {
       switch (type) {
         case 'error':
-          return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+          return <ExclamationCircleOutlined style={{ color: 'var(--error-color)' }} />;
         case 'warning':
-          return <ExclamationCircleOutlined style={{ color: '#faad14' }} />;
+          return <ExclamationCircleOutlined style={{ color: 'var(--warning-color)' }} />;
         case 'success':
-          return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+          return <CheckCircleOutlined style={{ color: 'var(--success-color)' }} />;
         case 'question':
-          return <QuestionCircleOutlined style={{ color: '#1890ff' }} />;
+          return <QuestionCircleOutlined style={{ color: 'var(--primary-color)' }} />;
         default:
-          return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+          return <InfoCircleOutlined style={{ color: 'var(--primary-color)' }} />;
       }
     };
 
@@ -102,7 +102,7 @@ export const NotificationProvider = ({ children }) => {
               style={{
                 width: '100%',
                 padding: '8px 12px',
-                border: '1px solid #d9d9d9',
+                border: '1px solid var(--border-color)',
                 borderRadius: '6px',
                 marginTop: '12px',
                 fontSize: '14px'

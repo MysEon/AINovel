@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Card } from 'antd';
+import { Layout } from 'antd';
 import WritingToolbar from './WritingToolbar';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
@@ -50,24 +50,7 @@ const AIChatPanel = ({
         />
 
         {/* 聊天消息区域 - 固定高度，可滚动 */}
-        <Card
-          className="ai-chat-card"
-          style={{
-            flex: 1,
-            borderRadius: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0, // 关键：允许flex子项收缩
-            overflow: 'hidden' // 关键：防止内容溢出
-          }}
-          bodyStyle={{
-            padding: 0,
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden' // 关键：防止内容溢出
-          }}
-        >
+        <div className="ai-chat-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <ChatMessages
             messages={messages}
             messagesContainerRef={messagesContainerRef}
@@ -84,7 +67,7 @@ const AIChatPanel = ({
             handleKeyPress={handleKeyPress}
             chatInputRef={chatInputRef}
           />
-        </Card>
+        </div>
       </div>
     </Sider>
   );
