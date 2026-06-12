@@ -18,6 +18,20 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Title } = Typography;
 
+const normalizeTags = (tags) => {
+  if (Array.isArray(tags)) {
+    return tags.map(tag => String(tag).trim()).filter(Boolean);
+  }
+
+  if (typeof tags === 'string') {
+    return tags.split(',').map(tag => tag.trim()).filter(Boolean);
+  }
+
+  return [];
+};
+
+const formatTagsForInput = (tags) => normalizeTags(tags).join(', ');
+
 const PromptManager = ({ onSelectTemplate }) => {
   const [templates, setTemplates] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -95,7 +109,7 @@ const PromptManager = ({ onSelectTemplate }) => {
         template: template.template,
         description: template.description || '',
         variables: template.variables || '',
-        tags: template.tags || '',
+        tags: formatTagsForInput(template.tags),
         is_active: template.is_active
       });
     } else {
@@ -180,6 +194,7 @@ const PromptManager = ({ onSelectTemplate }) => {
       title: '模板名称',
       dataIndex: 'name',
       key: 'name',
+      width: 160,
       render: (text, record) => (
         <Space>
           <span>{text}</span>
@@ -192,6 +207,7 @@ const PromptManager = ({ onSelectTemplate }) => {
       title: '分类',
       dataIndex: 'category',
       key: 'category',
+      width: 120,
       render: (category) => {
         const categoryInfo = categories.find(c => c.value === category);
         return categoryInfo ? categoryInfo.label : category;
@@ -201,25 +217,29 @@ const PromptManager = ({ onSelectTemplate }) => {
       title: '描述',
       dataIndex: 'description',
       key: 'description',
+      width: 190,
       ellipsis: true
     },
     {
       title: '标签',
       dataIndex: 'tags',
       key: 'tags',
-      render: (tags) => tags ? tags.split(',').map(tag => 
-        <Tag key={tag} size="small">{tag.trim()}</Tag>
-      ) : null
+      width: 160,
+      render: (tags) => normalizeTags(tags).map(tag => (
+        <Tag key={tag} size="small">{tag}</Tag>
+      ))
     },
     {
       title: '使用次数',
       dataIndex: 'usage_count',
       key: 'usage_count',
+      width: 100,
       sorter: (a, b) => a.usage_count - b.usage_count
     },
     {
       title: '操作',
       key: 'actions',
+      width: 170,
       render: (_, record) => (
         <Space>
           <Tooltip title="使用模板">
@@ -274,14 +294,43 @@ const PromptManager = ({ onSelectTemplate }) => {
     }
   ];
 
+  const systemTemplateCount = templates.filter(template => template.is_system).length;
+  const personalTemplateCount = templates.length - systemTemplateCount;
+  const activeCategoryLabel = selectedCategory
+    ? categories.find(category => category.value === selectedCategory)?.label || selectedCategory
+    : '全部分类';
+
   return (
     <div className="prompt-manager-container">
       <Card className="prompt-manager-card">
-        <Title level={2} style={{ marginBottom: 24 }}>提示词管理</Title>
+        <div className="prompt-manager-hero">
+          <div>
+            <div className="prompt-manager-kicker">
+              <BulbOutlined />
+              <span>Prompt Library</span>
+            </div>
+            <Title level={2} className="prompt-manager-title">提示词管理</Title>
+            <p>统一维护写作助手、角色塑造与设定校对模板，快速复用成熟提示词。</p>
+          </div>
+          <div className="prompt-manager-stats">
+            <div className="prompt-stat-pill">
+              <strong>{templates.length}</strong>
+              <span>模板</span>
+            </div>
+            <div className="prompt-stat-pill">
+              <strong>{systemTemplateCount}</strong>
+              <span>系统</span>
+            </div>
+            <div className="prompt-stat-pill">
+              <strong>{personalTemplateCount}</strong>
+              <span>个人</span>
+            </div>
+          </div>
+        </div>
         
         {/* 工具栏 */}
-        <Row gutter={16} className="prompt-manager-toolbar">
-          <Col span={8}>
+        <Row gutter={[12, 12]} className="prompt-manager-toolbar">
+          <Col xs={24} lg={8}>
             <Search
               placeholder="搜索模板名称、描述或标签"
               value={searchText}
@@ -290,13 +339,13 @@ const PromptManager = ({ onSelectTemplate }) => {
               enterButton={<SearchOutlined />}
             />
           </Col>
-          <Col span={4}>
+          <Col xs={24} sm={12} lg={4}>
             <Select
               placeholder="选择分类"
               value={selectedCategory}
               onChange={setSelectedCategory}
               allowClear
-              style={{ width: '100%' }}
+              className="prompt-toolbar-select"
             >
               {categories.map(category => (
                 <Option key={category.value} value={category.value}>
@@ -305,18 +354,18 @@ const PromptManager = ({ onSelectTemplate }) => {
               ))}
             </Select>
           </Col>
-          <Col span={4}>
+          <Col xs={24} sm={12} lg={4}>
             <Select
               value={includeSystem}
               onChange={setIncludeSystem}
-              style={{ width: '100%' }}
+              className="prompt-toolbar-select"
             >
               <Option value={true}>包含系统模板</Option>
               <Option value={false}>仅个人模板</Option>
             </Select>
           </Col>
-          <Col span={8}>
-            <Space>
+          <Col xs={24} lg={8}>
+            <Space className="prompt-toolbar-actions">
               <Button 
                 type="primary" 
                 icon={<PlusOutlined />}
@@ -335,19 +384,27 @@ const PromptManager = ({ onSelectTemplate }) => {
         </Row>
 
         {/* 模板列表 */}
-        <Table
-          dataSource={templates}
-          columns={columns}
-          loading={loading}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 个模板`
-          }}
-          className="prompt-manager-table"
-        />
+        <div className="prompt-table-panel">
+          <div className="prompt-table-head">
+            <span>{activeCategoryLabel}</span>
+            <small>{includeSystem ? '系统模板已包含' : '仅显示个人模板'}</small>
+          </div>
+          <Table
+            dataSource={templates}
+            columns={columns}
+            loading={loading}
+            rowKey="id"
+            tableLayout="fixed"
+            scroll={{ x: 900 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 个模板`
+            }}
+            className="prompt-manager-table"
+          />
+        </div>
       </Card>
 
       {/* 编辑模板对话框 */}
@@ -359,6 +416,7 @@ const PromptManager = ({ onSelectTemplate }) => {
         width={800}
         okText="保存"
         cancelText="取消"
+        className="prompt-template-modal"
       >
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Input
@@ -408,6 +466,7 @@ const PromptManager = ({ onSelectTemplate }) => {
         open={previewModalVisible}
         onCancel={() => setPreviewModalVisible(false)}
         width={800}
+        className="prompt-template-modal"
         footer={[
           <Button key="close" onClick={() => setPreviewModalVisible(false)}>
             关闭

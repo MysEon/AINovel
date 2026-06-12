@@ -15,6 +15,7 @@ import {
   sanitizeGenderProfile,
   parseLegacyGenderStringToProfile,
   getGenderTimelineLabels,
+  GENDER_PROFILE_KEY,
   formatFemaleTraitsSummary,
   isExistenceGenderTransitionMethod,
   formatThreeSizes,

@@ -634,3 +634,135 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Modern feature-page polish */
+.ai-workflow-manager {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 34px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 32%, transparent), transparent 260px),
+    var(--bg-color);
+}
+
+.workflow-header {
+  text-align: left;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+}
+
+.workflow-header h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.workflow-header p {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.workflow-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.workflow-card {
+  padding: 20px;
+  border-width: 1px;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px color-mix(in srgb, black 7%, transparent);
+}
+
+.workflow-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--primary-color), transparent 64%);
+  opacity: 0.6;
+}
+
+.workflow-card:hover {
+  transform: translateY(-1px);
+}
+
+.workflow-card-header {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.workflow-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+
+.workflow-info h3 {
+  font-size: 1.12rem;
+  line-height: 1.35;
+}
+
+.workflow-info p {
+  margin-top: 4px;
+  font-size: 0.84rem;
+}
+
+.workflow-steps h4 {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.steps-list {
+  gap: 7px;
+}
+
+.step-item {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+  border-radius: 7px;
+  background-color: color-mix(in srgb, var(--sidebar-bg) 64%, transparent);
+}
+
+.step-icon {
+  width: 26px;
+  height: 26px;
+  background-color: color-mix(in srgb, var(--secondary-text-color) 70%, transparent);
+}
+
+.workflow-actions {
+  padding-top: 2px;
+}
+
+.action-btn {
+  min-height: 38px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.action-btn.secondary {
+  background-color: color-mix(in srgb, var(--secondary-text-color) 16%, var(--elevated-bg));
+  color: var(--text-color);
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+}
+
+.action-btn.secondary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--secondary-text-color) 24%, var(--elevated-bg));
+}
+
+@media (max-width: 768px) {
+  .ai-workflow-manager {
+    padding: 16px;
+  }
+
+  .workflow-card-header {
+    flex-direction: row;
+    text-align: left;
+    align-items: flex-start;
+  }
+}

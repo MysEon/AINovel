@@ -341,6 +341,20 @@
 .app-container .content > .writing-editor,
 .app-container .content > .published-chapters,
 .app-container .content > .project-overview,
+.app-container .content > .kanban-board,
+.app-container .content > .prompt-manager-container,
+.app-container .content > .model-config-manager,
+.app-container .content > .knowledge-base,
+.app-container .content > .character-manager,
+.app-container .content > .ai-workflow-manager {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.app-container .content > .writing-editor,
+.app-container .content > .published-chapters,
+.app-container .content > .project-overview,
 .app-container .content > .kanban-board {
   height: 100%;
 }

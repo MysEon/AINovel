@@ -383,3 +383,108 @@
     font-size: 1rem;
   }
 }
+
+/* Modern feature-page polish */
+.project-overview {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 34px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 32%, transparent), transparent 260px),
+    var(--bg-color);
+}
+
+.overview-header {
+  align-items: flex-start;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom-color: color-mix(in srgb, var(--border-color) 72%, transparent);
+}
+
+.overview-header h3 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.overview-actions {
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.overview-actions .btn-primary,
+.overview-actions .btn-secondary {
+  min-height: 38px;
+  padding: 0.55rem 0.88rem;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.overview-actions .btn-secondary {
+  background: color-mix(in srgb, var(--sidebar-bg) 62%, var(--elevated-bg));
+}
+
+.overview-stats {
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--elevated-bg) 94%, var(--bg-color));
+  box-shadow: 0 12px 30px color-mix(in srgb, black 7%, transparent);
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+}
+
+.stat-info h3 {
+  font-size: 1.9rem;
+}
+
+.overview-content {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--elevated-bg) 94%, var(--bg-color));
+  box-shadow: 0 16px 40px color-mix(in srgb, black 7%, transparent);
+}
+
+.tabs {
+  background: color-mix(in srgb, var(--sidebar-bg) 68%, var(--elevated-bg));
+}
+
+.tab {
+  padding: 0.95rem 1.4rem;
+  font-weight: 800;
+}
+
+.tab-content {
+  padding: 1.7rem 2rem;
+}
+
+.content-structure h3,
+.chapter-list h3 {
+  font-size: 1.35rem;
+}
+
+.chapter-item {
+  border: 1px solid color-mix(in srgb, var(--border-color) 64%, transparent);
+  background: color-mix(in srgb, var(--bg-color) 28%, var(--elevated-bg));
+}
+
+@media (max-width: 768px) {
+  .project-overview {
+    padding: 16px;
+  }
+
+  .overview-actions {
+    justify-content: flex-start;
+  }
+}
