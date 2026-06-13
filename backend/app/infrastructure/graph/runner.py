@@ -144,10 +144,13 @@ class GraphRunner:
             await self._push_event(payload)
 
             config = graph_kwargs.get("config")
+            context = graph_kwargs.get("context")
+            invoke_kwargs = {}
             if self.checkpointer is not None and config is not None:
-                result = await graph.ainvoke(input_state, config=config)
-            else:
-                result = await graph.ainvoke(input_state)
+                invoke_kwargs["config"] = config
+            if context is not None:
+                invoke_kwargs["context"] = context
+            result = await graph.ainvoke(input_state, **invoke_kwargs)
 
             # 记录完成事件
             seq = await self._record_event(
@@ -266,10 +269,13 @@ class GraphRunner:
             graph = builder(model, checkpointer=self.checkpointer, **graph_kwargs)
 
             config = graph_kwargs.get("config")
+            context = graph_kwargs.get("context")
+            stream_kwargs = {"version": "v2"}
             if self.checkpointer is not None and config is not None:
-                stream_iter = graph.astream_events(input_state, version="v2", config=config)
-            else:
-                stream_iter = graph.astream_events(input_state, version="v2")
+                stream_kwargs["config"] = config
+            if context is not None:
+                stream_kwargs["context"] = context
+            stream_iter = graph.astream_events(input_state, **stream_kwargs)
             async for event in stream_iter:
                 kind = event.get("event", "")
                 name = event.get("name", "")

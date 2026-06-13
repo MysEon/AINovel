@@ -19,12 +19,18 @@ from app.infrastructure.db.models.worldbuilding import Character, Location, Orga
 logger = logging.getLogger(__name__)
 
 MAX_CONTEXT_CHARS = 8000
+CHAT_CONTEXT_MAX_CHARS = 4000
 
 
 def _truncate(text: str, max_len: int = 500) -> str:
     if not text or len(text) <= max_len:
         return text or ""
     return text[:max_len] + "…"
+
+
+def count_tokens_estimate(text: str) -> int:
+    """粗略估算 token 数，按中文经验值 len / 1.6。"""
+    return max(1, int(len(text) // 1.6))
 
 
 class AIContextBuilder:
@@ -74,13 +80,16 @@ class AIContextBuilder:
         return result.scalar_one_or_none()
 
     async def _get_characters(self, project_id: int) -> list[dict]:
-        result = await self.db.execute(select(Character).where(Character.project_id == project_id).limit(20))
+        result = await self.db.execute(
+            select(Character).where(Character.project_id == project_id).order_by(Character.id)
+        )
         return [
             {
                 "name": c.name,
                 "description": _truncate(c.description, 200),
                 "personality": _truncate(c.personality, 200),
                 "background": _truncate(c.background, 200),
+                "appearance": _truncate(c.appearance, 200),
             }
             for c in result.scalars().all()
         ]
@@ -132,6 +141,69 @@ class AIContextBuilder:
             }
             for ch in result.scalars().all()
         ]
+
+    def format_for_chat(self, ctx: dict) -> str:
+        """格式化 chat 用轻量上下文：项目元数据 + 角色基础列表。"""
+        return self._format_chat_characters(ctx, field_limit=200, compact=False)
+
+    def format_for_chat_with_budget(self, ctx: dict, max_chars: int = CHAT_CONTEXT_MAX_CHARS) -> str:
+        """按角色数量自适应预算格式化 chat 上下文。"""
+        characters = ctx.get("characters") or []
+        count = len(characters)
+        if count > 8:
+            text = self._format_chat_characters(ctx, field_limit=100, compact=True)
+        else:
+            field_limit = 200 if count <= 3 else max(100, 200 - (count - 3) * 20)
+            text = self._format_chat_characters(ctx, field_limit=field_limit, compact=False)
+
+        if len(text) <= max_chars:
+            return text
+
+        if count <= 8:
+            text = self._format_chat_characters(ctx, field_limit=100, compact=False)
+            if len(text) <= max_chars:
+                return text
+
+        text = self._format_chat_characters(ctx, field_limit=100, compact=True)
+        if len(text) <= max_chars:
+            return text
+        return text[: max(0, max_chars - 8)] + "\n…（已截断）"
+
+    def _format_chat_characters(self, ctx: dict, *, field_limit: int, compact: bool) -> str:
+        parts = []
+        if ctx.get("project_name"):
+            parts.append(f"项目：{ctx['project_name']}")
+        if ctx.get("project_description"):
+            parts.append(f"简介：{_truncate(ctx['project_description'], min(1000, field_limit * 3))}")
+
+        characters = ctx.get("characters") or []
+        lines = ["【角色基础列表】"]
+        if not characters:
+            lines.append("暂无角色。")
+        else:
+            for c in characters:
+                name = c.get("name", "未命名")
+                if compact:
+                    desc = _truncate(c.get("description", ""), field_limit)
+                    lines.append(f"- {name}：{desc}" if desc else f"- {name}")
+                    continue
+                lines.append(
+                    "\n".join(
+                        [
+                            f"- {name}",
+                            f"  描述：{_truncate(c.get('description', ''), field_limit)}",
+                            f"  性格：{_truncate(c.get('personality', ''), field_limit)}",
+                            f"  背景：{_truncate(c.get('background', ''), field_limit)}",
+                            f"  外貌：{_truncate(c.get('appearance', ''), field_limit)}",
+                        ]
+                    )
+                )
+        parts.append("\n".join(lines))
+        return "\n\n".join(parts)
+
+    def count_tokens_estimate(self, text: str) -> int:
+        """实例方法包装，便于调用方从 builder 使用。"""
+        return count_tokens_estimate(text)
 
     def format_as_text(self, ctx: dict) -> str:
         """将上下文 dict 格式化为纯文本（供 prompt 注入）"""

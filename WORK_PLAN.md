@@ -43,6 +43,13 @@
 
 ### 当前大型项目规划
 
+### 统一 AI 上下文注入器后端 Batch 1 Check - 2026-06-13
+**需求描述**：独立复核 AI 上下文注入器后端实现，重点检查 LangChain v1 API、跨层字段穿透、结构化 SSE 协议与现有回归测试。
+
+**修复记录**：补齐 chat 提示词模板 `{{project_context}}` 变量终端渲染；移除角色基础上下文 20 条查询限制，确保全部角色可进入预算自适应格式化；修正 tool result SSE 截断总长不超过 200 字符；补充对应单测断言。
+
+**相关文件**：backend/app/application/ai_context_builder.py、backend/app/application/legacy_ai_service.py、backend/app/infrastructure/graph/sse_events.py、backend/tests/unit/application/test_ai_context_builder_chat.py、backend/tests/unit/application/test_legacy_ai_service.py、backend/tests/unit/infrastructure/test_sse_event_dispatch.py。
+
 ### 角色 AI 生成与模型场景授权后端 Batch 1 - 2026-06-13
 **需求描述**：为模型配置新增场景授权字段，并提供基于授权模型的角色 AI 生成草稿后端能力。
 
@@ -666,6 +673,21 @@
 2. `LegacyAIService.chat` / `chat_stream` 已支持提示词模板渲染、system prompt 替换和成功后 usage 计数。
 3. 新增 chat 模板注入相关单元测试，覆盖无模板、有模板、无效模板三种路径。
 4. 后端 ruff、format check、相关单测均通过。
+
+### 统一 AI 上下文注入器 Batch 1 后端 - 2026-06-13
+**需求描述**：让 legacy chat / chat-stream 走 LangChain v1 `create_agent` + LangGraph 工作流，基础注入项目角色上下文，并通过 tools 按需查询角色、地点、组织和章节内容；流式协议升级为结构化 SSE 事件。
+
+**实施步骤**：
+1. ✅ 升级 `AIContextBuilder`，补充 appearance 字段、chat 专用格式化与字符预算策略。
+2. ✅ 新增 chat_assistant tools，全部采用 `ToolRuntime.context` 注入 project_id/session_factory。
+3. ✅ 新增 `chat_assistant` workflow：外层 `inject_context` 节点 + `create_agent` 子图 + dynamic prompt。
+4. ✅ 新增结构化 SSE 事件分发器，白名单暴露节点、工具和文本事件，异常转 error + done。
+5. ✅ 改造 `LegacyAIService.chat/chat_stream` 走 graph 路径，并保留 prompt_template usage 记录。
+6. ✅ 补充后端单元测试覆盖上下文构建、SSE 分发、chat_assistant graph 与 legacy chat 路径。
+
+**关键决策**：tool 不用每请求闭包重建，而是通过 `ChatAssistantContext` 的 `session_factory` 每次调用独立开 session；`inject_context` 放在 agent 前作为可观测节点；SSE 分发器捕获异常后发 `error` 再发 `done`，避免前端流悬挂。
+
+**相关文件**：backend/app/application、backend/app/infrastructure/graph、backend/tests/unit、TODO.md、WORK_PLAN.md。
 
 ## 待办事项
 - [ ] 设置工作规划模板

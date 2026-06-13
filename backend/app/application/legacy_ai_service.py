@@ -66,14 +66,19 @@ class LegacyAIService:
         message: str,
         user_id: int,
         prompt_template_id: int | None,
-    ) -> str:
+    ) -> str | None:
         """构建 legacy chat system prompt，支持可选提示词模板渲染。"""
         if prompt_template_id is None:
-            return f"你是一个专业的小说写作助手。当前项目：{project.name}"
+            return None
 
+        from app.application.ai_context_builder import AIContextBuilder
         from app.application.prompt_template_service import PromptTemplateService
 
         template = await PromptTemplateService(self.db).get_template(prompt_template_id, user_id)
+        context_builder = AIContextBuilder(self.db)
+        project_context = context_builder.format_for_chat_with_budget(
+            await context_builder.get_project_context(project.id, mode="chat")
+        )
         recent_history = history[-10:] if history else []
         history_lines = [
             f"助手: {msg.get('content', '')}" if msg.get("role") == "assistant" else f"用户: {msg.get('content', '')}"
@@ -84,6 +89,7 @@ class LegacyAIService:
             history_text += "\n"
         variables = {
             "project_info": f"{project.name} - {project.description or ''}".rstrip(),
+            "project_context": project_context,
             "history": history_text,
             "message": message,
         }
@@ -110,6 +116,27 @@ class LegacyAIService:
         except Exception:
             logger.warning("failed to record prompt template usage: %s", template_id, exc_info=True)
 
+    def _get_session_factory(self):
+        """获取供 LangGraph tool 独立开 session 使用的 session factory。"""
+        from app.infrastructure.db.session import get_session_factory
+
+        return get_session_factory()
+
+    def _build_chat_messages(self, message: str, history: list | None):
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        messages = []
+        if history:
+            for msg in history[-10:]:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                if role == "assistant":
+                    messages.append(AIMessage(content=content))
+                else:
+                    messages.append(HumanMessage(content=content))
+        messages.append(HumanMessage(content=message))
+        return messages
+
     async def chat(
         self,
         project_id: int,
@@ -123,36 +150,33 @@ class LegacyAIService:
         project = await self.proj_service.require_user_project(project_id, user_id)
         model = await self._get_config_and_model(model_config_id, user_id)
 
-        from langchain_core.messages import HumanMessage, SystemMessage
+        import app.infrastructure.graph.workflows  # noqa: F401
+        from app.infrastructure.graph.chat_assistant_types import ChatAssistantContext
+        from app.infrastructure.graph.registry import graph_registry
 
-        system_prompt = await self._build_chat_system_prompt(
+        injected_system_prompt = await self._build_chat_system_prompt(
             project=project,
             history=history,
             message=message,
             user_id=user_id,
             prompt_template_id=prompt_template_id,
         )
-        messages = [
-            SystemMessage(content=system_prompt),
-        ]
-        if history:
-            for msg in history[-10:]:
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-                if role == "assistant":
-                    from langchain_core.messages import AIMessage
-
-                    messages.append(AIMessage(content=content))
-                else:
-                    messages.append(HumanMessage(content=content))
-        messages.append(HumanMessage(content=message))
-
-        resp = await model.ainvoke(messages)
+        graph = graph_registry.get("chat_assistant")(model=model)
+        context = ChatAssistantContext(
+            project_id=project_id,
+            session_factory=self._get_session_factory(),
+            injected_system_prompt=injected_system_prompt,
+        )
+        result = await graph.ainvoke(
+            {"messages": self._build_chat_messages(message, history)},
+            context=context,
+        )
         if prompt_template_id is not None:
             await self._record_prompt_template_usage(prompt_template_id, user_id)
+        response = result["messages"][-1].content
         return {
             "success": True,
-            "response": resp.content,
+            "response": response,
             "message": "AI对话成功",
             "generated_at": datetime.now().isoformat(),
         }
@@ -170,40 +194,31 @@ class LegacyAIService:
         project = await self.proj_service.require_user_project(project_id, user_id)
         model = await self._get_config_and_model(model_config_id, user_id)
 
-        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+        import app.infrastructure.graph.workflows  # noqa: F401
+        from app.infrastructure.graph.chat_assistant_types import ChatAssistantContext
+        from app.infrastructure.graph.registry import graph_registry
+        from app.infrastructure.graph.sse_events import stream_agent_events
 
-        system_prompt = await self._build_chat_system_prompt(
+        injected_system_prompt = await self._build_chat_system_prompt(
             project=project,
             history=history,
             message=message,
             user_id=user_id,
             prompt_template_id=prompt_template_id,
         )
-        messages = [
-            SystemMessage(content=system_prompt),
-        ]
-        if history:
-            for msg in history[-10:]:
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-                if role == "assistant":
-                    messages.append(AIMessage(content=content))
-                else:
-                    messages.append(HumanMessage(content=content))
-        messages.append(HumanMessage(content=message))
+        graph = graph_registry.get("chat_assistant")(model=model)
+        context = ChatAssistantContext(
+            project_id=project_id,
+            session_factory=self._get_session_factory(),
+            injected_system_prompt=injected_system_prompt,
+        )
+        input_state = {"messages": self._build_chat_messages(message, history)}
 
         async def generate():
-            try:
-                async for chunk in model.astream(messages):
-                    if chunk.content:
-                        yield f"data: {chunk.content}\n\n"
-                if prompt_template_id is not None:
-                    await self._record_prompt_template_usage(prompt_template_id, user_id)
-                yield "data: [DONE]\n\n"
-            except Exception as e:
-                logger.exception("legacy chat-stream error")
-                yield f"data: 抱歉，AI服务暂时不可用: {str(e)}\n\n"
-                yield "data: [DONE]\n\n"
+            async for event in stream_agent_events(graph, input_state, context=context):
+                yield event
+            if prompt_template_id is not None:
+                await self._record_prompt_template_usage(prompt_template_id, user_id)
 
         return generate()
 
