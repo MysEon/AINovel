@@ -21,6 +21,7 @@ class ModelConfig(Base, TimestampMixin):
     frequency_penalty = Column(String(10), default="0.0")
     presence_penalty = Column(String(10), default="0.0")
     stop_sequences = Column(Text)
+    scenarios = Column(Text, nullable=True)
     stream = Column(Boolean, default=False)
     logprobs = Column(Boolean, default=False)
     top_logprobs = Column(Integer, default=0)

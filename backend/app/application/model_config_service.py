@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
+from app.core.model_scenarios import DEFAULT_SCENARIOS
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.repositories.base import BaseRepository
 from app.infrastructure.secrets import get_encryption_service
@@ -55,6 +56,20 @@ class ModelConfigService:
     @staticmethod
     def _serialize_stop_sequences(seqs: list | None) -> str | None:
         return json.dumps(seqs) if seqs else None
+
+    @staticmethod
+    def _serialize_scenarios(scenarios: list[str] | None) -> str | None:
+        return json.dumps(scenarios if scenarios is not None else DEFAULT_SCENARIOS, ensure_ascii=False)
+
+    @staticmethod
+    def _parse_scenarios(scenarios: str | None) -> list[str] | None:
+        if scenarios is None:
+            return None
+        try:
+            parsed = json.loads(scenarios)
+        except (json.JSONDecodeError, TypeError):
+            return DEFAULT_SCENARIOS.copy()
+        return parsed if isinstance(parsed, list) else DEFAULT_SCENARIOS.copy()
 
     def _attach_masked_key(self, cfg: ModelConfig) -> ModelConfig:
         """为配置对象附加遮蔽的 API Key（供响应序列化）"""
@@ -102,9 +117,10 @@ class ModelConfigService:
         masked_key = self._mask_key(body.api_key) if body.api_key else None
 
         cfg = ModelConfig(
-            **body.model_dump(exclude={"api_key", "stop_sequences"}),
+            **body.model_dump(exclude={"api_key", "stop_sequences", "scenarios"}),
             api_key=encrypted_key,
             stop_sequences=self._serialize_stop_sequences(body.stop_sequences),
+            scenarios=self._serialize_scenarios(body.scenarios),
             user_id=user_id,
         )
         await self.repo.create(cfg)
@@ -113,15 +129,19 @@ class ModelConfigService:
         cfg.api_key_masked = masked_key
         return cfg
 
-    async def list_configs(self, user_id: int) -> list[ModelConfig]:
-        """列出用户的所有模型配置"""
+    async def list_configs(self, user_id: int, scenario: str | None = None) -> list[ModelConfig]:
+        """列出用户的所有模型配置，可按授权场景过滤。"""
         result = await self.db.execute(
             select(ModelConfig).where(ModelConfig.user_id == user_id).order_by(ModelConfig.name)
         )
-        configs = result.scalars().all()
+        configs = list(result.scalars().all())
+        if scenario:
+            configs = [
+                c for c in configs if c.scenarios is None or scenario in (self._parse_scenarios(c.scenarios) or [])
+            ]
         for c in configs:
             self._attach_masked_key(c)
-        return list(configs)
+        return configs
 
     async def get_config(self, config_id: int, user_id: int) -> ModelConfig:
         """获取单个模型配置"""
@@ -138,6 +158,8 @@ class ModelConfigService:
 
         if "stop_sequences" in data and data["stop_sequences"] is not None:
             data["stop_sequences"] = json.dumps(data["stop_sequences"])
+        if "scenarios" in data and data["scenarios"] is not None:
+            data["scenarios"] = json.dumps(data["scenarios"], ensure_ascii=False)
 
         for key, value in data.items():
             setattr(cfg, key, value)

@@ -43,6 +43,53 @@
 
 ### 当前大型项目规划
 
+### 角色 AI 生成与模型场景授权后端 Batch 1 - 2026-06-13
+**需求描述**：为模型配置新增场景授权字段，并提供基于授权模型的角色 AI 生成草稿后端能力。
+
+**实施步骤**：
+1. ✅ 新增 ModelConfig.scenarios 数据层、迁移与 schema 序列化。
+2. ✅ 新增模型场景常量与校验函数。
+3. ✅ 新增角色 AI 生成 schema、service 与 API 路由。
+4. ✅ 补充后端单元测试并运行 alembic / ruff / pytest 验证。
+
+**预期成果**：后端支持 `GET /api/v1/model-configs?scenario=character_generation` 过滤与 `POST /api/v1/projects/{project_id}/characters/ai-generate` 生成未落库角色草稿。
+
+**完成记录**：2026-06-13 已完成 Batch 1 后端实现；新增 Alembic head `0005`，迁移在 stamped 0004 的临时 SQLite 测试库中验证通过；变更文件 ruff check / ruff format --check 通过，相关单元测试通过。
+
+**Check 修复记录**：2026-06-13 复核 Batch 1 后端字段穿透链路，修复 CharacterAIService 对 `scenarios IS NULL` 与列表过滤语义不一致的问题，收窄 AI 输出解析重试捕获异常范围，并补充 NULL 全场景兼容测试与 ModelConfig 三行过滤测试。
+
+**相关文件**：backend/app、backend/alembic、backend/tests。
+
+### 角色 AI 生成与模型场景授权前端 Batch 2 - 2026-06-13
+**需求描述**：接入后端 Batch 1 能力，在前端提供模型场景授权配置、写作页首角色强制引导、手动创建与 AI 生成角色草稿确认流程。
+
+**实施步骤**：
+1. ✅ 新增前端模型场景常量，并改造 modelConfigService / characterService。
+2. ✅ ModelConfigManager 新增“授权场景”复选框与卡片场景标签展示。
+3. ✅ 抽出 CharacterFormBody 复用既有角色表单主体，供普通角色弹窗与 onboarding 手动创建共用。
+4. ✅ 新增 useFirstCharacterGuard、FirstCharacterOnboardingModal、CharacterDraftReviewCard，并挂载到 WritingEditor。
+5. ✅ 运行前端 lint / build 验证。
+
+**关键决策**：优先采用抽 CharacterFormBody 的复用方案，避免在 onboarding 中复制完整角色表单；AI 草稿确认卡仅处理核心字段与 dimensions，extra_attributes 不传。
+
+**相关文件**：frontend/src/config、frontend/src/services、frontend/src/hooks、frontend/src/components/worldbuilding、frontend/src/components/writing、TODO.md、WORK_PLAN.md。
+
+### 角色 AI 生成扩展字段透传 Batch 3 - 2026-06-13
+**需求描述**：将 AI 生成角色草稿从固定核心字段扩展为核心字段 + extra_fields 自由透传 + dimensions 任意中文 key，避免 LLM 返回的梦想、冲突、关系网、标签等角色细节丢失。
+
+**实施步骤**：
+1. ✅ 后端 CharacterDraftSchema 新增 extra_fields，并为 dimensions 增加 float/int 兜底归一化与越界裁剪。
+2. ✅ 更新 CharacterAIService system prompt / retry prompt，引导 LLM 将扩展字段嵌套到 extra_fields。
+3. ✅ 补充 CharacterAIService 单元测试，覆盖 extra_fields、任意 dimensions key、float/越界/非数字归一化。
+4. ✅ 前端 CharacterDraftReviewCard 新增扩展属性编辑区，并将 extra_fields 序列化到 extra_attributes。
+5. ✅ dimensions 展示改为按 draft.dimensions 字典动态渲染所有 key。
+
+**关键决策**：扩展属性 UI 采用按值类型分支：字符串用 TextArea，数组用 Select tags，嵌套对象用 key-value 列表，其他类型用可编辑 JSON / 文本；不改手动创建表单路径。
+
+**Check 修复记录**：2026-06-13 独立复核 extra_fields / dimensions 穿透链路，修复 CharacterDraftReviewCard 中“其他类型”扩展属性只读且提交回退原值的问题，改为可编辑 JSON / 文本并按用户编辑值聚合；同时将维度提交归一化为 0-100 整数。
+
+**相关文件**：backend/app/schemas/character_ai.py、backend/app/application/character_ai_service.py、backend/tests/unit/application/test_character_ai_service.py、frontend/src/components/worldbuilding/CharacterDraftReviewCard.jsx、frontend/src/components/worldbuilding/CharacterDraftReviewCard.css、TODO.md、WORK_PLAN.md。
+
 ### Markdown渲染系统优化 - 2025-08-22
 **需求描述**：参考Cherry Studio的成熟markdown处理思想，优化AINovel项目的markdown渲染系统。重点改进流式渲染的平滑性、增强格式化智能度、扩展插件支持，同时保持langchain框架不变。
 

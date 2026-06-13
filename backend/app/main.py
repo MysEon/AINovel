@@ -121,6 +121,7 @@ def _register_routers(app: FastAPI) -> None:
         ai,
         auth,
         chapters,
+        character_ai,
         drafts,
         health,
         knowledge,
@@ -140,6 +141,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(projects.router)
     app.include_router(chapters.router)
     app.include_router(worldbuilding.router)
+    app.include_router(character_ai.router)
     app.include_router(drafts.router)
 
     # AI 辅助

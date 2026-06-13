@@ -1,0 +1,153 @@
+.character-draft-review-card {
+  display: grid;
+  gap: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 44%),
+    color-mix(in srgb, var(--elevated-bg) 94%, var(--bg-color));
+  box-shadow: 0 14px 42px color-mix(in srgb, black 12%, transparent);
+}
+
+.character-draft-review-card .ant-card-body {
+  padding: 22px;
+}
+
+.character-draft-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.character-draft-review-title {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.character-draft-review-subtitle {
+  margin: 6px 0 0;
+  color: var(--secondary-text-color);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.character-draft-review-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.character-draft-basic-panel,
+.character-draft-detail-panel,
+.character-draft-extra-panel,
+.character-draft-dimensions-panel {
+  border: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--elevated-bg) 88%, transparent);
+  padding: 16px;
+}
+
+.character-draft-basic-panel {
+  align-self: start;
+}
+
+.character-draft-field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted-text-color);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.character-draft-basic-panel .ant-form-item,
+.character-draft-detail-panel .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.character-draft-detail-panel .ant-form-item:last-child,
+.character-draft-basic-panel .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.character-draft-extra-panel,
+.character-draft-dimensions-panel {
+  grid-column: 1 / -1;
+}
+
+.character-draft-section-title {
+  margin: 0 0 12px;
+  color: var(--text-color);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.character-draft-dimensions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.character-draft-dimension-item {
+  display: grid;
+  gap: 6px;
+}
+
+.character-draft-extra-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.character-draft-extra-grid .ant-form-item {
+  margin-bottom: 0;
+}
+
+.character-draft-extra-object {
+  display: grid;
+  gap: 8px;
+}
+
+.character-draft-kv-list {
+  display: grid;
+  gap: 8px;
+}
+
+.character-draft-kv-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.36fr) minmax(160px, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.character-draft-kv-row .ant-form-item {
+  margin-bottom: 0;
+}
+
+.character-draft-readonly-json textarea {
+  cursor: default;
+}
+
+.character-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+@media (max-width: 780px) {
+  .character-draft-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .character-draft-kv-row {
+    grid-template-columns: 1fr;
+  }
+}

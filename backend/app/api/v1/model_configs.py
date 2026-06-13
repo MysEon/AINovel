@@ -32,11 +32,12 @@ async def create_config(
 
 @router.get("/", response_model=list[ModelConfigResponse])
 async def list_configs(
+    scenario: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_active_user),
 ):
     service = ModelConfigService(db)
-    return await service.list_configs(user.id)
+    return await service.list_configs(user.id, scenario=scenario)
 
 
 @router.get("/{config_id}", response_model=ModelConfigResponse)

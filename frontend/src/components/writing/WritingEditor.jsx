@@ -8,7 +8,9 @@ import useChapters from '../../hooks/useChapters';
 import useModelConfigs from '../../hooks/useModelConfigs';
 import usePromptTemplates from '../../hooks/usePromptTemplates';
 import useAIWriting from '../../hooks/useAIWriting';
+import useFirstCharacterGuard from '../../hooks/useFirstCharacterGuard';
 import BatchChapterPublishDialog from '../BatchChapterPublishDialog';
+import FirstCharacterOnboardingModal from '../worldbuilding/FirstCharacterOnboardingModal';
 import ChapterList from './ChapterList';
 import ChapterActionsPanel from './ChapterActionsPanel';
 import SessionPanel from './SessionPanel';
@@ -66,6 +68,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
   const aiAssisted = writingState?.aiAssisted ?? false;
   const aiMode = writingState?.aiMode ?? 'optimize';
   const layoutMode = writingState?.layoutMode ?? 'left';
+  const {
+    needsOnboarding,
+    loading: firstCharacterLoading,
+    refresh: refreshFirstCharacterGuard,
+  } = useFirstCharacterGuard(projectId);
 
   // 获取项目章节数据和模型配置
   useEffect(() => {
@@ -365,6 +372,11 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
       )}
 
       {/* Unlock confirmation dialog is now handled globally by NotificationManager */}
+      <FirstCharacterOnboardingModal
+        open={needsOnboarding && !firstCharacterLoading}
+        projectId={projectId}
+        onCreated={refreshFirstCharacterGuard}
+      />
     </div>
   );
 };

@@ -2,8 +2,10 @@ import { api } from './core/apiClient.js';
 
 class ModelConfigService {
   // 获取所有模型配置
-  getModelConfigs() {
-    return api.get('/model-configs/');
+  getModelConfigs(options = {}) {
+    const { scenario } = options;
+    const query = scenario ? `?scenario=${encodeURIComponent(scenario)}` : '';
+    return api.get(`/model-configs/${query}`);
   }
 
   // 获取单个模型配置
@@ -105,6 +107,7 @@ class ModelConfigService {
       top_logprobs: 0,
       proxy_url: '',
       enable_proxy: false,
+      scenarios: ['writing', 'chat'],
     };
   }
 }

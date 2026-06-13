@@ -13,6 +13,10 @@ export const getCharacter = (characterId) =>
 export const createCharacter = (projectId, data) =>
   api.post(`/projects/${projectId}/characters`, data);
 
+// AI 生成未落库角色草稿
+export const aiGenerateCharacter = (projectId, data) =>
+  api.post(`/projects/${projectId}/characters/ai-generate`, data);
+
 // 更新角色
 export const updateCharacter = (characterId, data) =>
   api.put(`/characters/${characterId}`, data);

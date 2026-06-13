@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
   Col,
   Form,
   Input,
@@ -33,6 +34,7 @@ import {
   SyncOutlined
 } from '@ant-design/icons';
 import modelConfigService from '../services/modelConfigService';
+import { DEFAULT_SCENARIOS, MODEL_SCENARIOS, MODEL_SCENARIO_LABEL_MAP } from '../config/modelScenarios';
 import './ModelConfigManager.css';
 
 const { Title, Text } = Typography;
@@ -77,6 +79,7 @@ const ModelConfigManager = () => {
         ...config,
         api_key: '',
         stop_sequences: config.stop_sequences ? config.stop_sequences.join(', ') : '',
+        scenarios: config.scenarios || DEFAULT_SCENARIOS,
       });
     } else {
       const defaultConfig = modelConfigService.getDefaultConfig();
@@ -112,7 +115,11 @@ const ModelConfigManager = () => {
         values.proxy_url = '';
       }
       
-      const submitData = { ...values, stop_sequences };
+      const submitData = {
+        ...values,
+        stop_sequences,
+        scenarios: Array.isArray(values.scenarios) ? values.scenarios : DEFAULT_SCENARIOS,
+      };
 
       if (editingConfig && !submitData.api_key) {
         delete submitData.api_key;
@@ -163,6 +170,7 @@ const ModelConfigManager = () => {
       ...configCopy,
       api_key: '', // 清空API密钥，需要用户重新输入
       stop_sequences: configCopy.stop_sequences ? configCopy.stop_sequences.join(', ') : '',
+      scenarios: configCopy.scenarios || DEFAULT_SCENARIOS,
     });
     setIsModalVisible(true);
     
@@ -337,6 +345,13 @@ const ModelConfigManager = () => {
                     <Tag style={{ fontSize: '11px', marginLeft: '4px', background: 'var(--success-color)', color: 'var(--active-menu-text)', borderColor: 'var(--success-color)' }}>代理</Tag>
                   )}
                 </div>
+                <div className="model-config-card-scenarios">
+                  {(config.scenarios || DEFAULT_SCENARIOS).map(scenario => (
+                    <Tag key={scenario} className="model-config-scenario-tag">
+                      {MODEL_SCENARIO_LABEL_MAP[scenario] || scenario}
+                    </Tag>
+                  ))}
+                </div>
                 <div style={{ fontSize: '12px', lineHeight: '1.4', color: 'var(--secondary-text-color)' }}>
                   <div style={{ marginBottom: '4px' }}>
                     <strong>模型:</strong> {config.model_name || '默认'}
@@ -494,6 +509,18 @@ const ModelConfigManager = () => {
                     </Form.Item>
                   </Col>
                 )}
+                <Col span={24}>
+                  <Form.Item
+                    name="scenarios"
+                    label="授权场景"
+                    tooltip="勾选此模型可用于哪些场景；'角色生成'未勾选时不会出现在 AI 生成主角的下拉里。"
+                  >
+                    <Checkbox.Group
+                      className="model-scenario-checkbox-group"
+                      options={MODEL_SCENARIOS}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
             </section>
 

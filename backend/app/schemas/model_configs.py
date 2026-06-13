@@ -3,8 +3,9 @@
 import json
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.model_scenarios import DEFAULT_SCENARIOS, validate_scenarios
 from app.core.url_safety import validate_outbound_url
 
 
@@ -21,11 +22,19 @@ class ModelConfigCreate(BaseModel):
     frequency_penalty: float | None = Field(0.0, ge=-2.0, le=2.0)
     presence_penalty: float | None = Field(0.0, ge=-2.0, le=2.0)
     stop_sequences: list[str] | None = Field(default_factory=list)
+    scenarios: list[str] | None = None
     stream: bool | None = False
     logprobs: bool | None = False
     top_logprobs: int | None = Field(0, ge=0, le=20)
     proxy_url: str | None = Field(None, max_length=500)
     enable_proxy: bool | None = False
+
+    @model_validator(mode="after")
+    def default_and_validate_scenarios(self):
+        if self.scenarios is None:
+            self.scenarios = DEFAULT_SCENARIOS.copy()
+        validate_scenarios(self.scenarios)
+        return self
 
     @field_validator("api_url")
     @classmethod
@@ -55,11 +64,19 @@ class ModelConfigUpdate(BaseModel):
     frequency_penalty: float | None = Field(None, ge=-2.0, le=2.0)
     presence_penalty: float | None = Field(None, ge=-2.0, le=2.0)
     stop_sequences: list[str] | None = None
+    scenarios: list[str] | None = None
     stream: bool | None = None
     logprobs: bool | None = None
     top_logprobs: int | None = Field(None, ge=0, le=20)
     proxy_url: str | None = Field(None, max_length=500)
     enable_proxy: bool | None = None
+
+    @field_validator("scenarios")
+    @classmethod
+    def check_scenarios(cls, v):
+        if v is not None:
+            validate_scenarios(v)
+        return v
 
     @field_validator("api_url")
     @classmethod
@@ -89,6 +106,7 @@ class ModelConfigResponse(BaseModel):
     frequency_penalty: float | None = 0.0
     presence_penalty: float | None = 0.0
     stop_sequences: list[str] | None = Field(default_factory=list)
+    scenarios: list[str] | None = None
     stream: bool | None = False
     logprobs: bool | None = False
     top_logprobs: int | None = 0
@@ -108,6 +126,19 @@ class ModelConfigResponse(BaseModel):
             except (json.JSONDecodeError, TypeError):
                 return []
         return v or []
+
+    @field_validator("scenarios", mode="before")
+    @classmethod
+    def parse_scenarios(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return DEFAULT_SCENARIOS.copy()
+            return validate_scenarios(parsed) if isinstance(parsed, list) else DEFAULT_SCENARIOS.copy()
+        return validate_scenarios(v)
 
     model_config = {"from_attributes": True}
 

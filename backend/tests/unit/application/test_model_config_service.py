@@ -1,5 +1,7 @@
 """ModelConfigService 单元测试"""
 
+import json
+
 import pytest
 
 from app.application.model_config_service import ModelConfigService
@@ -51,6 +53,37 @@ class TestModelConfigService:
         await service.create(ModelConfigCreate(name="配置A", model_type="openai", api_key="sk-test"), test_user.id)
         configs = await service.list_configs(test_user.id)
         assert any(c.name == "配置A" for c in configs)
+
+    async def test_create_config_defaults_scenarios(self, db_session, test_user):
+        service = ModelConfigService(db_session)
+        cfg = await service.create(
+            ModelConfigCreate(name="默认场景", model_type="openai", api_key="sk-test"), test_user.id
+        )
+        assert json.loads(cfg.scenarios) == ["writing", "chat"]
+
+    async def test_model_configs_scenario_filter(self, db_session, test_user):
+        service = ModelConfigService(db_session)
+        null_compatible = await service.create(
+            ModelConfigCreate(name="A空场景兼容模型", model_type="openai", api_key="sk-test"),
+            test_user.id,
+        )
+        null_compatible.scenarios = None
+        await db_session.commit()
+        await service.create(
+            ModelConfigCreate(
+                name="B角色模型",
+                model_type="openai",
+                api_key="sk-test",
+                scenarios=["character_generation"],
+            ),
+            test_user.id,
+        )
+        await service.create(
+            ModelConfigCreate(name="C写作模型", model_type="openai", api_key="sk-test", scenarios=["writing"]),
+            test_user.id,
+        )
+        configs = await service.list_configs(test_user.id, scenario="character_generation")
+        assert [c.name for c in configs] == ["A空场景兼容模型", "B角色模型"]
 
     async def test_mask_key(self, db_session, test_user):
         service = ModelConfigService(db_session)
