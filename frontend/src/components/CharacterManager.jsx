@@ -10,6 +10,7 @@ import { useCharacters } from '../hooks/useCharacters';
 import { useCharacterForm } from '../hooks/useCharacterForm';
 import CharacterList from './worldbuilding/CharacterList';
 import CharacterForm from './worldbuilding/CharacterForm';
+import CharacterCreateModal from './worldbuilding/CharacterCreateModal';
 import './CharacterManager.css';
 
 const CharacterManager = ({ projectId }) => {
@@ -20,6 +21,7 @@ const CharacterManager = ({ projectId }) => {
 
   const [templateRegistry, setTemplateRegistry] = useState(FALLBACK_CHARACTER_TEMPLATE_REGISTRY);
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadCharacterTemplates();
@@ -61,8 +63,20 @@ const CharacterManager = ({ projectId }) => {
         onToggleExpand={(id) => setExpandedId(expandedId === id ? null : id)}
         onEdit={showModal}
         onDelete={handleDelete}
-        onCreate={() => showModal()}
+        onCreate={() => setIsCreateModalOpen(true)}
         templateRegistry={templateRegistry}
+      />
+
+      <CharacterCreateModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        projectId={projectId}
+        templateRegistry={templateRegistry}
+        templateLoading={templateLoading}
+        onCreated={async () => {
+          setIsCreateModalOpen(false);
+          await loadCharacters();
+        }}
       />
 
       <CharacterForm

@@ -50,6 +50,22 @@
 
 **相关文件**：backend/app/application/ai_context_builder.py、backend/app/application/legacy_ai_service.py、backend/app/infrastructure/graph/sse_events.py、backend/tests/unit/application/test_ai_context_builder_chat.py、backend/tests/unit/application/test_legacy_ai_service.py、backend/tests/unit/infrastructure/test_sse_event_dispatch.py。
 
+### 统一 AI 上下文注入器前端 Batch 2 - 2026-06-13
+**需求描述**：接入后端 Batch 1 结构化 SSE 新协议，修复 AI 聊天流式断流，并在每条 AI 回复内展示节点流转与 tool 调用思考轨迹。
+
+**实施步骤**：
+1. ✅ 新增前端 agent 事件类型、节点标签与工具友好名映射。
+2. ✅ 改造 `aiService.chatWithAIStream` 为 JSON SSE 分发 callbacks，并保留 prompt_template_id 透传。
+3. ✅ 新增 `useAgentEvents` 通用 hook，供后续 modal / 一次性 AI 调用复用。
+4. ✅ 新增 `AIThinkingTrace` 折叠面板与墨韵 / 晨案风格 CSS。
+5. ✅ 改造 `ChatMessages` 与 `useAIWriting`，在流式消息中直接维护轨迹事件、文本缓冲与 traceStatus。
+
+**关键决策**：`useAgentEvents` 本批创建但不接入 `useAIWriting`；写作聊天状态机与 isLoading、isThinking、messages 持久化高度耦合，直接在 callbacks 中 patch 指定 assistant message 更清晰。
+
+**验证结果**：`npm run lint` 通过，0 errors / 10 existing warnings；`npm run build` 成功，保留既有 KaTeX 字体解析与 chunk size warnings。
+
+**相关文件**：frontend/src/config/agentEventTypes.js、frontend/src/services/aiService.js、frontend/src/hooks/useAgentEvents.js、frontend/src/hooks/useAIWriting.js、frontend/src/components/writing/AIThinkingTrace.jsx、frontend/src/components/writing/AIThinkingTrace.css、frontend/src/components/writing/ChatMessages.jsx、TODO.md、WORK_PLAN.md。
+
 ### 角色 AI 生成与模型场景授权后端 Batch 1 - 2026-06-13
 **需求描述**：为模型配置新增场景授权字段，并提供基于授权模型的角色 AI 生成草稿后端能力。
 
@@ -80,6 +96,22 @@
 **关键决策**：优先采用抽 CharacterFormBody 的复用方案，避免在 onboarding 中复制完整角色表单；AI 草稿确认卡仅处理核心字段与 dimensions，extra_attributes 不传。
 
 **相关文件**：frontend/src/config、frontend/src/services、frontend/src/hooks、frontend/src/components/worldbuilding、frontend/src/components/writing、TODO.md、WORK_PLAN.md。
+
+### 角色管理页新建角色 AI 生成 Batch 4 - 2026-06-13
+**需求描述**：让常规 CharacterManager 的“新建角色”入口复用首角色引导中的手动创建 / AI 生成双 tab 流程，同时保留编辑角色只走原手动表单。
+
+**实施步骤**：
+1. 抽出 `CharacterCreatorTabs` 纯内容组件，承载手动创建表单、AI 生成、草稿 review 与创建逻辑。
+2. 将 `FirstCharacterOnboardingModal` 收敛为强制 modal 包装，内嵌共享 tabs。
+3. 新增可关闭 `CharacterCreateModal`，供角色管理页新建路径使用。
+4. 改造 `CharacterManager`：新建打开双 tab modal，编辑继续打开原 `CharacterForm`。
+5. 运行前端 lint / build 验证。
+
+**关键决策**：草稿 review 卡的“取消”在共享组件内统一处理为 `setDraft(null)` 返回 AI 输入步骤，modal 关闭仅由外层可关闭 `CharacterCreateModal` 的 `onCancel` 负责。
+
+**完成记录**：2026-06-13 已完成共享组件抽取、onboarding 薄包装、新建角色可关闭 modal 与 CharacterManager 新建 / 编辑路径拆分；`npm run lint` 通过（0 errors / 10 existing warnings），`npm run build` 成功（保留既有 KaTeX 字体解析与 chunk size warnings）。
+
+**相关文件**：frontend/src/components/worldbuilding/CharacterCreatorTabs.jsx、frontend/src/components/worldbuilding/CharacterCreateModal.jsx、frontend/src/components/worldbuilding/FirstCharacterOnboardingModal.jsx、frontend/src/components/CharacterManager.jsx、TODO.md、WORK_PLAN.md。
 
 ### 角色 AI 生成扩展字段透传 Batch 3 - 2026-06-13
 **需求描述**：将 AI 生成角色草稿从固定核心字段扩展为核心字段 + extra_fields 自由透传 + dimensions 任意中文 key，避免 LLM 返回的梦想、冲突、关系网、标签等角色细节丢失。
