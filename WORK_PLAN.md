@@ -739,3 +739,20 @@
 - 未改动前端代码，未扩展其余 generate 端点模板挂载范围。
 - 保持 `PromptTemplateService.get_template` 访问校验与 `record_usage` 失败容忍策略。
 
+
+### AI 写作助手聊天前端迁移 assistant-ui - 2026-06-13
+**需求描述**：将右侧 AI 写作助手聊天消息渲染和输入区迁移到 `@assistant-ui/react` primitives，保留 WritingToolbar、墨韵主题、提示词模板透传和后端结构化 SSE 协议；v1 暂不做跨 session 聊天持久化。
+
+**实施步骤**：
+1. 安装 `@assistant-ui/react` 并确认 React 18 peer dependency 兼容。
+2. 新增 `createAINovelChatAdapter`，通过 promise 队列桥接 `aiService.chatWithAIStream` callbacks 到 async generator。
+3. 新增 thinking_trace tool-call renderer、Streamdown 文本 part renderer、用户/助手消息 renderer。
+4. 重写 `AIChatPanel` 使用 `useLocalRuntime`、ThreadPrimitive 与 ComposerPrimitive。
+5. 精简 `useAIWriting`，移除旧聊天 messages/handleSend 状态机并临时禁用 chat localStorage 写入。
+6. 调整 `WritingEditor` 向 `AIChatPanel` 传入 `projectId` 与 `selectedPromptTemplate`。
+7. 新增 assistant-ui primitive CSS 并删除旧 `ChatMessages` / `ChatInput` 文件。
+8. 运行前端 lint / build 验证。
+
+**关键决策**：遵循 PRD D1-D5；不改后端、不改 `aiService.chatWithAIStream` 签名、不引入 shadcn / @assistant-ui/react-markdown / @ai-sdk 包；adapter 的 abort v1 仅本地停止 yield，真 fetch abort 留 TODO。
+
+**相关文件**：frontend/package.json、frontend/src/runtime/aiNovelChatAdapter.js、frontend/src/components/writing/AIChatPanel.jsx、frontend/src/components/writing/*MessageRenderer.jsx、frontend/src/hooks/useAIWriting.js、frontend/src/components/writing/WritingEditor.jsx、TODO.md、WORK_PLAN.md。

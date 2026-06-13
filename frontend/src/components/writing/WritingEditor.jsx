@@ -251,6 +251,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               {layoutMode === 'left' ? (
                 <AIChatPanel
                   {...aiWriting}
+                  projectId={projectId}
                   onModelConfigChange={handleModelConfigChange}
                   onPromptTemplateSelect={handlePromptTemplateSelect}
                 />
@@ -291,6 +292,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
               ) : (
                 <AIChatPanel
                   {...aiWriting}
+                  projectId={projectId}
                   onModelConfigChange={handleModelConfigChange}
                   onPromptTemplateSelect={handlePromptTemplateSelect}
                 />

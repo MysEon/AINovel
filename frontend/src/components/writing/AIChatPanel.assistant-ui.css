@@ -1,0 +1,726 @@
+.writing-editor .ai-chat-sider-shell {
+  min-width: 360px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.writing-editor .ai-chat-sider-shell.is-active {
+  opacity: 1;
+}
+
+.writing-editor .ai-assistant-surface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 82%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--studio-surface) 96%, transparent), var(--studio-surface-muted)),
+    var(--studio-surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--elevated-bg) 32%, transparent),
+    0 18px 44px color-mix(in srgb, var(--studio-text) 10%, transparent);
+  transform: translateX(10px);
+  opacity: 0.96;
+  transition: transform 220ms ease, opacity 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.writing-editor .ai-assistant-surface.is-open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.writing-editor .ai-assistant-toolbar-card {
+  flex: 0 0 auto;
+  border: none;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--studio-surface) 98%, transparent), color-mix(in srgb, var(--studio-surface-muted) 72%, transparent));
+  box-shadow: none;
+}
+
+.writing-editor .ai-assistant-toolbar-header {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--studio-border) 56%, transparent);
+}
+
+.writing-editor .ai-assistant-toolbar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.writing-editor .ai-assistant-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.writing-editor .ai-assistant-title-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--studio-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writing-editor .ai-assistant-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 20px;
+  border: 1px solid color-mix(in srgb, var(--studio-primary) 24%, var(--studio-border));
+  border-radius: 999px;
+  padding: 0 0.48rem;
+  background: color-mix(in srgb, var(--studio-primary) 10%, transparent);
+  color: var(--studio-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.writing-editor .ai-assistant-live-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: agentPulse 1.4s ease-in-out infinite;
+}
+
+.writing-editor .ai-assistant-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.writing-editor .ai-assistant-toolbar-actions .ant-btn,
+.writing-editor .ai-toolbar-icon-btn.ant-btn,
+.writing-editor .ai-toolbar-text-btn.ant-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  height: 30px !important;
+  border-radius: 9px !important;
+  color: var(--studio-text-soft) !important;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease !important;
+}
+
+.writing-editor .ai-toolbar-text-btn.ant-btn {
+  padding: 0 0.55rem !important;
+}
+
+.writing-editor .ai-toolbar-icon-btn.ant-btn {
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.writing-editor .ai-assistant-toolbar-actions .ant-btn:hover:not(:disabled),
+.writing-editor .ai-toolbar-icon-btn.ant-btn:hover:not(:disabled),
+.writing-editor .ai-toolbar-text-btn.ant-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--studio-primary) 9%, transparent) !important;
+  color: var(--studio-text) !important;
+  transform: translateY(-1px);
+}
+
+.writing-editor .ai-toolbar-tag.ant-tag {
+  max-width: 132px;
+  height: 24px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 70%, transparent);
+  border-radius: 8px;
+  margin: 0 !important;
+  padding: 2px 0.45rem;
+  background: color-mix(in srgb, var(--studio-surface-muted) 76%, transparent);
+  color: var(--studio-text-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writing-editor .ai-assistant-toolbar-body {
+  padding: 0.65rem 0.85rem 0.7rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--studio-border) 42%, transparent);
+}
+
+.writing-editor .ai-toolbar-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  margin: 0 0 0.58rem;
+}
+
+.writing-editor .agent-status-badge {
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--studio-border) 72%, transparent);
+  background: color-mix(in srgb, var(--studio-surface) 72%, transparent);
+  color: var(--studio-text-soft);
+  font-size: 0.7rem;
+  padding: 0.32rem 0.5rem;
+}
+
+.writing-editor .agent-status-badge.active {
+  border-color: color-mix(in srgb, var(--studio-primary) 24%, var(--studio-border));
+  background: color-mix(in srgb, var(--studio-primary) 9%, transparent);
+  color: var(--studio-primary);
+}
+
+.writing-editor .ai-assistant-toolbar-body .ant-space {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem !important;
+  width: 100%;
+}
+
+.writing-editor .ai-assistant-toolbar-body .ant-space-item {
+  min-width: 0;
+}
+
+.writing-editor .ai-quick-action-btn.ant-btn {
+  width: 100%;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 74%, transparent) !important;
+  border-radius: 9px !important;
+  background: color-mix(in srgb, var(--studio-surface) 82%, transparent) !important;
+  color: var(--studio-text) !important;
+  box-shadow: none !important;
+  font-weight: 650;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease !important;
+}
+
+.writing-editor .ai-quick-action-btn.ant-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--studio-primary) 30%, var(--studio-border)) !important;
+  background: color-mix(in srgb, var(--studio-primary) 8%, var(--studio-surface)) !important;
+  transform: translateY(-1px);
+}
+
+.writing-editor .ai-model-empty-note {
+  margin-top: 0.6rem;
+  color: var(--studio-text-soft);
+  font-size: 0.75rem;
+}
+
+.writing-editor .ai-chat-body {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  background:
+    radial-gradient(circle at 50% -15%, color-mix(in srgb, var(--studio-primary) 8%, transparent), transparent 34%),
+    color-mix(in srgb, var(--studio-surface-muted) 82%, var(--studio-surface));
+}
+
+.writing-editor .aui-thread-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+}
+
+.writing-editor .aui-thread-viewport {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.95rem 0.9rem 0;
+  scroll-behavior: smooth;
+}
+
+.writing-editor .aui-thread-viewport > [role='list'],
+.writing-editor .aui-thread-viewport > div:not(.aui-thread-footer):not(.aui-thread-scroll-bottom) {
+  min-width: 0;
+}
+
+.writing-editor .chat-message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  margin: 0 0 0.95rem;
+  animation: messageEnter 220ms ease;
+}
+
+.writing-editor .chat-message-row.user {
+  justify-content: flex-end;
+}
+
+.writing-editor .chat-message-row.assistant {
+  justify-content: flex-start;
+}
+
+.writing-editor .chat-message-avatar.ant-avatar {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 75%, transparent);
+  background: color-mix(in srgb, var(--studio-surface) 86%, transparent);
+  color: var(--studio-text-soft);
+  box-shadow: none;
+}
+
+.writing-editor .chat-message-avatar.user.ant-avatar {
+  background: var(--studio-primary);
+  color: var(--active-menu-text);
+}
+
+.writing-editor .chat-message-stack {
+  display: flex;
+  flex-direction: column;
+  max-width: min(82%, 680px);
+  min-width: 0;
+}
+
+.writing-editor .chat-message-stack.user {
+  align-items: flex-end;
+}
+
+.writing-editor .chat-message-stack.assistant {
+  align-items: flex-start;
+}
+
+.writing-editor .chat-message-bubble {
+  position: relative;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding: 0.68rem 0.82rem;
+  color: var(--studio-text);
+  line-height: 1.62;
+  word-break: break-word;
+  box-shadow: none;
+}
+
+.writing-editor .chat-message-bubble.assistant {
+  border-color: color-mix(in srgb, var(--studio-border) 82%, transparent);
+  border-bottom-left-radius: 6px;
+  background: color-mix(in srgb, var(--studio-surface) 96%, transparent);
+}
+
+.writing-editor .chat-message-bubble.user {
+  border-bottom-right-radius: 6px;
+  background: var(--studio-primary);
+  color: var(--active-menu-text);
+}
+
+.writing-editor .chat-message-bubble.user .user-message-text {
+  color: inherit;
+  white-space: pre-wrap;
+}
+
+.writing-editor .chat-message-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 24px;
+  margin-top: 0.18rem;
+  opacity: 0.66;
+  transition: opacity 160ms ease;
+}
+
+.writing-editor .chat-message-stack:hover .chat-message-footer,
+.writing-editor .chat-message-footer:focus-within {
+  opacity: 1;
+}
+
+.writing-editor .chat-message-footer.user {
+  justify-content: flex-end;
+}
+
+.writing-editor .chat-message-meta {
+  color: var(--studio-text-soft);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.writing-editor .chat-message-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.writing-editor .chat-message-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 7px;
+  padding: 0;
+  background: transparent;
+  color: var(--studio-text-soft);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease, opacity 160ms ease;
+}
+
+.writing-editor .chat-message-action:hover:not(:disabled),
+.writing-editor .chat-message-action:focus-visible {
+  background: color-mix(in srgb, var(--studio-primary) 9%, transparent);
+  color: var(--studio-text);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.writing-editor .chat-message-action:disabled {
+  display: none;
+}
+
+.writing-editor .ai-chat-markdown,
+.writing-editor .streamdown-chat {
+  color: var(--studio-text);
+  font-family: var(--font-family);
+  font-size: 0.88rem;
+  line-height: 1.66;
+}
+
+.writing-editor .ai-chat-markdown :where(p, ul, ol, blockquote, pre, table) {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.writing-editor .ai-chat-markdown :where(p:first-child, ul:first-child, ol:first-child) {
+  margin-top: 0;
+}
+
+.writing-editor .ai-chat-markdown :where(p:last-child, ul:last-child, ol:last-child) {
+  margin-bottom: 0;
+}
+
+.writing-editor .ai-chat-markdown :where(pre) {
+  border: 1px solid color-mix(in srgb, var(--studio-border) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--studio-surface-muted) 78%, transparent);
+}
+
+.writing-editor .ai-tool-fallback {
+  margin: 0 0 0.55rem;
+  border: 1px dashed color-mix(in srgb, var(--studio-primary) 28%, var(--studio-border));
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, var(--studio-primary) 7%, transparent);
+  color: var(--studio-text-soft);
+  font-size: 0.78rem;
+}
+
+.writing-editor .stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 2px;
+  background: var(--studio-primary);
+  animation: blinkCaret 900ms steps(1, end) infinite;
+}
+
+.writing-editor .aui-thread-scroll-bottom {
+  position: sticky;
+  bottom: 5.2rem;
+  left: 50%;
+  z-index: 3;
+  align-self: center;
+  width: fit-content;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in srgb, var(--studio-primary) 24%, var(--studio-border));
+  border-radius: 999px;
+  padding: 0.34rem 0.72rem;
+  background: color-mix(in srgb, var(--studio-surface) 94%, transparent);
+  color: var(--studio-primary);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--studio-text) 10%, transparent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.writing-editor .aui-thread-scroll-bottom:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--studio-primary) 42%, var(--studio-border));
+  transform: translateX(-50%) translateY(-1px);
+}
+
+.writing-editor .aui-thread-scroll-bottom:disabled {
+  display: none;
+}
+
+.writing-editor .aui-thread-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+  padding: 1.8rem 0 0;
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--studio-surface-muted) 86%, transparent) 32%, color-mix(in srgb, var(--studio-surface-muted) 98%, transparent) 100%);
+}
+
+.writing-editor .aui-composer-root.chat-input-area {
+  flex-shrink: 0;
+  border-top: none !important;
+  background: transparent !important;
+  padding: 0 0.1rem 0.85rem !important;
+}
+
+.writing-editor .aui-composer-wrapper.chat-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+  min-height: 58px;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 82%, transparent);
+  border-radius: 16px;
+  padding: 0.52rem 0.56rem 0.52rem 0.78rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--studio-surface) 98%, transparent), color-mix(in srgb, var(--studio-surface) 92%, transparent)),
+    var(--studio-surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--elevated-bg) 34%, transparent),
+    0 12px 28px color-mix(in srgb, var(--studio-text) 8%, transparent);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.writing-editor .aui-composer-wrapper.chat-input-wrapper:focus-within {
+  border-color: color-mix(in srgb, var(--studio-primary) 42%, var(--studio-border));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--elevated-bg) 38%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--studio-primary) 10%, transparent),
+    0 16px 32px color-mix(in srgb, var(--studio-text) 10%, transparent);
+}
+
+.writing-editor .aui-composer-input.chat-input-textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 132px;
+  border: none !important;
+  outline: none !important;
+  resize: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--studio-text) !important;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  padding: 0.34rem 0.1rem !important;
+  transition: color 160ms ease;
+}
+
+.writing-editor .aui-composer-input.chat-input-textarea::placeholder {
+  color: color-mix(in srgb, var(--studio-text-soft) 72%, transparent);
+}
+
+.writing-editor .aui-composer-input.chat-input-textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.writing-editor .aui-composer-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.writing-editor .aui-composer-action-stack {
+  position: relative;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+}
+
+.writing-editor .aui-composer-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  overflow: hidden;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.writing-editor .aui-composer-send-button {
+  background: var(--studio-primary);
+  color: var(--active-menu-text);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--studio-primary) 22%, transparent);
+}
+
+.writing-editor .aui-composer-send-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--studio-primary) 26%, transparent);
+}
+
+.writing-editor .aui-composer-send-button:disabled {
+  border-color: color-mix(in srgb, var(--studio-border) 88%, transparent);
+  background: color-mix(in srgb, var(--studio-surface-muted) 82%, transparent);
+  color: color-mix(in srgb, var(--studio-text-soft) 62%, transparent);
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.78;
+}
+
+.writing-editor .aui-composer-spinner-button {
+  border-color: color-mix(in srgb, var(--studio-primary) 24%, var(--studio-border));
+  background: color-mix(in srgb, var(--studio-primary) 10%, var(--studio-surface));
+  color: var(--studio-primary);
+  cursor: default;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--studio-primary) 12%, transparent);
+}
+
+.writing-editor .aui-composer-spinner-button svg {
+  animation: auiComposerSpin 0.9s linear infinite;
+}
+
+.writing-editor .aui-composer-stop-button {
+  position: absolute;
+  inset: 0;
+  border-color: color-mix(in srgb, var(--error-color) 28%, var(--studio-border));
+  background: color-mix(in srgb, var(--error-color) 10%, var(--studio-surface));
+  color: var(--error-color);
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--error-color) 10%, transparent);
+}
+
+.writing-editor .aui-composer-action-stack.is-running:hover .aui-composer-spinner-button,
+.writing-editor .aui-composer-action-stack.is-running:focus-within .aui-composer-spinner-button {
+  opacity: 0;
+}
+
+.writing-editor .aui-composer-action-stack.is-running:hover .aui-composer-stop-button,
+.writing-editor .aui-composer-action-stack.is-running:focus-within .aui-composer-stop-button {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--error-color) 14%, transparent);
+}
+
+.writing-editor .aui-composer-stop-button:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.writing-editor .aui-composer-action-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--studio-primary) 16%, transparent),
+    0 12px 24px color-mix(in srgb, var(--studio-primary) 16%, transparent);
+}
+
+@keyframes auiComposerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dark-theme .writing-editor .ai-assistant-surface {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--studio-surface) 94%, transparent), color-mix(in srgb, var(--studio-surface-muted) 96%, transparent)),
+    var(--studio-surface);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 44px rgba(0, 0, 0, 0.26);
+}
+
+.dark-theme .writing-editor .ai-chat-body {
+  background:
+    radial-gradient(circle at 50% -15%, color-mix(in srgb, var(--studio-primary) 10%, transparent), transparent 34%),
+    color-mix(in srgb, var(--studio-surface-muted) 86%, #09090b);
+}
+
+.dark-theme .writing-editor .chat-message-bubble.assistant,
+.dark-theme .writing-editor .aui-composer-wrapper.chat-input-wrapper {
+  background: color-mix(in srgb, var(--studio-surface) 90%, #09090b);
+}
+
+@media (max-width: 1180px) {
+  .writing-editor .ai-assistant-toolbar-body .ant-space {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .writing-editor .ai-toolbar-tag.ant-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .writing-editor .ai-chat-sider-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .writing-editor .ai-assistant-surface {
+    transform: translateY(10px);
+  }
+
+  .writing-editor .ai-assistant-surface.is-open {
+    transform: translateY(0);
+  }
+
+  .writing-editor .aui-thread-viewport {
+    max-height: 430px;
+  }
+}
+
+@media (max-width: 720px) {
+  .writing-editor .ai-assistant-toolbar-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.55rem 0;
+  }
+
+  .writing-editor .ai-assistant-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .writing-editor .chat-message-stack {
+    max-width: calc(100% - 42px);
+  }
+
+  .writing-editor .chat-message-avatar.ant-avatar {
+    display: none;
+  }
+
+  .writing-editor .chat-message-stack {
+    max-width: 94%;
+  }
+
+  .writing-editor .aui-thread-viewport {
+    padding: 0.75rem 0.65rem 0;
+  }
+
+  .writing-editor .aui-composer-wrapper.chat-input-wrapper {
+    border-radius: 14px;
+    padding: 0.42rem 0.45rem 0.42rem 0.62rem;
+  }
+}
