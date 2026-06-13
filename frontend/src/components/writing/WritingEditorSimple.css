@@ -4923,3 +4923,372 @@
   }
 }
 
+/* Project writing surface: Codex-style neutral studio */
+.light-theme .writing-editor,
+.writing-editor {
+  --desk-bg: #f7f7f5;
+  --desk-shell: #eeeeeb;
+  --desk-panel: #ffffff;
+  --desk-paper: #fbfbfa;
+  --desk-paper-soft: #f3f3f0;
+  --desk-ink: #111827;
+  --desk-muted: #68707d;
+  --desk-line: rgba(17, 24, 39, 0.1);
+  --desk-line-strong: rgba(16, 163, 127, 0.3);
+  --desk-accent: #111827;
+  --desk-teal: #10a37f;
+  --desk-plum: #64748b;
+  --desk-shadow: 0 18px 48px rgba(17, 24, 39, 0.08);
+}
+
+.dark-theme .writing-editor {
+  --desk-bg: #0b0c0f;
+  --desk-shell: #111318;
+  --desk-panel: #17191f;
+  --desk-paper: #14161b;
+  --desk-paper-soft: #1d2028;
+  --desk-ink: #f4f4f5;
+  --desk-muted: #9ca3af;
+  --desk-line: rgba(255, 255, 255, 0.1);
+  --desk-line-strong: rgba(16, 163, 127, 0.36);
+  --desk-accent: #f4f4f5;
+  --desk-teal: #10a37f;
+  --desk-plum: #a1a1aa;
+  --desk-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+}
+
+.writing-editor {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-paper-soft) 42%, transparent), transparent 320px),
+    var(--desk-bg) !important;
+}
+
+.writing-editor .editor-content {
+  padding: clamp(8px, 1.2vw, 14px) clamp(8px, 1.4vw, 18px) 0;
+}
+
+.rich-text-editor,
+.ai-writing-interface.modern-ai-layout {
+  border-color: var(--desk-line);
+  border-radius: 10px;
+  background: var(--desk-shell);
+  box-shadow: none;
+}
+
+.rich-text-editor::before,
+.ai-writing-interface.modern-ai-layout::before {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 54%, transparent), transparent 220px),
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--desk-teal) 5%, transparent), transparent);
+  opacity: 1;
+}
+
+.editor-paper {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  border-color: var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-paper);
+  box-shadow: var(--desk-shadow);
+}
+
+.light-theme .editor-paper {
+  box-shadow: var(--desk-shadow);
+}
+
+.editor-paper::before,
+.editor-paper::after {
+  display: none;
+}
+
+.editor-paper-head {
+  min-height: 64px;
+  padding: 0.78rem clamp(1rem, 2.4vw, 1.6rem);
+  border-bottom-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 92%, var(--desk-paper-soft));
+}
+
+.editor-paper-kicker {
+  color: var(--desk-teal);
+  font-size: 0.68rem;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+}
+
+.editor-paper-title h2 {
+  font-size: clamp(1rem, 1.12vw, 1.18rem);
+  font-weight: 760;
+}
+
+.editor-paper-stats span,
+.editor-meta-pill,
+.canvas-tool-btn,
+.canvas-tool-chip,
+.agent-status-badge {
+  border-radius: 8px !important;
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper-soft) 74%, transparent);
+  color: var(--desk-muted);
+}
+
+.content-textarea,
+.editor-canvas-textarea.ant-input {
+  padding:
+    clamp(22px, 2.6vw, 38px)
+    clamp(22px, 4vw, 64px)
+    clamp(26px, 3.6vw, 48px) !important;
+  background: var(--desk-paper) !important;
+  caret-color: var(--desk-teal);
+  font-family: var(--font-sans);
+  font-size: clamp(16px, 0.9vw, 18px) !important;
+  line-height: 1.9 !important;
+  scrollbar-color: color-mix(in srgb, var(--desk-teal) 46%, var(--desk-line)) transparent;
+}
+
+.content-textarea:focus,
+.editor-canvas-textarea.ant-input:focus,
+.editor-canvas-textarea.ant-input-focused {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--desk-teal) 18%, transparent) !important;
+}
+
+.editor-lock-overlay,
+.editor-lock-overlay.modern {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line)) !important;
+  color: var(--desk-teal);
+}
+
+.ai-writing-interface.modern-ai-layout {
+  padding: clamp(8px, 1.2vw, 14px);
+}
+
+.ai-writing-layout-shell {
+  gap: 0.6rem;
+}
+
+.ai-chat-drawer {
+  border-color: var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-panel);
+}
+
+.ai-assistant-toolbar-card {
+  border-bottom-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 88%, var(--desk-paper-soft));
+}
+
+.ai-assistant-toolbar-header {
+  min-height: 46px;
+}
+
+.ai-assistant-title-text {
+  color: var(--desk-ink);
+  font-weight: 760;
+}
+
+.ai-toolbar-text-btn.ant-btn,
+.ai-toolbar-icon-btn.ant-btn {
+  color: var(--desk-muted) !important;
+}
+
+.ai-toolbar-text-btn.ant-btn:hover,
+.ai-toolbar-icon-btn.ant-btn:hover,
+.ai-toolbar-icon-btn.selected.ant-btn {
+  color: var(--desk-teal) !important;
+}
+
+.ai-toolbar-tag.model.ant-tag,
+.ai-toolbar-tag.prompt.ant-tag {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 12%, transparent);
+  color: var(--desk-teal);
+}
+
+.ai-chat-container {
+  background: color-mix(in srgb, var(--desk-panel) 82%, var(--desk-paper)) !important;
+}
+
+.chat-message-avatar.assistant.ant-avatar {
+  background: var(--desk-accent);
+}
+
+.chat-message-avatar.user.ant-avatar {
+  background: var(--desk-teal);
+}
+
+.chat-message-bubble.assistant {
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 82%, var(--desk-panel));
+  color: var(--desk-ink);
+}
+
+.chat-message-bubble.user {
+  background: var(--desk-teal);
+  color: #ffffff;
+}
+
+.chat-input-area {
+  border-top-color: var(--desk-line) !important;
+  background: color-mix(in srgb, var(--desk-panel) 96%, transparent) !important;
+}
+
+.chat-input-wrapper {
+  border-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+
+.editor-footer {
+  margin: 0.5rem clamp(8px, 1.4vw, 18px) clamp(8px, 1.2vw, 14px);
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 92%, transparent);
+  box-shadow: none;
+}
+
+.writing-editor .editor-footer .footer-panel,
+.writing-editor .editor-footer .chapter-selector,
+.writing-editor .editor-footer .footer-metric {
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 68%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only {
+  border-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only:hover,
+.writing-editor .editor-footer .footer-ai-options[open] .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-teal) 42%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, var(--desk-paper));
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline {
+  border-color: var(--desk-line) !important;
+  background: color-mix(in srgb, var(--desk-panel) 96%, transparent) !important;
+  box-shadow: 0 18px 50px color-mix(in srgb, black 24%, transparent) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::before {
+  content: "AI Assistant";
+  border-bottom-color: var(--desk-line);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::after {
+  border-color: var(--desk-line);
+  background: var(--desk-panel);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-buttons,
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle {
+  border-color: var(--desk-line) !important;
+  background: var(--desk-paper) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button.active {
+  border-color: var(--desk-accent) !important;
+  background: var(--desk-accent) !important;
+  color: var(--desk-bg) !important;
+  box-shadow: none;
+}
+
+.editor-agent-strip {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 92%, transparent);
+  box-shadow: none;
+}
+
+.editor-agent-strip .agent-status-badge.active,
+.editor-meta-pill.generating,
+.canvas-tool-chip.ai,
+.canvas-tool-btn.ai {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, transparent);
+  color: var(--desk-teal);
+}
+
+.writing-editor .empty-chapters-notice {
+  position: relative;
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  height: 100%;
+  min-height: 420px;
+  margin: 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 56px);
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--desk-teal) 12%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 98%, transparent), color-mix(in srgb, var(--desk-paper) 90%, transparent)),
+    var(--desk-paper);
+  color: var(--desk-muted);
+  box-shadow: var(--desk-shadow);
+  text-align: left;
+}
+
+.writing-editor .empty-chapters-notice::before {
+  content: "START";
+  position: absolute;
+  top: clamp(20px, 4vw, 48px);
+  right: clamp(20px, 4vw, 52px);
+  color: color-mix(in srgb, var(--desk-ink) 7%, transparent);
+  font-size: clamp(4.2rem, 13vw, 11rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 0.82;
+  pointer-events: none;
+}
+
+.writing-editor .empty-chapters-notice h3 {
+  position: relative;
+  max-width: 680px;
+  margin: 0 0 0.7rem;
+  color: var(--desk-ink);
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.writing-editor .empty-chapters-notice p {
+  position: relative;
+  max-width: 460px;
+  margin: 0 0 1.35rem;
+  color: var(--desk-muted);
+  font-size: clamp(0.94rem, 1vw, 1.06rem);
+  line-height: 1.72;
+}
+
+.writing-editor .empty-chapters-notice .create-chapter-button {
+  position: relative;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 1.1rem;
+  border: 1px solid var(--desk-accent);
+  border-radius: 8px;
+  background: var(--desk-accent);
+  color: var(--desk-bg);
+  box-shadow: none;
+  font-size: 0.92rem;
+  font-weight: 760;
+}
+
+.writing-editor .empty-chapters-notice .create-chapter-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+  background: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+}
+
+@media (max-width: 768px) {
+  .writing-editor .empty-chapters-notice {
+    min-height: 360px;
+    padding: 24px;
+  }
+
+  .writing-editor .empty-chapters-notice::before {
+    font-size: clamp(3.6rem, 21vw, 6rem);
+  }
+}
+

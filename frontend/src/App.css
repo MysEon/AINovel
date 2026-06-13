@@ -903,3 +903,35 @@ button:active {
     transition-duration: 0.2s !important;
   }
 }
+
+/* Project editor sidebar should stay neutral and tool-like. */
+.app-container .start-writing a {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--secondary-text-color) !important;
+  box-shadow: none !important;
+}
+
+.app-container .start-writing a:hover {
+  border-color: transparent !important;
+  background: var(--hover-bg) !important;
+  color: var(--text-color) !important;
+  box-shadow: none !important;
+}
+
+.app-container .menu-section li.active a,
+.app-container .start-writing.active a {
+  border-color: light-dark(rgba(17, 24, 39, 0.1), rgba(255, 255, 255, 0.1)) !important;
+  background: light-dark(rgba(16, 163, 127, 0.11), rgba(16, 163, 127, 0.16)) !important;
+  color: var(--text-color) !important;
+  box-shadow: none !important;
+}
+
+.app-container .menu-section li.active a svg,
+.app-container .start-writing.active a svg {
+  color: var(--success-color) !important;
+}
+
+.app-container .menu-section li.active a::before {
+  display: none !important;
+}

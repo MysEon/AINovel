@@ -607,3 +607,385 @@
     border: 0;
   }
 }
+
+/* Project workspace: Codex-style neutral shell */
+.app-container {
+  --workspace-canvas: light-dark(#f7f7f5, #0b0c0f);
+  --workspace-shell: light-dark(#ffffff, #111318);
+  --workspace-panel: light-dark(#fbfbfa, #17191f);
+  --workspace-panel-soft: light-dark(#f1f1ee, #1d2028);
+  --workspace-border: light-dark(rgba(17, 24, 39, 0.1), rgba(255, 255, 255, 0.1));
+  --workspace-border-strong: light-dark(rgba(17, 24, 39, 0.18), rgba(255, 255, 255, 0.18));
+  --workspace-text: light-dark(#111827, #f4f4f5);
+  --workspace-muted: light-dark(#69707d, #9ca3af);
+  --workspace-accent: #10a37f;
+  --workspace-accent-soft: light-dark(rgba(16, 163, 127, 0.11), rgba(16, 163, 127, 0.16));
+  --workspace-shadow: light-dark(0 18px 45px rgba(17, 24, 39, 0.08), 0 22px 60px rgba(0, 0, 0, 0.36));
+  gap: 8px;
+  padding: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--workspace-panel-soft) 42%, transparent), transparent 340px),
+    var(--workspace-canvas);
+}
+
+.app-container .sidebar {
+  width: 264px;
+  border-radius: 12px;
+  border-color: var(--workspace-border);
+  background: color-mix(in srgb, var(--workspace-shell) 94%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+}
+
+.app-container .sidebar-header {
+  padding: 0.86rem 0.74rem 0.68rem;
+  border-bottom: 1px solid var(--workspace-border);
+  border-image: none;
+}
+
+.app-container .project-header-with-back,
+.app-container .project-info-separate {
+  display: none;
+}
+
+.app-container .app-title-section h1 {
+  font-size: 1.03rem;
+  font-weight: 780;
+}
+
+.app-container .app-subtitle {
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+.app-container .sidebar-project-card {
+  margin-top: 0.72rem;
+  padding: 0.62rem 0.66rem;
+  border-radius: 8px;
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.app-container .sidebar-project-card span {
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.app-container .sidebar-project-card strong {
+  margin-top: 0.18rem;
+  font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.app-container .collapse-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border-color: var(--workspace-border);
+  background: transparent;
+  color: var(--workspace-muted);
+}
+
+.app-container .collapse-btn:hover {
+  border-color: var(--workspace-border-strong);
+  background: var(--workspace-panel-soft);
+  color: var(--workspace-text);
+}
+
+.app-container .sidebar-menu {
+  padding: 0.54rem;
+}
+
+.app-container .menu-section {
+  margin-bottom: 0.62rem;
+}
+
+.app-container .menu-section h3,
+.app-container .menu-section h2 {
+  margin-bottom: 0.32rem;
+  padding: 0 0.44rem;
+  color: var(--workspace-muted);
+  font-size: 0.66rem;
+  font-weight: 720;
+  letter-spacing: 0.03em;
+}
+
+.app-container .menu-section li a {
+  min-height: 34px;
+  margin: 1px 0;
+  padding: 0 0.56rem;
+  border-radius: 8px;
+  color: var(--workspace-muted);
+  font-size: 0.84rem;
+  font-weight: 560;
+}
+
+.app-container .menu-section li a svg {
+  width: 14px;
+  min-width: 14px;
+  color: inherit;
+}
+
+.app-container .menu-section li a:hover {
+  border-color: transparent;
+  background: var(--workspace-panel-soft);
+  color: var(--workspace-text);
+}
+
+.app-container .menu-section li.active a {
+  border-color: var(--workspace-border);
+  background: var(--workspace-accent-soft);
+  color: var(--workspace-text);
+}
+
+.app-container .menu-section li.active a svg {
+  color: var(--workspace-accent);
+}
+
+.app-container .sidebar-utility-panel {
+  gap: 0.42rem;
+  padding: 0.54rem;
+  border-top: 1px solid var(--workspace-border);
+  background: color-mix(in srgb, var(--workspace-shell) 96%, transparent);
+}
+
+.app-container .sidebar-utility-button {
+  min-height: 36px;
+  padding: 0 0.62rem;
+  border-radius: 8px;
+  border-color: var(--workspace-border);
+  background: transparent;
+  color: var(--workspace-muted);
+  font-size: 0.8rem;
+  font-weight: 620;
+}
+
+.app-container .sidebar-utility-button:hover {
+  border-color: var(--workspace-border-strong);
+  background: var(--workspace-panel-soft);
+  color: var(--workspace-text);
+}
+
+.app-container .content {
+  padding: 8px;
+  border-radius: 12px;
+  border-color: var(--workspace-border);
+  background: var(--workspace-canvas);
+  box-shadow: none;
+}
+
+.app-container .content > :not(.writing-editor) {
+  border-radius: 10px;
+}
+
+.app-container .content > .prompt-manager-container,
+.app-container .content > .model-config-manager,
+.app-container .content > .ant-layout,
+.app-container .content > .knowledge-base,
+.app-container .content > .character-manager,
+.app-container .content > .ai-workflow-manager,
+.app-container .content > .published-chapters,
+.app-container .content > .project-overview,
+.app-container .content > .kanban-board,
+.app-container .content > .progress-tracking {
+  width: 100%;
+  min-height: 100%;
+  padding: clamp(14px, 1.6vw, 24px);
+  border: 1px solid var(--workspace-border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--workspace-panel) 96%, transparent), color-mix(in srgb, var(--workspace-canvas) 98%, transparent)),
+    var(--workspace-panel);
+  box-shadow: var(--workspace-shadow);
+}
+
+.app-container .content .ant-card,
+.app-container .content .ant-table-wrapper,
+.app-container .content .ant-list,
+.app-container .content .ant-collapse,
+.app-container .content .ant-tabs-content-holder,
+.app-container .content .knowledge-section,
+.app-container .content .manager-card,
+.app-container .content .dashboard-card,
+.app-container .content .stat-card,
+.app-container .content .kanban-column,
+.app-container .content .published-card {
+  border-radius: 8px !important;
+  border-color: var(--workspace-border) !important;
+  background: color-mix(in srgb, var(--workspace-shell) 94%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-card-head,
+.app-container .content .ant-table-thead > tr > th,
+.app-container .content .ant-collapse-header {
+  border-color: var(--workspace-border) !important;
+  background: color-mix(in srgb, var(--workspace-panel-soft) 72%, transparent) !important;
+  color: var(--workspace-text) !important;
+}
+
+.app-container .content .ant-input,
+.app-container .content .ant-input-affix-wrapper,
+.app-container .content .ant-select-selector,
+.app-container .content .ant-input-number,
+.app-container .content textarea {
+  border-radius: 8px !important;
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-shell) !important;
+  color: var(--workspace-text) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-input:hover,
+.app-container .content .ant-input-affix-wrapper:hover,
+.app-container .content .ant-select-selector:hover,
+.app-container .content .ant-input-number:hover,
+.app-container .content textarea:hover {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, var(--workspace-border-strong)) !important;
+}
+
+.app-container .content .ant-btn {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.app-container .content .ant-btn-primary {
+  background: var(--workspace-text);
+  border-color: var(--workspace-text);
+  color: var(--workspace-canvas);
+}
+
+.app-container .content .ant-btn-primary:hover {
+  background: color-mix(in srgb, var(--workspace-text) 86%, var(--workspace-accent));
+  border-color: color-mix(in srgb, var(--workspace-text) 86%, var(--workspace-accent));
+  color: var(--workspace-canvas);
+}
+
+.app-container .content .ai-action-btn,
+.app-container .content .btn-primary,
+.app-container .content .new-config-btn,
+.app-container .content .create-config-btn,
+.app-container .content .add-knowledge-btn,
+.app-container .content .prompt-manager-toolbar .ant-btn-primary,
+.app-container .content .prompt-preview-action,
+.app-container .content .model-config-actions-modern .ant-btn-primary {
+  border: 1px solid var(--workspace-text) !important;
+  border-radius: 8px !important;
+  background: var(--workspace-text) !important;
+  color: var(--workspace-canvas) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ai-action-btn:hover,
+.app-container .content .btn-primary:hover,
+.app-container .content .new-config-btn:hover,
+.app-container .content .create-config-btn:hover,
+.app-container .content .add-knowledge-btn:hover,
+.app-container .content .prompt-manager-toolbar .ant-btn-primary:hover,
+.app-container .content .prompt-preview-action:hover,
+.app-container .content .model-config-actions-modern .ant-btn-primary:hover {
+  border-color: color-mix(in srgb, var(--workspace-text) 82%, var(--workspace-accent)) !important;
+  background: color-mix(in srgb, var(--workspace-text) 82%, var(--workspace-accent)) !important;
+  color: var(--workspace-canvas) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .model-fetch-button,
+.app-container .content .model-test-button,
+.app-container .content .prompt-manager-kicker,
+.app-container .content .model-config-kicker {
+  border-color: color-mix(in srgb, var(--workspace-accent) 28%, var(--workspace-border)) !important;
+  background: var(--workspace-accent-soft) !important;
+  color: var(--workspace-accent) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .knowledge-module.active,
+.app-container .content .knowledge-module:hover,
+.app-container .content .prompt-stat-pill,
+.app-container .content .model-config-section,
+.app-container .content .empty-configs,
+.app-container .content .stats-badge {
+  border-color: var(--workspace-border) !important;
+  background: color-mix(in srgb, var(--workspace-shell) 92%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .stats-badge {
+  color: var(--workspace-text) !important;
+}
+
+.app-container .content .ant-empty {
+  min-height: 360px;
+  display: grid;
+  place-content: center;
+  border: 1px dashed var(--workspace-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, var(--workspace-accent-soft), transparent 42%),
+    color-mix(in srgb, var(--workspace-shell) 88%, transparent);
+}
+
+.app-container .content .ant-empty-description {
+  color: var(--workspace-muted);
+}
+
+.app-container .content > .ant-layout {
+  border: 1px solid var(--workspace-border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--workspace-panel) 96%, transparent), color-mix(in srgb, var(--workspace-canvas) 98%, transparent)),
+    var(--workspace-panel) !important;
+  box-shadow: var(--workspace-shadow);
+}
+
+.app-container.sidebar-collapsed .sidebar {
+  width: 60px;
+}
+
+.app-container.sidebar-collapsed .sidebar-menu,
+.app-container.sidebar-collapsed .sidebar-header,
+.app-container.sidebar-collapsed .sidebar-utility-panel {
+  padding-left: 0.42rem;
+  padding-right: 0.42rem;
+}
+
+.app-container.sidebar-collapsed .menu-section li a {
+  justify-content: center;
+  padding: 0;
+}
+
+@media (max-width: 1024px) {
+  .app-container .sidebar {
+    width: 236px;
+    border-radius: 10px;
+  }
+
+  .app-container .content {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container .sidebar {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .app-container .sidebar-menu {
+    max-height: 25vh;
+  }
+
+  .app-container .content > .prompt-manager-container,
+  .app-container .content > .model-config-manager,
+  .app-container .content > .knowledge-base,
+  .app-container .content > .character-manager,
+  .app-container .content > .ai-workflow-manager,
+  .app-container .content > .published-chapters,
+  .app-container .content > .project-overview,
+  .app-container .content > .kanban-board,
+  .app-container .content > .progress-tracking {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+}
