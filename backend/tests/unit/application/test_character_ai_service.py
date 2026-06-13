@@ -1,5 +1,6 @@
 """CharacterAIService 单元测试。"""
 
+import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,7 +9,12 @@ from app.application.character_ai_service import CharacterAIService
 from app.application.model_config_service import ModelConfigService
 from app.application.project_service import ProjectService
 from app.core.exceptions import ForbiddenError, ValidationError
-from app.schemas.character_ai import AIGenerateCharacterRequest, CharacterDraftSchema
+from app.infrastructure.db.models.worldbuilding import Character, Location
+from app.schemas.character_ai import (
+    AIGenerateCharacterRequest,
+    CharacterDraftSchema,
+    ReferenceItem,
+)
 from app.schemas.model_configs import ModelConfigCreate
 from app.schemas.projects import ProjectCreate
 
@@ -321,3 +327,250 @@ class TestCharacterAIService:
                 AIGenerateCharacterRequest(description="一个不稳定输出测试角色", model_config_id=model_config.id),
             )
         assert structured_model.ainvoke.await_count == 2
+
+    # ── References (关联已有实体) ─────────────────────────────────────────
+
+    @staticmethod
+    def _captured_system_prompt(structured_model: AsyncMock) -> str:
+        """从 ainvoke 的 mock 中取出最后一次传入的 system prompt 文本。"""
+        assert structured_model.ainvoke.await_count >= 1
+        last_call_args = structured_model.ainvoke.await_args_list[-1].args[0]
+        # _build_messages 返回 [SystemMessage, HumanMessage]
+        return last_call_args[0].content
+
+    async def test_generate_draft_with_character_reference(self, db_session, test_user, monkeypatch):
+        """选中已有角色 A，prompt 中应出现 A 的核心字段与 relationships。"""
+        project = await self._create_project(db_session, test_user.id)
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        existing = Character(
+            project_id=project.id,
+            name="苏清",
+            description="孤身追查家族秘密的少女剑客",
+            personality="坚毅而克制",
+            background="八岁亲历家族灭门后被剑庄收养",
+            appearance="黑发束起，腰悬青锋",
+            extra_attributes=json.dumps(
+                {"relationships": {"father": "已故的剑庄主人苏远", "mentor": "现任剑庄主人沈言"}},
+                ensure_ascii=False,
+            ),
+        )
+        db_session.add(existing)
+        await db_session.commit()
+        await db_session.refresh(existing)
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft(name="苏母"))
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        service = CharacterAIService(db_session)
+        await service.generate_draft(
+            project.id,
+            test_user.id,
+            AIGenerateCharacterRequest(
+                description="生成苏清的母亲",
+                model_config_id=model_config.id,
+                references=[ReferenceItem(type="character", id=existing.id)],
+            ),
+        )
+
+        sys_prompt = self._captured_system_prompt(structured_model)
+        assert "【已知项目实体（仅供参考）】" in sys_prompt
+        assert "苏清" in sys_prompt
+        assert "孤身追查家族秘密" in sys_prompt
+        assert "坚毅而克制" in sys_prompt
+        assert "已记载关系" in sys_prompt
+        assert "苏远" in sys_prompt  # relationships 字典里的值
+        assert "extra_fields.relationships" in sys_prompt  # 一致性硬性指令
+
+    async def test_generate_draft_empty_references_keeps_legacy_prompt(self, db_session, test_user, monkeypatch):
+        """references=[] 时 system prompt 不应出现关联段，与历史行为完全一致。"""
+        project = await self._create_project(db_session, test_user.id)
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft())
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        service = CharacterAIService(db_session)
+        await service.generate_draft(
+            project.id,
+            test_user.id,
+            AIGenerateCharacterRequest(
+                description="一个边境星港出身的女机械师主角",
+                model_config_id=model_config.id,
+                references=[],
+            ),
+        )
+
+        sys_prompt = self._captured_system_prompt(structured_model)
+        assert "【已知项目实体（仅供参考）】" not in sys_prompt
+        assert "已记载关系" not in sys_prompt
+
+    async def test_generate_draft_cross_project_reference_silently_ignored(self, db_session, test_user, monkeypatch):
+        """跨 project 的角色 ID 应被静默忽略（防越权），prompt 不含该角色信息。"""
+        project_a = await self._create_project(db_session, test_user.id, name="项目A")
+        project_b = await self._create_project(db_session, test_user.id, name="项目B")
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        # 在 project_b 里建一个角色，然后在 project_a 的生成请求里引用它
+        outsider = Character(
+            project_id=project_b.id,
+            name="跨项目角色赵迁",
+            description="他的存在不应进入 A 项目的 prompt",
+            personality="x",
+            background="y",
+            appearance="z",
+        )
+        db_session.add(outsider)
+        await db_session.commit()
+        await db_session.refresh(outsider)
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft())
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        service = CharacterAIService(db_session)
+        await service.generate_draft(
+            project_a.id,
+            test_user.id,
+            AIGenerateCharacterRequest(
+                description="一个新角色",
+                model_config_id=model_config.id,
+                references=[ReferenceItem(type="character", id=outsider.id)],
+            ),
+        )
+
+        sys_prompt = self._captured_system_prompt(structured_model)
+        # 跨项目角色的所有信息都不应进入 prompt；由于桶为空，整段关联区块也不应出现
+        assert "跨项目角色赵迁" not in sys_prompt
+        assert "【已知项目实体（仅供参考）】" not in sys_prompt
+
+    async def test_generate_draft_nonexistent_reference_silently_ignored(self, db_session, test_user, monkeypatch):
+        """不存在的 reference id 应被静默忽略，不抛错。"""
+        project = await self._create_project(db_session, test_user.id)
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft())
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        service = CharacterAIService(db_session)
+        result = await service.generate_draft(
+            project.id,
+            test_user.id,
+            AIGenerateCharacterRequest(
+                description="一个新角色",
+                model_config_id=model_config.id,
+                references=[ReferenceItem(type="character", id=999_999)],
+            ),
+        )
+
+        assert result.name  # 正常生成，没有抛错
+        sys_prompt = self._captured_system_prompt(structured_model)
+        assert "【已知项目实体（仅供参考）】" not in sys_prompt
+
+    async def test_generate_draft_references_truncated_when_over_limit(
+        self, db_session, test_user, monkeypatch, caplog
+    ):
+        """超过 MAX_REFERENCES_PER_REQUEST=10 应被截断且打 warning。"""
+        from app.schemas.character_ai import MAX_REFERENCES_PER_REQUEST
+
+        project = await self._create_project(db_session, test_user.id)
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        # 建 12 个角色
+        chars = [
+            Character(
+                project_id=project.id,
+                name=f"角色{i}",
+                description=f"第{i}号角色",
+                personality="p",
+                background="b",
+                appearance="a",
+            )
+            for i in range(12)
+        ]
+        db_session.add_all(chars)
+        await db_session.commit()
+        for c in chars:
+            await db_session.refresh(c)
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft())
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        refs = [ReferenceItem(type="character", id=c.id) for c in chars]
+        assert len(refs) > MAX_REFERENCES_PER_REQUEST
+
+        service = CharacterAIService(db_session)
+        with caplog.at_level("WARNING", logger="app.application.character_ai_service"):
+            await service.generate_draft(
+                project.id,
+                test_user.id,
+                AIGenerateCharacterRequest(
+                    description="一个新角色", model_config_id=model_config.id, references=refs
+                ),
+            )
+
+        sys_prompt = self._captured_system_prompt(structured_model)
+        # 前 10 个应在 prompt 中
+        assert "角色0" in sys_prompt
+        assert "角色9" in sys_prompt
+        # 11、12 号被截断
+        assert "角色10" not in sys_prompt
+        assert "角色11" not in sys_prompt
+        # warning 日志已记录
+        assert any("references 数量超限" in rec.message for rec in caplog.records)
+
+    async def test_generate_draft_with_multi_type_references(self, db_session, test_user, monkeypatch):
+        """同时关联角色 + 地点：prompt 应包含两类标签段。"""
+        project = await self._create_project(db_session, test_user.id)
+        model_config = await self._create_model_config(db_session, test_user.id, ["character_generation"])
+
+        char = Character(
+            project_id=project.id,
+            name="林时",
+            description="守夜人队长",
+            personality="沉默寡言",
+            background="出身边陲军户",
+            appearance="灰袍佩刀",
+        )
+        loc = Location(
+            project_id=project.id,
+            name="北境哨塔",
+            description="冰原最前沿的瞭望据点",
+        )
+        db_session.add_all([char, loc])
+        await db_session.commit()
+        await db_session.refresh(char)
+        await db_session.refresh(loc)
+
+        structured_model = AsyncMock()
+        structured_model.ainvoke = AsyncMock(return_value=self._draft())
+        provider = _FakeProvider(_FakeChatModel(structured_model))
+        monkeypatch.setattr("app.infrastructure.llm.provider_adapters.get_provider", lambda _model_type: provider)
+
+        service = CharacterAIService(db_session)
+        await service.generate_draft(
+            project.id,
+            test_user.id,
+            AIGenerateCharacterRequest(
+                description="生成一个守夜人新兵",
+                model_config_id=model_config.id,
+                references=[
+                    ReferenceItem(type="character", id=char.id),
+                    ReferenceItem(type="location", id=loc.id),
+                ],
+            ),
+        )
+
+        sys_prompt = self._captured_system_prompt(structured_model)
+        assert "角色《林时》" in sys_prompt
+        assert "地点《北境哨塔》" in sys_prompt
+        assert "冰原最前沿的瞭望据点" in sys_prompt

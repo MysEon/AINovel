@@ -142,6 +142,161 @@ class AIContextBuilder:
             for ch in result.scalars().all()
         ]
 
+    async def get_referenced_entities(
+        self,
+        project_id: int,
+        refs: list[dict],
+    ) -> dict[str, list[dict]]:
+        """
+        按 (type, id) 子集聚合用户显式关联的实体。
+
+        - 严格按 project_id 过滤：跨项目的引用会被静默忽略（防越权）
+        - 不存在的 ID 会被静默忽略（不抛错，体验更软）
+        - 输入 refs 形如 [{"type":"character","id":1}, ...]
+        - 输出 dict 形如 {"characters":[...], "locations":[...], ...}（仅包含有命中的桶）
+
+        与 `_get_characters` 等批量方法的区别：
+        - 这里按 ID 集合精筛，不限制条数（调用方应在更上层做数量上限）
+        - 复用相同的字段截断策略，保持 prompt 注入风格一致
+        """
+        # 把 refs 按类型分桶
+        ids_by_type: dict[str, set[int]] = {}
+        for ref in refs:
+            ref_type = ref.get("type")
+            ref_id = ref.get("id")
+            if not isinstance(ref_type, str) or not isinstance(ref_id, int):
+                continue
+            ids_by_type.setdefault(ref_type, set()).add(ref_id)
+
+        result: dict[str, list[dict]] = {}
+
+        if char_ids := ids_by_type.get("character"):
+            rows = await self.db.execute(
+                select(Character)
+                .where(Character.project_id == project_id, Character.id.in_(char_ids))
+                .order_by(Character.id)
+            )
+            chars: list[dict] = []
+            for c in rows.scalars().all():
+                relationships: dict | None = None
+                if c.extra_attributes:
+                    try:
+                        import json as _json
+
+                        extra = _json.loads(c.extra_attributes)
+                        if isinstance(extra, dict):
+                            rel = extra.get("relationships")
+                            if isinstance(rel, dict) and rel:
+                                relationships = rel
+                    except (ValueError, TypeError):
+                        pass
+                chars.append(
+                    {
+                        "id": c.id,
+                        "name": c.name,
+                        "description": _truncate(c.description, 200),
+                        "personality": _truncate(c.personality, 200),
+                        "background": _truncate(c.background, 200),
+                        "relationships": relationships,
+                    }
+                )
+            if chars:
+                result["characters"] = chars
+
+        if loc_ids := ids_by_type.get("location"):
+            rows = await self.db.execute(
+                select(Location)
+                .where(Location.project_id == project_id, Location.id.in_(loc_ids))
+                .order_by(Location.id)
+            )
+            locs = [
+                {
+                    "id": loc.id,
+                    "name": loc.name,
+                    "description": _truncate(loc.description, 200),
+                }
+                for loc in rows.scalars().all()
+            ]
+            if locs:
+                result["locations"] = locs
+
+        if org_ids := ids_by_type.get("organization"):
+            rows = await self.db.execute(
+                select(Organization)
+                .where(Organization.project_id == project_id, Organization.id.in_(org_ids))
+                .order_by(Organization.id)
+            )
+            orgs = [
+                {
+                    "id": org.id,
+                    "name": org.name,
+                    "description": _truncate(org.description, 200),
+                }
+                for org in rows.scalars().all()
+            ]
+            if orgs:
+                result["organizations"] = orgs
+
+        if wv_ids := ids_by_type.get("worldview"):
+            rows = await self.db.execute(
+                select(Worldview)
+                .where(Worldview.project_id == project_id, Worldview.id.in_(wv_ids))
+                .order_by(Worldview.id)
+            )
+            wvs = [
+                {
+                    "id": w.id,
+                    "name": w.name,
+                    "description": _truncate(w.description, 300),
+                }
+                for w in rows.scalars().all()
+            ]
+            if wvs:
+                result["worldviews"] = wvs
+
+        return result
+
+    @staticmethod
+    def format_referenced_entities(entities: dict[str, list[dict]]) -> str:
+        """
+        把 `get_referenced_entities` 的结果渲染成 prompt 可注入的中文文本段。
+        空字典返回空字符串，调用方据此决定是否拼接。
+        """
+        if not entities:
+            return ""
+
+        lines: list[str] = ["【已知项目实体（仅供参考）】"]
+
+        for c in entities.get("characters") or []:
+            lines.append(f"- 角色《{c['name']}》")
+            if c.get("description"):
+                lines.append(f"  · 一句话定位：{c['description']}")
+            if c.get("personality"):
+                lines.append(f"  · 性格：{c['personality']}")
+            if c.get("background"):
+                lines.append(f"  · 背景：{c['background']}")
+            rel = c.get("relationships")
+            if rel:
+                rel_text = "、".join(f"{k}={v}" for k, v in rel.items())
+                lines.append(f"  · 已记载关系：{rel_text}")
+
+        for loc in entities.get("locations") or []:
+            lines.append(f"- 地点《{loc['name']}》")
+            if loc.get("description"):
+                lines.append(f"  · 描述：{loc['description']}")
+
+        for org in entities.get("organizations") or []:
+            lines.append(f"- 组织《{org['name']}》")
+            if org.get("description"):
+                lines.append(f"  · 描述：{org['description']}")
+
+        for w in entities.get("worldviews") or []:
+            lines.append(f"- 世界观《{w['name']}》")
+            if w.get("description"):
+                lines.append(f"  · 描述：{w['description']}")
+
+        return "\n".join(lines)
+
     def format_for_chat(self, ctx: dict) -> str:
         """格式化 chat 用轻量上下文：项目元数据 + 角色基础列表。"""
         return self._format_chat_characters(ctx, field_limit=200, compact=False)

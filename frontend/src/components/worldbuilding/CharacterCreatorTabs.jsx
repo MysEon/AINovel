@@ -15,6 +15,7 @@ import {
   aiGenerateCharacter,
   createCharacter,
   getCharacterTemplates,
+  getCharacters,
 } from '../../services/characterService';
 import { FALLBACK_CHARACTER_TEMPLATE_REGISTRY } from '../../config/characterPanelTemplates';
 import CharacterFormBody from './CharacterFormBody';
@@ -30,6 +31,16 @@ import {
 import './FirstCharacterOnboardingModal.css';
 
 const { TextArea } = Input;
+
+// AI 生成时关联已有角色的数量上限（与后端 MAX_REFERENCES_PER_REQUEST 对齐）
+const MAX_REFERENCES = 10
+// 选项里 description 摘要的截断长度
+const REF_DESC_PREVIEW_LEN = 30
+
+function truncate(text, max) {
+  if (!text) return ''
+  return text.length > max ? `${text.slice(0, max)}…` : text
+}
 
 function buildManualPayload(values, templateRegistry) {
   const payload = normalizeCoreCharacterPayload(values);
@@ -84,6 +95,7 @@ const CharacterCreatorTabs = ({
   const [modelLoading, setModelLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [existingCharacters, setExistingCharacters] = useState([]);
   const [templateRegistry, setTemplateRegistry] = useState(
     templateRegistryProp || FALLBACK_CHARACTER_TEMPLATE_REGISTRY
   );
@@ -165,6 +177,27 @@ const CharacterCreatorTabs = ({
     }
   }, [activeTab, loadCharacterGenerationModels]);
 
+  // AI tab 激活时拉取项目下已有角色，作为「关联已有角色」选择器的数据源
+  // 不在初始化阶段拉，避免还没切到 AI tab 就发一次请求
+  useEffect(() => {
+    if (activeTab !== 'ai' || !projectId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getCharacters(projectId);
+        if (!cancelled) {
+          setExistingCharacters(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        // 拉取失败时静默降级为「无已有角色」状态，不打断主流程
+        if (!cancelled) setExistingCharacters([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, projectId]);
+
   const handleManualCreate = async () => {
     try {
       const values = await manualForm.validateFields();
@@ -186,9 +219,14 @@ const CharacterCreatorTabs = ({
     try {
       const values = await aiForm.validateFields();
       setGenerating(true);
+      const referencedIds = Array.isArray(values.__referenced_character_ids)
+        ? values.__referenced_character_ids
+        : [];
+      const references = referencedIds.map(id => ({ type: 'character', id }));
       const result = await aiGenerateCharacter(projectId, {
         description: values.description,
         model_config_id: values.model_config_id,
+        ...(references.length > 0 ? { references } : {}),
       });
       setDraft(result);
     } catch (error) {
@@ -290,6 +328,27 @@ const CharacterCreatorTabs = ({
               }))}
             />
           </Form.Item>
+          {existingCharacters.length > 0 && (
+            <Form.Item
+              name="__referenced_character_ids"
+              label={`关联已有角色（可选，最多 ${MAX_REFERENCES} 个）`}
+              tooltip="选中的角色会作为 AI 生成的上下文参考。例如：选中『苏清』并在描述里写『生成苏清的母亲』，AI 会保持家世/外貌/背景的一致性。"
+            >
+              <Select
+                mode="multiple"
+                allowClear
+                maxCount={MAX_REFERENCES}
+                placeholder="可选：让 AI 在生成时参考这些已有角色"
+                optionFilterProp="label"
+                options={existingCharacters.map(c => ({
+                  value: c.id,
+                  label: c.description
+                    ? `${c.name} — ${truncate(c.description, REF_DESC_PREVIEW_LEN)}`
+                    : c.name,
+                }))}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="description"
             label="角色描述"

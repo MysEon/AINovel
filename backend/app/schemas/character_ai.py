@@ -1,13 +1,33 @@
 """角色 AI 生成 Schemas。"""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
+
+# AI 生成时附带的关联实体类型（与 worldbuilding 模型四类对齐）
+ReferenceEntityType = Literal["character", "location", "organization", "worldview"]
+
+# 单次生成请求中关联实体数量上限（防 prompt 体积爆炸）
+MAX_REFERENCES_PER_REQUEST = 10
+
+
+class ReferenceItem(BaseModel):
+    """关联已有项目实体的引用。"""
+
+    type: ReferenceEntityType = Field(..., description="实体类型")
+    id: int = Field(..., gt=0, description="实体在对应表中的主键 ID")
 
 
 class AIGenerateCharacterRequest(BaseModel):
     description: str = Field(..., min_length=5, max_length=2000)
     model_config_id: int
+    references: list[ReferenceItem] = Field(
+        default_factory=list,
+        description=(
+            f"可选的关联已有项目实体列表（最多 {MAX_REFERENCES_PER_REQUEST} 个，"
+            "超出会被截断）。AI 会把这些实体的核心信息作为生成上下文参考。"
+        ),
+    )
 
 
 class CharacterDraftSchema(BaseModel):
