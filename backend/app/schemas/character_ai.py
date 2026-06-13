@@ -91,3 +91,65 @@ class CharacterDraftSchema(BaseModel):
 
 class CharacterDraftResponse(CharacterDraftSchema):
     """角色 AI 生成响应。dimensions 保持 dict，由前端复用表单逻辑转 JSON。"""
+
+
+# 一次请求最多生成的角色数量上限（与 prompt 引导的硬边界一致）
+MAX_CHARACTERS_PER_BATCH = 5
+
+
+class PlanItem(BaseModel):
+    """规划阶段对单个角色的简要描绘。"""
+
+    slot_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="角色槽位名（中文短词），如『队长』『剑客』『母亲』",
+    )
+    brief: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="一句话简介，给生成阶段做差异化锚点",
+    )
+
+
+class CharacterPlan(BaseModel):
+    """规划阶段输出：从用户描述中提取要生成几个角色、分别是谁。"""
+
+    count: int = Field(..., ge=1, le=MAX_CHARACTERS_PER_BATCH, description="要生成的角色数量（1~上限）")
+    plan: list[PlanItem] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_CHARACTERS_PER_BATCH,
+        description="要生成的角色槽位列表，长度应等于 count",
+    )
+    reasoning: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="AI 简短解释为什么是这个数量，用于前端展示给用户",
+    )
+
+
+class CharacterDraftBatch(BaseModel):
+    """生成阶段输出：一次性产出 1~N 个完整角色档案。"""
+
+    characters: list[CharacterDraftSchema] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_CHARACTERS_PER_BATCH,
+        description="生成的角色草稿列表，长度应与规划阶段 count 一致",
+    )
+
+
+class CharacterDraftBatchResponse(BaseModel):
+    """API 响应：包含规划元信息 + 多角色草稿数组。"""
+
+    plan: CharacterPlan = Field(..., description="规划阶段产出，含 count / 槽位列表 / reasoning")
+    characters: list[CharacterDraftSchema] = Field(
+        ...,
+        min_length=1,
+        max_length=MAX_CHARACTERS_PER_BATCH,
+        description="生成阶段产出的角色草稿列表",
+    )

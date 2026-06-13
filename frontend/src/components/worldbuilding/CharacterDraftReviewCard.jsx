@@ -248,7 +248,14 @@ function renderExtraFieldInput(fieldKey, value) {
   );
 }
 
-const CharacterDraftReviewCard = ({ draft, onConfirm, onRegenerate, onCancel }) => {
+const CharacterDraftReviewCard = ({
+  draft,
+  onConfirm,
+  onRegenerate,
+  onCancel,
+  readOnly = false,
+  cancelLabel = '取消',
+}) => {
   const [form] = Form.useForm();
   const watchedDimensions = Form.useWatch('dimensions', form) || {};
   const dimensionKeys = Object.keys(watchedDimensions);
@@ -277,7 +284,7 @@ const CharacterDraftReviewCard = ({ draft, onConfirm, onRegenerate, onCancel }) 
         </div>
       </div>
 
-      <Form form={form} layout="vertical" requiredMark="optional">
+      <Form form={form} layout="vertical" requiredMark="optional" disabled={readOnly}>
         <div className="character-draft-review-grid">
           <div className="character-draft-basic-panel">
             <Form.Item
@@ -354,9 +361,15 @@ const CharacterDraftReviewCard = ({ draft, onConfirm, onRegenerate, onCancel }) 
       </Form>
 
       <div className="character-draft-actions">
-        <Button onClick={onRegenerate}>重新生成</Button>
-        <Button onClick={onCancel}>取消</Button>
-        <Button type="primary" onClick={handleCreate}>创建角色</Button>
+        {readOnly ? (
+          <span className="character-draft-confirmed-tag">✓ 已入库</span>
+        ) : (
+          <>
+            <Button onClick={onRegenerate}>重新生成</Button>
+            <Button onClick={onCancel}>{cancelLabel}</Button>
+            <Button type="primary" onClick={handleCreate}>创建角色</Button>
+          </>
+        )}
       </div>
     </Card>
   );

@@ -94,7 +94,12 @@ const CharacterCreatorTabs = ({
   const [modelConfigs, setModelConfigs] = useState([]);
   const [modelLoading, setModelLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [draft, setDraft] = useState(null);
+  // 多角色草稿状态：drafts 数组 + 当前编辑 tab 索引 + 已确认入库的索引集合 + 规划元信息
+  const [drafts, setDrafts] = useState([]);
+  const [activeDraftIdx, setActiveDraftIdx] = useState(0);
+  const [confirmedIdxSet, setConfirmedIdxSet] = useState(() => new Set());
+  const [draftPlan, setDraftPlan] = useState(null);
+  const [batchSaving, setBatchSaving] = useState(false);
   const [existingCharacters, setExistingCharacters] = useState([]);
   const [templateRegistry, setTemplateRegistry] = useState(
     templateRegistryProp || FALLBACK_CHARACTER_TEMPLATE_REGISTRY
@@ -215,6 +220,13 @@ const CharacterCreatorTabs = ({
     }
   };
 
+  const resetDraftState = () => {
+    setDrafts([]);
+    setActiveDraftIdx(0);
+    setConfirmedIdxSet(new Set());
+    setDraftPlan(null);
+  };
+
   const handleGenerate = async () => {
     try {
       const values = await aiForm.validateFields();
@@ -228,7 +240,12 @@ const CharacterCreatorTabs = ({
         model_config_id: values.model_config_id,
         ...(references.length > 0 ? { references } : {}),
       });
-      setDraft(result);
+      // 后端响应：{ plan: CharacterPlan, characters: list[CharacterDraftSchema] }
+      const newDrafts = Array.isArray(result?.characters) ? result.characters : [];
+      setDrafts(newDrafts);
+      setDraftPlan(result?.plan || null);
+      setActiveDraftIdx(0);
+      setConfirmedIdxSet(new Set());
     } catch (error) {
       if (error.errorFields) return;
       notification.error({ message: 'AI 生成失败', description: error.message });
@@ -238,22 +255,108 @@ const CharacterCreatorTabs = ({
   };
 
   const handleRegenerateDraft = async () => {
+    // MVP：重新生成 = 整批重生（清掉所有 draft 后重发）
+    resetDraftState();
     await handleGenerate();
   };
 
+  // 单角色入库（来自 CharacterDraftReviewCard 的 onConfirm 回调）
   const handleConfirmDraft = async (payload) => {
+    const idx = activeDraftIdx;
     try {
       setSavingDraft(true);
       await createCharacter(projectId, payload);
       notification.success({ message: `角色「${payload.name}」已创建` });
-      aiForm.resetFields();
-      setDraft(null);
-      await onCreated?.();
+      // 标记当前 idx 已确认；如果还有未确认的角色，自动跳到第一个未确认的 tab
+      const nextConfirmed = new Set(confirmedIdxSet);
+      nextConfirmed.add(idx);
+      setConfirmedIdxSet(nextConfirmed);
+      const nextUnconfirmedIdx = drafts.findIndex((_, i) => !nextConfirmed.has(i));
+      if (nextUnconfirmedIdx === -1) {
+        // 全部已确认 → 关闭审阅面板
+        aiForm.resetFields();
+        resetDraftState();
+        await onCreated?.();
+      } else {
+        setActiveDraftIdx(nextUnconfirmedIdx);
+        await onCreated?.();
+      }
     } catch (error) {
       notification.error({ message: '创建角色失败', description: error.message });
     } finally {
       setSavingDraft(false);
     }
+  };
+
+  // 丢弃当前 tab 的角色（仅前端剔除，不调后端）
+  const handleDiscardCurrent = () => {
+    if (drafts.length === 0) return;
+    const idx = activeDraftIdx;
+    const newDrafts = drafts.filter((_, i) => i !== idx);
+    if (newDrafts.length === 0) {
+      resetDraftState();
+      return;
+    }
+    // 重映射 confirmedIdxSet：被删除位置之后的索引整体 -1
+    const newConfirmed = new Set();
+    confirmedIdxSet.forEach((cIdx) => {
+      if (cIdx < idx) newConfirmed.add(cIdx);
+      else if (cIdx > idx) newConfirmed.add(cIdx - 1);
+      // cIdx === idx 直接丢弃
+    });
+    setDrafts(newDrafts);
+    setConfirmedIdxSet(newConfirmed);
+    setActiveDraftIdx(Math.min(idx, newDrafts.length - 1));
+  };
+
+  // 一次性确认所有未入库的角色
+  const handleConfirmAll = async () => {
+    const pendingIndices = drafts
+      .map((_, i) => i)
+      .filter(i => !confirmedIdxSet.has(i));
+    if (pendingIndices.length === 0) return;
+
+    setBatchSaving(true);
+    const successIndices = [];
+    const failed = [];
+    for (const i of pendingIndices) {
+      const draft = drafts[i];
+      try {
+        // 这里直接用 draft 原始 schema 落库——CharacterDraftReviewCard 的编辑能力此场景下不暴露
+        // 用户若需精修可改回 tab 内单独保存
+        await createCharacter(projectId, draft);
+        successIndices.push(i);
+      } catch (err) {
+        failed.push({ idx: i, name: draft?.name || `角色 ${i + 1}`, error: err });
+      }
+    }
+    setBatchSaving(false);
+
+    if (successIndices.length > 0) {
+      const nextConfirmed = new Set(confirmedIdxSet);
+      successIndices.forEach(i => nextConfirmed.add(i));
+      setConfirmedIdxSet(nextConfirmed);
+      notification.success({
+        message: `已批量入库 ${successIndices.length} 个角色`,
+      });
+      await onCreated?.();
+    }
+    if (failed.length > 0) {
+      notification.error({
+        message: `${failed.length} 个角色入库失败，请单独处理`,
+        description: failed.map(f => f.name).join('、'),
+      });
+      // 跳到第一个失败的 tab
+      setActiveDraftIdx(failed[0].idx);
+    } else if (successIndices.length === pendingIndices.length) {
+      // 全部成功 → 关闭审阅面板
+      aiForm.resetFields();
+      resetDraftState();
+    }
+  };
+
+  const handleCancelDraftReview = () => {
+    resetDraftState();
   };
 
   const handleGoModelConfig = () => {
@@ -278,18 +381,82 @@ const CharacterCreatorTabs = ({
     </div>
   );
 
+  const renderDraftReviewBody = () => {
+    if (drafts.length === 0) return null;
+    const isMulti = drafts.length > 1;
+    const activeDraft = drafts[activeDraftIdx] || drafts[0];
+    const isActiveConfirmed = confirmedIdxSet.has(activeDraftIdx);
+    const allConfirmed = drafts.length > 0 && drafts.every((_, i) => confirmedIdxSet.has(i));
+
+    const reviewCardNode = (
+      <CharacterDraftReviewCard
+        // key 让切换 tab 时 form 重新初始化
+        key={`draft-${activeDraftIdx}-${activeDraft?.name || ''}`}
+        draft={activeDraft}
+        readOnly={isActiveConfirmed}
+        onConfirm={handleConfirmDraft}
+        onRegenerate={handleRegenerateDraft}
+        onCancel={isMulti ? handleDiscardCurrent : handleCancelDraftReview}
+        cancelLabel={isMulti ? '丢弃本角色' : undefined}
+      />
+    );
+
+    return (
+      <Spin
+        spinning={savingDraft || generating || batchSaving}
+        tip={
+          batchSaving
+            ? '正在批量入库...'
+            : generating
+              ? '正在重新生成角色档案...'
+              : '正在创建角色...'
+        }
+      >
+        {draftPlan?.reasoning ? (
+          <div className="character-multi-draft-plan-banner">
+            <span className="character-multi-draft-plan-banner__count">
+              AI 判断要生成 {draftPlan.count || drafts.length} 个角色
+            </span>
+            <span className="character-multi-draft-plan-banner__reasoning">{draftPlan.reasoning}</span>
+          </div>
+        ) : null}
+
+        {isMulti ? (
+          <>
+            <Tabs
+              type="card"
+              activeKey={String(activeDraftIdx)}
+              onChange={key => setActiveDraftIdx(Number(key))}
+              items={drafts.map((d, i) => ({
+                key: String(i),
+                label: `${confirmedIdxSet.has(i) ? '✓ ' : ''}角色 ${i + 1}：${d?.name || '未命名'}`,
+              }))}
+            />
+            <div className="character-multi-draft-batch-actions">
+              <Button
+                type="primary"
+                disabled={allConfirmed || batchSaving}
+                loading={batchSaving}
+                onClick={handleConfirmAll}
+              >
+                {allConfirmed ? '已全部入库' : `全部确认入库（${drafts.length - confirmedIdxSet.size} 个待处理）`}
+              </Button>
+              <Button onClick={handleCancelDraftReview} disabled={batchSaving}>
+                关闭审阅
+              </Button>
+            </div>
+            {reviewCardNode}
+          </>
+        ) : (
+          reviewCardNode
+        )}
+      </Spin>
+    );
+  };
+
   const renderAiTab = () => {
-    if (draft) {
-      return (
-        <Spin spinning={savingDraft || generating} tip={generating ? '正在重新生成角色档案...' : '正在创建角色...'}>
-          <CharacterDraftReviewCard
-            draft={draft}
-            onConfirm={handleConfirmDraft}
-            onRegenerate={handleRegenerateDraft}
-            onCancel={() => setDraft(null)}
-          />
-        </Spin>
-      );
+    if (drafts.length > 0) {
+      return renderDraftReviewBody();
     }
 
     if (modelLoading) {
