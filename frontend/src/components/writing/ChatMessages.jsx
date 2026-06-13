@@ -3,6 +3,7 @@ import { FaRobot, FaUser } from 'react-icons/fa';
 import { Avatar, Spin } from 'antd';
 import { Streamdown } from 'streamdown';
 import { formatAssistantMarkdownForRender } from '../../utils/aiMarkdownRenderer';
+import AIThinkingTrace from './AIThinkingTrace';
 
 const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMessageId }) => {
   return (
@@ -36,17 +37,24 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
                     <span>AI正在思考中...</span>
                   </div>
                 ) : message.role === 'assistant' ? (
-                  <div className="ai-chat-markdown">
-                    <Streamdown
-                      key={message.id}
-                      parseIncompleteMarkdown={true}
-                      className="ai-chat-content streamdown-chat"
-                      shikiTheme="github-light"
-                    >
-                      {assistantContent}
-                    </Streamdown>
-                    {isStreamingMessage && <span className="stream-caret" aria-hidden="true" />}
-                  </div>
+                  <>
+                    <AIThinkingTrace
+                      events={message.events}
+                      status={message.traceStatus}
+                      errorMessage={message.errorMessage}
+                    />
+                    <div className="ai-chat-markdown">
+                      <Streamdown
+                        key={message.id}
+                        parseIncompleteMarkdown={true}
+                        className="ai-chat-content streamdown-chat"
+                        shikiTheme="github-light"
+                      >
+                        {assistantContent}
+                      </Streamdown>
+                      {isStreamingMessage && <span className="stream-caret" aria-hidden="true" />}
+                    </div>
+                  </>
                 ) : (
                   <span className="user-message-text">
                     {message.content}

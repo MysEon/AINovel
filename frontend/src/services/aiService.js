@@ -2,6 +2,7 @@
 import { api, rawFetch } from './core/apiClient.js';
 import { API_FLAGS } from './core/apiFlags.js';
 import { getSelectedModelConfigId, setSelectedModelConfigId } from './core/authStorage.js';
+import { EVENT_TYPES } from '../config/agentEventTypes.js';
 
 /**
  * Legacy AI 端点走 /api/ai/* (compat 层)，不走 /api/v1 前缀。
@@ -147,7 +148,7 @@ class AIService {
   }
 
   // AI智能体对话 - 流式输出
-  async chatWithAIStream(projectId, message, history = [], onChunk, onComplete, promptTemplateId = null) {
+  async chatWithAIStream(projectId, message, history = [], callbacks = {}, promptTemplateId = null) {
     const body = await this._withModelConfig({
       project_id: projectId,
       message,
@@ -156,17 +157,26 @@ class AIService {
     if (promptTemplateId) body.prompt_template_id = promptTemplateId;
 
     const response = await rawFetch('/ai/chat-stream', { method: 'POST', body, ...LEGACY_AI_OPTS });
+    if (!response.body) {
+      throw new Error('AI 流式响应不可读');
+    }
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let receivedDone = false;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
 
         if (done) {
-          this._flushBuffer(buffer, onChunk, onComplete);
-          if (onComplete) onComplete();
+          buffer += decoder.decode();
+          receivedDone = this._flushBuffer(buffer, callbacks) || receivedDone;
+          if (!receivedDone) {
+            callbacks.onError?.({ message: 'AI 流式连接已关闭' });
+            callbacks.onDone?.({});
+          }
           break;
         }
 
@@ -175,10 +185,9 @@ class AIService {
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') { if (onComplete) onComplete(); return; }
-          if (data && !data.startsWith('错误:') && onChunk) onChunk(data);
+          if (this._dispatchSseLine(line, callbacks) === EVENT_TYPES.DONE) {
+            receivedDone = true;
+          }
         }
       }
     } catch (error) {
@@ -188,16 +197,61 @@ class AIService {
   }
 
   // 处理流式输出剩余 buffer
-  _flushBuffer(buffer, onChunk) {
-    if (!buffer.trim()) return;
+  _flushBuffer(buffer, callbacks = {}) {
+    if (!buffer.trim()) return false;
+
+    let receivedDone = false;
     for (const line of buffer.split('\n')) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data && data !== '[DONE]' && !data.startsWith('错误:') && onChunk) {
-          onChunk(data);
-        }
+      if (this._dispatchSseLine(line, callbacks) === EVENT_TYPES.DONE) {
+        receivedDone = true;
       }
     }
+    return receivedDone;
+  }
+
+  _dispatchSseLine(line, callbacks = {}) {
+    if (!line.startsWith('data: ')) return null;
+
+    const data = line.slice(6).trim();
+    if (!data) return null;
+
+    let event;
+    try {
+      event = JSON.parse(data);
+    } catch (error) {
+      console.warn('无法解析 AI 结构化 SSE 事件:', data, error);
+      return null;
+    }
+
+    const payload = event?.payload || {};
+    switch (event?.type) {
+      case EVENT_TYPES.NODE_START:
+        callbacks.onNodeStart?.(payload);
+        break;
+      case EVENT_TYPES.NODE_END:
+        callbacks.onNodeEnd?.(payload);
+        break;
+      case EVENT_TYPES.TOOL_START:
+        callbacks.onToolStart?.(payload);
+        break;
+      case EVENT_TYPES.TOOL_END:
+        callbacks.onToolEnd?.(payload);
+        break;
+      case EVENT_TYPES.TEXT:
+        callbacks.onText?.(payload);
+        break;
+      case EVENT_TYPES.ERROR:
+        callbacks.onError?.(payload);
+        break;
+      case EVENT_TYPES.DONE:
+        callbacks.onDone?.(payload);
+        break;
+      default:
+        console.warn('未知 AI 结构化 SSE 事件类型:', event);
+        break;
+    }
+
+    return event?.type || null;
   }
 
   // 内容优化

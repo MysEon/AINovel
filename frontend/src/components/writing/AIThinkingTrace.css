@@ -1,0 +1,173 @@
+.ai-thinking-trace-wrapper {
+  margin: 0 0 0.72rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 86%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-paper-soft) 68%, transparent), color-mix(in srgb, var(--desk-paper) 92%, transparent)),
+    var(--desk-paper);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--desk-panel) 8%, transparent);
+  transition: border-color 0.28s ease, background 0.28s ease, box-shadow 0.28s ease;
+}
+
+.ai-thinking-trace-wrapper.streaming {
+  animation: ai-thinking-trace-pulse 2.4s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--desk-teal) 30%, var(--desk-line));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--desk-teal) 8%, transparent), transparent 45%, color-mix(in srgb, var(--desk-accent) 7%, transparent)),
+    color-mix(in srgb, var(--desk-paper) 94%, var(--desk-shell));
+}
+
+.ai-thinking-trace-wrapper.error {
+  border-color: color-mix(in srgb, var(--desk-accent) 44%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-accent) 8%, var(--desk-paper));
+}
+
+.ai-thinking-trace-wrapper .ant-collapse {
+  color: var(--desk-ink);
+}
+
+.ai-thinking-trace-wrapper .ant-collapse-header {
+  align-items: center !important;
+  min-height: 34px;
+  padding: 0.35rem 0.58rem !important;
+  color: var(--desk-muted) !important;
+  transition: background 0.24s ease;
+}
+
+.ai-thinking-trace-wrapper .ant-collapse-header:hover {
+  background: color-mix(in srgb, var(--desk-paper-soft) 48%, transparent);
+}
+
+.ai-thinking-trace-wrapper .ant-collapse-expand-icon {
+  color: var(--desk-muted);
+}
+
+.ai-thinking-trace-wrapper .ant-collapse-content-box {
+  padding: 0 0.62rem 0.62rem !important;
+}
+
+.ai-thinking-trace-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: var(--desk-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.ai-thinking-trace-done-icon {
+  color: var(--desk-accent);
+}
+
+.ai-thinking-trace-alert-icon {
+  color: var(--desk-accent);
+}
+
+.ai-thinking-trace-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  padding: 0.18rem 0 0;
+}
+
+.ai-thinking-trace-step {
+  transition: background 0.22s ease, border-color 0.22s ease;
+}
+
+.ai-thinking-trace-step.node {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 22px;
+  color: var(--desk-ink);
+  font-size: 0.8rem;
+}
+
+.ai-thinking-trace-bullet {
+  color: var(--desk-teal);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.ai-thinking-trace-step.tool {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.44rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 76%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--desk-paper-soft) 44%, transparent);
+}
+
+.ai-thinking-trace-tool-icon {
+  flex: 0 0 auto;
+  margin-top: 0.12rem;
+  color: var(--desk-teal);
+  font-size: 0.86rem;
+}
+
+.ai-thinking-trace-tool-body {
+  min-width: 0;
+}
+
+.ai-thinking-trace-label {
+  color: var(--desk-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.ai-thinking-trace-args {
+  margin-top: 0.18rem;
+  color: var(--desk-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ai-thinking-trace-step.tool-end {
+  margin-left: 1.95rem;
+  padding: 0.35rem 0.48rem;
+  border-left: 2px solid color-mix(in srgb, var(--desk-teal) 32%, var(--desk-line));
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--desk-paper-soft) 28%, transparent);
+  color: var(--desk-muted);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.ai-thinking-trace-result-label {
+  color: var(--desk-ink);
+  font-weight: 700;
+}
+
+.ai-thinking-trace-result {
+  overflow-wrap: anywhere;
+}
+
+.ai-thinking-trace-error {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--desk-accent) 36%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--desk-accent) 10%, transparent);
+  color: var(--desk-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+@keyframes ai-thinking-trace-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--desk-panel) 8%, transparent),
+      0 0 0 color-mix(in srgb, var(--desk-teal) 0%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--desk-panel) 8%, transparent),
+      0 0 18px color-mix(in srgb, var(--desk-teal) 12%, transparent);
+  }
+}

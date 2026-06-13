@@ -177,45 +177,69 @@ const useAIWriting = ({
     const messagesWithThinking = [...newMessages, aiResponse];
     setMessages(messagesWithThinking);
 
+    let latestAiText = '';
+
     try {
       if (supportsStream) {
-        // 使用流式输出
-        let isFirstChunk = true;
-        // 使用ref来跟踪当前消息内容，避免状态竞争
-        const currentContentRef = { current: '' };
+        // 新协议：消费结构化 SSE 事件。useAIWriting 的状态机需要和 isLoading、isThinking、messages 列表协同，
+        // 因此这里直接维护 callbacks；通用 useAgentEvents hook 保留给后续 modal 等一次性 AI 调用复用。
+        const aiResponseEvents = [];
+        let aiTextBuffer = '';
+
+        const updateMessageById = (patch) => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiResponseId ? { ...msg, ...patch } : msg
+          ));
+        };
+
+        const callbacks = {
+          onNodeStart: (payload) => {
+            aiResponseEvents.push({ kind: 'node_start', ...payload, ts: Date.now() });
+            updateMessageById({ events: [...aiResponseEvents], traceStatus: 'streaming', isThinking: false });
+          },
+          onNodeEnd: (payload) => {
+            aiResponseEvents.push({ kind: 'node_end', ...payload, ts: Date.now() });
+            updateMessageById({ events: [...aiResponseEvents] });
+          },
+          onToolStart: (payload) => {
+            aiResponseEvents.push({ kind: 'tool_start', ...payload, ts: Date.now() });
+            updateMessageById({ events: [...aiResponseEvents], traceStatus: 'streaming' });
+          },
+          onToolEnd: (payload) => {
+            aiResponseEvents.push({ kind: 'tool_end', ...payload, ts: Date.now() });
+            updateMessageById({ events: [...aiResponseEvents] });
+          },
+          onText: (payload) => {
+            const chunk = payload?.chunk || '';
+            aiTextBuffer += chunk;
+            latestAiText = aiTextBuffer;
+            updateMessageById({ content: aiTextBuffer, isThinking: false });
+          },
+          onError: (payload) => {
+            const aiErrorMessage = payload?.message || 'AI 流式错误';
+            updateMessageById({
+              content: latestAiText || `抱歉，AI服务暂时不可用: ${aiErrorMessage}`,
+              traceStatus: 'error',
+              errorMessage: aiErrorMessage,
+              isThinking: false,
+            });
+          },
+          onDone: () => {
+            // 不覆盖 error 状态。
+            setMessages(prev => prev.map(msg => {
+              if (msg.id !== aiResponseId) return msg;
+              if (msg.traceStatus === 'error') return msg;
+              return { ...msg, traceStatus: 'done' };
+            }));
+            setTimeout(() => setIsLoading(false), 100);
+          },
+        };
 
         await aiService.chatWithAIStream(
           projectId,
           userInputContent,  // 传入用户当前输入的内容
           newMessages,  // 传入包含用户新消息的聊天历史
-          (chunk) => {
-            // 只过滤null和undefined，保留所有有效内容
-            if (chunk !== null && chunk !== undefined) {
-              // 直接拼接文本，不做任何额外处理，完全依赖Streamdown
-              if (isFirstChunk) {
-                currentContentRef.current = chunk;
-              } else {
-                currentContentRef.current += chunk;
-              }
-
-              setMessages(prev => prev.map(msg =>
-                msg.id === aiResponseId
-                  ? {
-                      ...msg,
-                      content: currentContentRef.current, // Streamdown会自动处理markdown格式
-                      isThinking: false  // 收到内容后取消思考状态
-                    }
-                  : msg
-              ));
-              if (isFirstChunk) isFirstChunk = false;
-            }
-          },
-          () => {
-            // 流式完成时，确保最终状态同步
-            setTimeout(() => {
-              setIsLoading(false);
-            }, 100);
-          },
+          callbacks,
           selectedPromptTemplate?.id  // 传入选中的模板 ID
         );
       } else {
@@ -239,8 +263,10 @@ const useAIWriting = ({
         msg.id === aiResponseId
           ? {
               ...msg,
-              content: `抱歉，AI服务暂时不可用: ${error.message}`, // 直接使用原始内容
-              isThinking: false
+              content: latestAiText || `抱歉，AI服务暂时不可用: ${error.message}`, // 直接使用原始内容
+              isThinking: false,
+              traceStatus: supportsStream ? 'error' : msg.traceStatus,
+              errorMessage: supportsStream ? error.message : msg.errorMessage
             }
           : msg
       ));
