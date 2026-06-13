@@ -49,6 +49,8 @@ const REALM_CONFIG = {
   },
 };
 
+const REALM_TRANSITION_MS = 1800;
+
 const getRealm = (activeRealm) =>
   SHAPE_LIST.find((item) => item.key === activeRealm) || SHAPE_LIST[0];
 
@@ -138,15 +140,72 @@ const createSignatureMesh = (realm, config) => {
   return group;
 };
 
+const forEachMaterial = (object, callback) => {
+  object.traverse((child) => {
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach(callback);
+  });
+};
+
+const rememberBaseOpacity = (object) => {
+  forEachMaterial(object, (material) => {
+    if (material.userData.baseOpacity === undefined) {
+      material.userData.baseOpacity = material.opacity ?? 1;
+    }
+  });
+};
+
+const setLayerOpacity = (layer, opacity) => {
+  layer.opacity = opacity;
+  forEachMaterial(layer.root, (material) => {
+    material.opacity = (material.userData.baseOpacity ?? 1) * opacity;
+    material.needsUpdate = true;
+  });
+};
+
+const disposeLayer = (layer) => {
+  layer.root.traverse((child) => {
+    if (child.geometry) child.geometry.dispose();
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => material.dispose());
+  });
+};
+
+const createRealmLayer = (realm, config, isDarkMode) => {
+  const root = new THREE.Group();
+  const particles = createParticleField(realm, config, isDarkMode);
+  const signature = createSignatureMesh(realm, config);
+  signature.position.set(5.2, -0.5, -3);
+  root.add(particles, signature);
+  rememberBaseOpacity(root);
+
+  return {
+    key: realm.key,
+    root,
+    particles,
+    signature,
+    config,
+    opacity: 1,
+    fadeFrom: 1,
+    fadeStart: null,
+    exiting: false,
+  };
+};
+
 const ParticleBackground = ({ isDarkMode, activeRealm = 'fantasy', scrollProgress = 0 }) => {
   const canvasRef = useRef(null);
+  const runtimeRef = useRef(null);
+  const activeRealmRef = useRef(activeRealm);
   const scrollRef = useRef(scrollProgress);
+  activeRealmRef.current = activeRealm;
   scrollRef.current = scrollProgress;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const realm = getRealm(activeRealm);
+    const realm = getRealm(activeRealmRef.current);
     const config = REALM_CONFIG[realm.key];
 
     const renderer = new THREE.WebGLRenderer({
@@ -163,12 +222,18 @@ const ParticleBackground = ({ isDarkMode, activeRealm = 'fantasy', scrollProgres
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     camera.position.set(0, 0, 18);
 
-    const root = new THREE.Group();
-    const particles = createParticleField(realm, config, isDarkMode);
-    const signature = createSignatureMesh(realm, config);
-    signature.position.set(5.2, -0.5, -3);
-    root.add(particles, signature);
-    scene.add(root);
+    const initialLayer = createRealmLayer(realm, config, isDarkMode);
+    scene.add(initialLayer.root);
+
+    const runtime = {
+      camera,
+      currentKey: realm.key,
+      frameId: 0,
+      layers: [initialLayer],
+      renderer,
+      scene,
+    };
+    runtimeRef.current = runtime;
 
     const resize = () => {
       const width = window.innerWidth;
@@ -181,35 +246,83 @@ const ParticleBackground = ({ isDarkMode, activeRealm = 'fantasy', scrollProgres
     resize();
     window.addEventListener('resize', resize);
 
-    let frameId = 0;
     const animate = (time) => {
       const scroll = scrollRef.current;
       const motion = reducedMotion ? 0 : 1;
-      root.rotation.y = time * config.rotationSpeed * motion + scroll * 0.5;
-      root.rotation.x = Math.sin(time * 0.00018) * 0.08 * motion - scroll * 0.08;
-      particles.rotation.z = time * config.rotationSpeed * 0.55 * motion;
-      signature.rotation.y = -time * config.rotationSpeed * 2.4 * motion;
-      signature.rotation.x = Math.sin(time * 0.00025) * 0.24 * motion;
-      signature.scale.setScalar(1 + scroll * 0.18);
+
+      runtime.layers.forEach((layer) => {
+        const layerConfig = layer.config;
+        layer.root.rotation.y = time * layerConfig.rotationSpeed * motion + scroll * 0.5;
+        layer.root.rotation.x = Math.sin(time * 0.00018) * 0.08 * motion - scroll * 0.08;
+        layer.particles.rotation.z = time * layerConfig.rotationSpeed * 0.55 * motion;
+        layer.signature.rotation.y = -time * layerConfig.rotationSpeed * 2.4 * motion;
+        layer.signature.rotation.x = Math.sin(time * 0.00025) * 0.24 * motion;
+        layer.signature.scale.setScalar(1 + scroll * 0.18);
+
+        if (layer.fadeStart !== null) {
+          const progress = Math.min((time - layer.fadeStart) / REALM_TRANSITION_MS, 1);
+          const targetOpacity = layer.exiting ? 0 : 1;
+          const nextOpacity = layer.fadeFrom + (targetOpacity - layer.fadeFrom) * progress;
+          setLayerOpacity(layer, nextOpacity);
+
+          if (progress >= 1 && !layer.exiting) {
+            layer.fadeStart = null;
+            layer.fadeFrom = 1;
+          }
+        }
+      });
+
+      runtime.layers
+        .filter((layer) => layer.exiting && layer.opacity <= 0.01)
+        .forEach((layer) => {
+          runtime.scene.remove(layer.root);
+          disposeLayer(layer);
+        });
+      runtime.layers = runtime.layers.filter((layer) => !(layer.exiting && layer.opacity <= 0.01));
+
       camera.position.z = 18 - scroll * 2.4;
       camera.position.y = scroll * 1.1;
       renderer.render(scene, camera);
-      frameId = window.requestAnimationFrame(animate);
+      runtime.frameId = window.requestAnimationFrame(animate);
     };
 
-    frameId = window.requestAnimationFrame(animate);
+    runtime.frameId = window.requestAnimationFrame(animate);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      window.cancelAnimationFrame(runtime.frameId);
       window.removeEventListener('resize', resize);
-      particles.geometry.dispose();
-      particles.material.dispose();
-      signature.traverse((child) => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
-      });
+      runtime.layers.forEach(disposeLayer);
       renderer.dispose();
+      if (runtimeRef.current === runtime) {
+        runtimeRef.current = null;
+      }
     };
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || runtime.currentKey === activeRealm) return;
+
+    const realm = getRealm(activeRealm);
+    const config = REALM_CONFIG[realm.key];
+    const transitionStart = performance.now();
+    const nextLayer = createRealmLayer(realm, config, isDarkMode);
+    nextLayer.fadeFrom = 0;
+    nextLayer.fadeStart = transitionStart;
+    setLayerOpacity(nextLayer, 0);
+
+    runtime.layers.forEach((layer) => {
+      if (!layer.exiting) {
+        layer.exiting = true;
+        layer.fadeFrom = layer.opacity;
+        layer.fadeStart = transitionStart;
+      }
+    });
+
+    runtime.scene.fog = new THREE.Fog(config.fog, 18, 42);
+    runtime.scene.add(nextLayer.root);
+    runtime.layers.push(nextLayer);
+    runtime.currentKey = realm.key;
   }, [activeRealm, isDarkMode]);
 
   return <canvas ref={canvasRef} className="particle-stage-canvas" aria-hidden="true" />;

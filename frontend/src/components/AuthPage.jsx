@@ -16,6 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { login, register } from '../services/authService';
 import './AuthPage.css';
 
+const AUTO_REALM_INTERVAL_MS = 9000;
+
 const strengthLabels = {
   0: '待输入',
   25: '较弱',
@@ -48,6 +50,18 @@ const AuthPage = () => {
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveRealm((currentRealm) => {
+        const currentIndex = SHAPE_LIST.findIndex((item) => item.key === currentRealm);
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % SHAPE_LIST.length;
+        return SHAPE_LIST[nextIndex].key;
+      });
+    }, AUTO_REALM_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   const activeRealmInfo = useMemo(
@@ -249,37 +263,80 @@ const AuthPage = () => {
           </div>
         </div>
 
-        <div className="realm-switcher" aria-label="切换登录页元素风格">
-          {SHAPE_LIST.map((realm) => (
-            <button
-              key={realm.key}
-              className={realm.key === activeRealm ? 'active' : ''}
-              onClick={() => setActiveRealm(realm.key)}
-              type="button"
-            >
-              <span>{realm.name}</span>
-              <small>{realm.label}</small>
-            </button>
-          ))}
+      </section>
+
+      <section className="auth-scroll-typography" aria-label="创作能力关键词">
+        <div className="kinetic-word kinetic-world">
+          <span>世界观</span>
+          <small>World state</small>
+        </div>
+        <div className="kinetic-word kinetic-magic">
+          <span>魔法</span>
+          <small>Arcane logic</small>
+        </div>
+        <div className="kinetic-word kinetic-tech">
+          <span>科技</span>
+          <small>Model engine</small>
+        </div>
+        <div className="kinetic-word kinetic-write">
+          <span>写作</span>
+          <small>Draft faster</small>
+        </div>
+        <div className="kinetic-center-copy">
+          <span>Novel OS</span>
+          <p>把设定、章节、提示词和模型协作放在同一个冷静的创作系统里。</p>
         </div>
       </section>
 
-      <section className="auth-scroll-story">
-        <div className="story-card story-card-primary">
-          <span>01</span>
-          <h2>设定沉淀</h2>
-          <p>把角色、组织、地点、世界规则沉淀成可检索资产，写作时随时调用。</p>
+      <section className="auth-product-flow" aria-label="AINovel 工作流">
+        <div className="auth-flow-lead">
+          <span>Build the universe first</span>
+          <h2>不是写作软件加一个聊天框，而是一套小说项目操作系统。</h2>
         </div>
-        <div className="story-card story-card-secondary">
-          <span>02</span>
-          <h2>多模型协作</h2>
-          <p>按场景切换模型、提示词和工作流，让 AI 成为稳定的创作伙伴。</p>
+        <div className="auth-flow-rows">
+          <article>
+            <span>01</span>
+            <h3>项目中枢</h3>
+            <p>章节、角色、地点、组织和世界观统一归档，长篇项目不再散落在多个文档里。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>AI 协作</h3>
+            <p>按写作阶段切换提示词、模型和上下文，让 AI 更像稳定的创作搭档。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>连续创作</h3>
+            <p>从大纲到正文再到校对，功能区服务文本流动，界面保持克制和高密度。</p>
+          </article>
         </div>
-        <div className="story-card story-card-tertiary">
-          <span>03</span>
-          <h2>专注写作</h2>
-          <p>项目内界面回归简洁科技风，减少装饰噪音，把空间留给文本。</p>
+      </section>
+
+      <section className="auth-system-strip" aria-label="创作系统能力">
+        <div>
+          <span>Prompt Library</span>
+          <strong>提示词沉淀</strong>
         </div>
+        <div>
+          <span>Knowledge Graph</span>
+          <strong>知识库联动</strong>
+        </div>
+        <div>
+          <span>Draft Studio</span>
+          <strong>正文工作台</strong>
+        </div>
+        <div>
+          <span>Review Loop</span>
+          <strong>设定校对</strong>
+        </div>
+      </section>
+
+      <section className="auth-bottom-cta">
+        <span>AINovel</span>
+        <h2>开始把你的世界写成系统。</h2>
+        <Button type="primary" size="large" onClick={() => openAuth('register')}>
+          创建新账号
+        </Button>
       </section>
 
       <Modal
