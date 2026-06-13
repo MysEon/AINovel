@@ -596,6 +596,45 @@
 - ESLint: 通过（0 errors，10 warnings 为既有问题）
 - Vite Build: 通过（9.67s）
 
+## 提示词模板注入 AI 对话链修复 — 2026-06-13
+
+### 计划内容
+1. 修复 legacy chat / chat-stream API 对 `prompt_template_id` 的透传。
+2. 在 `LegacyAIService` 中按项目、历史、当前消息渲染提示词模板并替换 system prompt。
+3. 模型调用成功后记录模板使用次数，计数失败仅记录 warning。
+4. 补充 LegacyAIService 单元测试覆盖无模板、有模板、无效模板三种路径。
+
+### 相关文件
+- `backend/app/api/v1/ai_compat.py`
+- `backend/app/application/legacy_ai_service.py`
+- `backend/tests/unit/application/test_legacy_ai_service.py`
+
+### 重要决策
+- 未知模板变量保持原样并记录 warning，不阻断 AI 对话。
+- `PromptTemplateService` 使用方法内懒导入，避免潜在循环依赖。
+- 不修改前端和其余 generate 端点，保持本次 scope 收敛。
+
+### 完成内容
+1. `legacy_chat` / `legacy_chat_stream` 已透传 `prompt_template_id`。
+2. `LegacyAIService.chat` / `chat_stream` 已支持提示词模板渲染、system prompt 替换和成功后 usage 计数。
+3. 新增 chat 模板注入相关单元测试，覆盖无模板、有模板、无效模板三种路径。
+4. 后端 ruff、format check、相关单测均通过。
+
 ## 待办事项
 - [ ] 设置工作规划模板
 - [ ] 定义工作记录格式
+
+### 提示词模板注入 AI 调用链复核修复 - 2026-06-13
+**完成的任务**：
+- 复核 `/api/ai/chat` 与 `/api/ai/chat-stream` 的 `prompt_template_id` 请求穿透。
+- 修正 LegacyAIService 模板渲染细节，使 `project_info` 按 PRD 仅去尾部空白，`history` 按最近 10 条中文角色映射并保留行尾换行格式。
+- 在 `ainovel` conda 环境下重跑 ruff check、ruff format --check 与相关 pytest。
+
+**修改的文件**：
+- `backend/app/application/legacy_ai_service.py`
+- `WORK_PLAN.md`
+
+**重要决策或变更**：
+- 未改动前端代码，未扩展其余 generate 端点模板挂载范围。
+- 保持 `PromptTemplateService.get_template` 访问校验与 `record_usage` 失败容忍策略。
+

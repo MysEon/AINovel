@@ -6,6 +6,7 @@
 """
 
 import logging
+import re
 from collections.abc import AsyncIterator
 from datetime import datetime
 
@@ -58,6 +59,57 @@ class LegacyAIService:
         )
         return provider.build_chat_model(pcfg)
 
+    async def _build_chat_system_prompt(
+        self,
+        project,
+        history: list | None,
+        message: str,
+        user_id: int,
+        prompt_template_id: int | None,
+    ) -> str:
+        """构建 legacy chat system prompt，支持可选提示词模板渲染。"""
+        if prompt_template_id is None:
+            return f"你是一个专业的小说写作助手。当前项目：{project.name}"
+
+        from app.application.prompt_template_service import PromptTemplateService
+
+        template = await PromptTemplateService(self.db).get_template(prompt_template_id, user_id)
+        recent_history = history[-10:] if history else []
+        history_lines = [
+            f"助手: {msg.get('content', '')}" if msg.get("role") == "assistant" else f"用户: {msg.get('content', '')}"
+            for msg in recent_history
+        ]
+        history_text = "\n".join(history_lines)
+        if history_text:
+            history_text += "\n"
+        variables = {
+            "project_info": f"{project.name} - {project.description or ''}".rstrip(),
+            "history": history_text,
+            "message": message,
+        }
+
+        rendered = template.template
+        for key, value in variables.items():
+            rendered = rendered.replace(f"{{{{{key}}}}}", str(value))
+
+        leftovers = re.findall(r"\{\{[^{}]+\}\}", rendered)
+        if leftovers:
+            logger.warning(
+                "prompt template %s has unresolved variables: %s",
+                prompt_template_id,
+                leftovers,
+            )
+        return rendered
+
+    async def _record_prompt_template_usage(self, template_id: int, user_id: int) -> None:
+        """记录提示词模板使用次数，失败不影响主流程。"""
+        from app.application.prompt_template_service import PromptTemplateService
+
+        try:
+            await PromptTemplateService(self.db).record_usage(template_id, user_id)
+        except Exception:
+            logger.warning("failed to record prompt template usage: %s", template_id, exc_info=True)
+
     async def chat(
         self,
         project_id: int,
@@ -65,6 +117,7 @@ class LegacyAIService:
         message: str,
         history: list | None,
         user_id: int,
+        prompt_template_id: int | None = None,
     ) -> dict:
         """兼容旧 /api/ai/chat — 非流式对话"""
         project = await self.proj_service.require_user_project(project_id, user_id)
@@ -72,8 +125,15 @@ class LegacyAIService:
 
         from langchain_core.messages import HumanMessage, SystemMessage
 
+        system_prompt = await self._build_chat_system_prompt(
+            project=project,
+            history=history,
+            message=message,
+            user_id=user_id,
+            prompt_template_id=prompt_template_id,
+        )
         messages = [
-            SystemMessage(content=f"你是一个专业的小说写作助手。当前项目：{project.name}"),
+            SystemMessage(content=system_prompt),
         ]
         if history:
             for msg in history[-10:]:
@@ -88,6 +148,8 @@ class LegacyAIService:
         messages.append(HumanMessage(content=message))
 
         resp = await model.ainvoke(messages)
+        if prompt_template_id is not None:
+            await self._record_prompt_template_usage(prompt_template_id, user_id)
         return {
             "success": True,
             "response": resp.content,
@@ -102,6 +164,7 @@ class LegacyAIService:
         message: str,
         history: list | None,
         user_id: int,
+        prompt_template_id: int | None = None,
     ) -> AsyncIterator[str]:
         """兼容旧 /api/ai/chat-stream — SSE 流式对话"""
         project = await self.proj_service.require_user_project(project_id, user_id)
@@ -109,8 +172,15 @@ class LegacyAIService:
 
         from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+        system_prompt = await self._build_chat_system_prompt(
+            project=project,
+            history=history,
+            message=message,
+            user_id=user_id,
+            prompt_template_id=prompt_template_id,
+        )
         messages = [
-            SystemMessage(content=f"你是一个专业的小说写作助手。当前项目：{project.name}"),
+            SystemMessage(content=system_prompt),
         ]
         if history:
             for msg in history[-10:]:
@@ -127,6 +197,8 @@ class LegacyAIService:
                 async for chunk in model.astream(messages):
                     if chunk.content:
                         yield f"data: {chunk.content}\n\n"
+                if prompt_template_id is not None:
+                    await self._record_prompt_template_usage(prompt_template_id, user_id)
                 yield "data: [DONE]\n\n"
             except Exception as e:
                 logger.exception("legacy chat-stream error")
