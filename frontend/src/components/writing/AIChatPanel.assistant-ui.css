@@ -724,3 +724,20 @@
     padding: 0.42rem 0.45rem 0.42rem 0.62rem;
   }
 }
+
+/* 空对话欢迎语 */
+.writing-editor .ai-chat-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.writing-editor .ai-chat-welcome p {
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text-secondary, #888) 92%, transparent);
+  font-size: 14px;
+}

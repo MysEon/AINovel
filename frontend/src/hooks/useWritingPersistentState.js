@@ -4,11 +4,23 @@ import storageCleanup from '../utils/storageCleanup';
 /**
  * 写作页面增强型持久化状态管理 Hook
  * 支持分层次的状态管理：项目级状态、章节级状态
- * 
+ *
  * @param {number} projectId - 项目ID
  * @param {number} chapterId - 章节ID
  * @returns {Object} - 返回状态管理对象
  */
+
+// AI 对话历史的滚动窗口上限：超过后丢弃最旧的（保留最近 N 条）
+// 当前后端 _build_chat_messages 用 history[-10:]，前端这层只为持久化体积与渲染性能服务
+const MAX_CHAT_MESSAGES = 100;
+
+const truncateMessages = (messages) => {
+  if (!Array.isArray(messages)) return [];
+  return messages.length > MAX_CHAT_MESSAGES
+    ? messages.slice(messages.length - MAX_CHAT_MESSAGES)
+    : messages;
+};
+
 const useWritingPersistentState = (projectId, chapterId) => {
   // 状态恢复进度
   const [restorationProgress, setRestorationProgress] = useState(0);
@@ -23,7 +35,7 @@ const useWritingPersistentState = (projectId, chapterId) => {
     selectedModelConfigId: null
   });
 
-  // 章节级AI聊天状态
+  // 项目级AI聊天状态（按 projectId 持久化，跨章节延续）
   const [aiChatState, setAiChatStateInternal] = useState({
     messages: [],
     lastInteractionTime: null
@@ -44,7 +56,10 @@ const useWritingPersistentState = (projectId, chapterId) => {
     switch (type) {
       case 'project_writing':
         return `ainovel_project_${id}_writing_state`;
+      case 'project_chat':
+        return `ainovel_project_${id}_ai_chat`;
       case 'chapter_chat':
+        // [Deprecated] 旧的章节级 chat key，仅用于一次性数据迁移清理
         return `ainovel_chapter_${id}_ai_chat`;
       case 'chapter_draft':
         return `ainovel_chapter_${id}_draft`;
@@ -140,13 +155,19 @@ const useWritingPersistentState = (projectId, chapterId) => {
       setRestorationProgress(currentProgress);
       await new Promise(resolve => setTimeout(resolve, 100)); // 模拟异步恢复
 
-      // 步骤2: 恢复章节级AI聊天状态
+      // 步骤2: 恢复项目级AI聊天状态（按 projectId 持久化，跨章节延续）
       restorationSteps.current.push(steps[1].name);
-      const chatKey = getStorageKey('chapter_chat', chapterId);
+      const chatKey = getStorageKey('project_chat', projectId);
       const savedChatState = safeLocalStorageGet(chatKey);
-      
-      if (savedChatState && savedChatState.messages) {
-        setAiChatStateInternal(savedChatState);
+
+      if (savedChatState && Array.isArray(savedChatState.messages)) {
+        setAiChatStateInternal({
+          messages: truncateMessages(savedChatState.messages),
+          lastInteractionTime: savedChatState.lastInteractionTime || null,
+        });
+      } else {
+        // 没有存档时确保 reset 为空（防止从其它项目切回时残留旧 state）
+        setAiChatStateInternal({ messages: [], lastInteractionTime: null });
       }
       
       currentProgress += steps[1].weight;
@@ -191,23 +212,28 @@ const useWritingPersistentState = (projectId, chapterId) => {
   }, [projectId, writingState, getStorageKey, safeLocalStorageSet]);
 
   /**
-   * 设置章节级AI聊天状态
+   * 设置项目级AI聊天状态（messages 在写入前按上限滚动截断）
+   *
+   * 注意：这里走 setAiChatStateInternal 的 functional updater 形态获取 prev，
+   * 避免 useCallback 闭包捕获 stale aiChatState 在流式高频更新时丢消息。
    */
   const setAiChatState = useCallback((value) => {
-    if (!chapterId) return;
-    
-    const newState = typeof value === 'function' ? value(aiChatState) : value;
-    // 更新最后交互时间
-    const stateWithTimestamp = {
-      ...newState,
-      lastInteractionTime: new Date().toISOString()
-    };
-    
-    setAiChatStateInternal(stateWithTimestamp);
-    
-    const key = getStorageKey('chapter_chat', chapterId);
-    safeLocalStorageSet(key, stateWithTimestamp);
-  }, [chapterId, aiChatState, getStorageKey, safeLocalStorageSet]);
+    if (!projectId) return;
+
+    setAiChatStateInternal((prev) => {
+      const newState = typeof value === 'function' ? value(prev) : value;
+      const truncated = truncateMessages(newState?.messages);
+      const stateWithTimestamp = {
+        ...newState,
+        messages: truncated,
+        lastInteractionTime: new Date().toISOString(),
+      };
+      // localStorage 写入放在 reducer 里同步执行，保证持久化与 React state 一致
+      const key = getStorageKey('project_chat', projectId);
+      safeLocalStorageSet(key, stateWithTimestamp);
+      return stateWithTimestamp;
+    });
+  }, [projectId, getStorageKey, safeLocalStorageSet]);
 
   /**
    * 设置章节级草稿状态
@@ -228,15 +254,34 @@ const useWritingPersistentState = (projectId, chapterId) => {
   }, [chapterId, draftState, getStorageKey, safeLocalStorageSet]);
 
   /**
-   * 清理指定章节的数据
+   * 清理指定章节的数据（仅章节级——草稿等；chat 现已升级为项目级，不在此处清）
    */
   const clearChapterData = useCallback((targetChapterId) => {
-    const chatKey = getStorageKey('chapter_chat', targetChapterId);
     const draftKey = getStorageKey('chapter_draft', targetChapterId);
-    
-    localStorage.removeItem(chatKey);
+
     localStorage.removeItem(draftKey);
   }, [getStorageKey]);
+
+  /**
+   * 一次性清理旧的章节级 chat 残留（迁移到项目级 chat 后不再使用）
+   */
+  const cleanupLegacyChapterChat = useCallback(() => {
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && /^ainovel_chapter_\d+_ai_chat$/.test(key)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+      if (keysToRemove.length > 0) {
+        console.info(`[useWritingPersistentState] 已清理 ${keysToRemove.length} 条旧章节级 chat 残留`);
+      }
+    } catch (error) {
+      console.warn('清理旧章节级 chat 残留失败:', error);
+    }
+  }, []);
 
   /**
    * 获取存储使用情况统计
@@ -287,6 +332,11 @@ const useWritingPersistentState = (projectId, chapterId) => {
       restoreStates();
     }
   }, [projectId, chapterId, restoreStates]);
+
+  // 首次挂载时清理旧章节级 chat localStorage 残留（仅一次）
+  useEffect(() => {
+    cleanupLegacyChapterChat();
+  }, [cleanupLegacyChapterChat]);
 
   // 页面卸载时清理过期数据
   useEffect(() => {
