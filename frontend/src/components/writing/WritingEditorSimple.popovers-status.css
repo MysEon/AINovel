@@ -678,6 +678,123 @@
   background: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
 }
 
+/* Assistant markdown rendering */
+.chat-message-bubble.assistant .ai-chat-markdown {
+  width: 100%;
+  min-width: 0;
+  color: var(--desk-ink, var(--studio-text, var(--text-color)));
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat {
+  max-width: 100%;
+  color: inherit;
+  font-size: 0.92rem;
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat > *:first-child {
+  margin-top: 0 !important;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat p {
+  margin: 0.42rem 0;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h1,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h2,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h3,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h4,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h5,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat h6 {
+  margin: 0.78rem 0 0.38rem;
+  color: var(--desk-ink, var(--studio-text, var(--text-color)));
+  font-size: 0.96rem;
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat ul,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat ol {
+  margin: 0.38rem 0 0.58rem;
+  padding-inline-start: 1.2rem;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat li {
+  margin: 0.18rem 0;
+  padding-inline-start: 0.1rem;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat li > p {
+  margin: 0.18rem 0;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat blockquote {
+  margin: 0.62rem 0;
+  padding: 0.1rem 0 0.1rem 0.72rem;
+  border-left: 3px solid var(--desk-teal, var(--studio-primary, var(--primary-color)));
+  color: var(--desk-muted, var(--studio-text-soft, var(--muted-text-color)));
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat hr {
+  margin: 0.78rem 0;
+  border: 0;
+  border-top: 1px solid var(--desk-line, var(--studio-border, var(--border-color)));
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat code {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--desk-line, var(--studio-border, var(--border-color))) 42%, transparent);
+  color: var(--desk-ink, var(--studio-text, var(--text-color)));
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat pre {
+  max-width: 100%;
+  margin: 0.62rem 0;
+  padding: 0.68rem;
+  border: 1px solid var(--desk-line, var(--studio-border, var(--border-color)));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-paper, var(--studio-surface-muted, var(--hover-bg))) 82%, transparent);
+  overflow-x: auto;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat pre code {
+  background: transparent;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.62rem 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat th,
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat td {
+  min-width: 7rem;
+  border: 1px solid var(--desk-line, var(--studio-border, var(--border-color)));
+  padding: 0.42rem 0.5rem;
+  vertical-align: top;
+}
+
+.chat-message-bubble.assistant .ai-chat-content.streamdown-chat th {
+  background: color-mix(in srgb, var(--desk-line, var(--studio-surface-muted, var(--hover-bg))) 34%, transparent);
+  font-weight: 720;
+}
+
 @media (max-width: 768px) {
   .writing-editor .empty-chapters-notice {
     min-height: 360px;
@@ -688,4 +805,3 @@
     font-size: clamp(3.6rem, 21vw, 6rem);
   }
 }
-

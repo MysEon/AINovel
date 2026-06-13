@@ -1,8 +1,8 @@
 import React from 'react';
 import { FaRobot, FaUser } from 'react-icons/fa';
 import { Avatar, Spin } from 'antd';
-// 使用官方Streamdown组件 - 修正导入方式
 import { Streamdown } from 'streamdown';
+import { formatAssistantMarkdownForRender } from '../../utils/aiMarkdownRenderer';
 
 const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMessageId }) => {
   return (
@@ -13,6 +13,9 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
       {messages.map((message) => {
         const isStreamingMessage = message.id === streamingMessageId;
         const rowRole = message.role === 'user' ? 'user' : 'assistant';
+        const assistantContent = message.role === 'assistant'
+          ? formatAssistantMarkdownForRender(message.content)
+          : '';
 
         return (
           <div
@@ -40,19 +43,7 @@ const ChatMessages = ({ messages, messagesContainerRef, isLoading, streamingMess
                       className="ai-chat-content streamdown-chat"
                       shikiTheme="github-light"
                     >
-                      {(() => {
-                        let content = message.content || '';
-
-                        // 修复流式传输导致的不完整代码块标记
-                        const codeBlockCount = (content.match(/```/g) || []).length;
-
-                        // 如果代码块标记是奇数个，自动补全结束标记
-                        if (codeBlockCount % 2 === 1) {
-                          content = content + '\n```';
-                        }
-
-                        return content;
-                      })()}
+                      {assistantContent}
                     </Streamdown>
                     {isStreamingMessage && <span className="stream-caret" aria-hidden="true" />}
                   </div>
