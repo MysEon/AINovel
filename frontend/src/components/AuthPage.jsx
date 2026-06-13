@@ -1,62 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Card, message, Tabs, Divider, Checkbox, Switch } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeOutlined, EyeInvisibleOutlined, GithubOutlined, WechatOutlined, SettingOutlined } from '@ant-design/icons';
+import { Button, Checkbox, Divider, Form, Input, message, Modal, Switch, Tabs } from 'antd';
+import {
+  ArrowRightOutlined,
+  GithubOutlined,
+  LockOutlined,
+  MailOutlined,
+  RadarChartOutlined,
+  UserOutlined,
+  WechatOutlined,
+} from '@ant-design/icons';
 import ParticleBackground, { SHAPE_LIST } from './ParticleBackground';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { login, register } from '../services/authService';
-import { STORAGE_KEYS } from '../services/core/authStorage';
 import './AuthPage.css';
 
-const { TabPane } = Tabs;
+const strengthLabels = {
+  0: '待输入',
+  25: '较弱',
+  50: '可用',
+  75: '稳定',
+  100: '强',
+};
 
 const AuthPage = () => {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
   const { isDarkMode, setThemeMode } = useTheme();
   const [activeTab, setActiveTab] = useState('login');
-  const [loginForm] = Form.useForm();
-  const [registerForm] = Form.useForm();
-  const [isLoginLoading, setIsLoginLoading] = useState(false);
-  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [activeRealm, setActiveRealm] = useState('fantasy');
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [showShapeSettings, setShowShapeSettings] = useState(false);
-  const [enabledShapes, setEnabledShapes] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PARTICLE_SHAPES);
-      return saved ? JSON.parse(saved) : SHAPE_LIST.map(s => s.key);
-    } catch { return SHAPE_LIST.map(s => s.key); }
-  });
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
+  const [loginForm] = Form.useForm();
+  const [registerForm] = Form.useForm();
 
-  const [displayedSlogan, setDisplayedSlogan] = useState('');
-  const fullSlogan = '用 AI 重新定义创作';
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      setDisplayedSlogan(fullSlogan);
-      return;
-    }
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < fullSlogan.length) {
-        setDisplayedSlogan(fullSlogan.slice(0, i + 1));
-        i++;
-      } else {
-        clearInterval(timer);
-      }
-    }, 80);
-    return () => clearInterval(timer);
+    const handleScroll = () => {
+      const scrollable = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      setScrollProgress(Math.min(window.scrollY / scrollable, 1));
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleShape = (key) => {
-    setEnabledShapes(prev => {
-      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
-      const result = next.length === 0 ? [key] : next; // at least one
-      localStorage.setItem(STORAGE_KEYS.PARTICLE_SHAPES, JSON.stringify(result));
-      return result;
-    });
+  const activeRealmInfo = useMemo(
+    () => SHAPE_LIST.find((item) => item.key === activeRealm) || SHAPE_LIST[0],
+    [activeRealm]
+  );
+
+  const openAuth = (tab) => {
+    setActiveTab(tab);
+    setAuthOpen(true);
   };
 
   const calculatePasswordStrength = (password) => {
@@ -64,24 +65,17 @@ const AuthPage = () => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
     if (password.length >= 12) strength += 25;
-    if (/[a-z]/.test(password)) strength += 12.5;
-    if (/[A-Z]/.test(password)) strength += 12.5;
-    if (/[0-9]/.test(password)) strength += 12.5;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 12.5;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
+    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength += 25;
     return Math.min(strength, 100);
   };
 
-  const handlePasswordChange = (e) => {
-    const password = e.target.value;
-    setPasswordStrength(calculatePasswordStrength(password));
+  const handlePasswordChange = (event) => {
+    setPasswordStrength(calculatePasswordStrength(event.target.value));
   };
 
   const handleSocialLogin = (provider) => {
     message.info(`${provider} 登录功能开发中`);
-  };
-
-  const handleForgotPassword = () => {
-    message.info('忘记密码功能开发中');
   };
 
   const handleLogin = async (values) => {
@@ -102,7 +96,7 @@ const AuthPage = () => {
     setIsRegisterLoading(true);
     try {
       await register(values);
-      message.success('注册成功！请登录您的账户。');
+      message.success('注册成功，请登录');
       registerForm.resetFields();
       setActiveTab('login');
     } catch (error) {
@@ -112,245 +106,216 @@ const AuthPage = () => {
     }
   };
 
-  const containerClass = isDarkMode ? "auth-container dark" : "auth-container light";
+  const strengthLevel = Math.ceil(passwordStrength / 25) * 25;
+
+  const loginFormContent = (
+    <Form
+      form={loginForm}
+      name="login"
+      onFinish={handleLogin}
+      autoComplete="off"
+      className="auth-form"
+      layout="vertical"
+    >
+      <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
+        <Input prefix={<UserOutlined />} placeholder="输入用户名" size="large" disabled={isLoginLoading} />
+      </Form.Item>
+
+      <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
+        <Input.Password prefix={<LockOutlined />} placeholder="输入密码" size="large" disabled={isLoginLoading} />
+      </Form.Item>
+
+      <div className="auth-meta">
+        <Checkbox checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)}>
+          记住我
+        </Checkbox>
+        <Button type="link" onClick={() => message.info('忘记密码功能开发中')}>
+          忘记密码？
+        </Button>
+      </div>
+
+      <Button type="primary" htmlType="submit" loading={isLoginLoading} block size="large" className="auth-submit">
+        登录工作台
+      </Button>
+    </Form>
+  );
+
+  const registerFormContent = (
+    <Form
+      form={registerForm}
+      name="register"
+      onFinish={handleRegister}
+      autoComplete="off"
+      className="auth-form"
+      layout="vertical"
+    >
+      <Form.Item
+        name="username"
+        label="用户名"
+        rules={[
+          { required: true, message: '请输入用户名' },
+          { min: 3, message: '用户名至少需要 3 个字符' },
+          { max: 50, message: '用户名不能超过 50 个字符' },
+        ]}
+      >
+        <Input prefix={<UserOutlined />} placeholder="创建用户名" size="large" disabled={isRegisterLoading} />
+      </Form.Item>
+
+      <Form.Item
+        name="email"
+        label="邮箱"
+        rules={[
+          { required: true, message: '请输入邮箱' },
+          { type: 'email', message: '请输入有效邮箱地址' },
+        ]}
+      >
+        <Input prefix={<MailOutlined />} placeholder="name@example.com" size="large" disabled={isRegisterLoading} />
+      </Form.Item>
+
+      <Form.Item
+        name="password"
+        label="密码"
+        rules={[
+          { required: true, message: '请输入密码' },
+          { min: 6, message: '密码至少需要 6 个字符' },
+          { max: 50, message: '密码不能超过 50 个字符' },
+        ]}
+      >
+        <Input.Password
+          prefix={<LockOutlined />}
+          placeholder="设置密码"
+          size="large"
+          disabled={isRegisterLoading}
+          onChange={handlePasswordChange}
+        />
+      </Form.Item>
+
+      <div className={`pwd-strength strength-${strengthLevel}`}>
+        <span>密码强度</span>
+        <div className="pwd-strength-bar">
+          <div className="pwd-strength-fill" />
+        </div>
+        <span>{strengthLabels[strengthLevel] || strengthLabels[0]}</span>
+      </div>
+
+      <Button type="primary" htmlType="submit" loading={isRegisterLoading} block size="large" className="auth-submit">
+        创建账号
+      </Button>
+    </Form>
+  );
 
   return (
-    <div className={containerClass}>
-      <ParticleBackground isDarkMode={isDarkMode} enabledShapes={enabledShapes} />
-      <div className="auth-wrapper">
+    <main className={`auth-container ${isDarkMode ? 'dark' : 'light'}`}>
+      <ParticleBackground isDarkMode={isDarkMode} activeRealm={activeRealm} scrollProgress={scrollProgress} />
 
-        <div className="auth-brand">
-          <div className="brand-icon">✦</div>
-          <h1 className="brand-title">AINovel</h1>
-          <p className={`brand-slogan ${displayedSlogan.length === fullSlogan.length ? 'done' : ''}`}>
-            {displayedSlogan}
+      <header className="auth-nav">
+        <div className="auth-nav-brand">
+          <span className="auth-nav-mark">
+            <RadarChartOutlined />
+          </span>
+          <span>AINovel</span>
+        </div>
+        <div className="auth-nav-actions">
+          <Switch
+            checked={isDarkMode}
+            onChange={(checked) => setThemeMode(checked ? 'dark' : 'light')}
+            checkedChildren="暗"
+            unCheckedChildren="亮"
+          />
+          <Button className="auth-nav-button" onClick={() => openAuth('login')}>
+            登录
+          </Button>
+          <Button type="primary" className="auth-nav-button primary" onClick={() => openAuth('register')}>
+            注册
+          </Button>
+        </div>
+      </header>
+
+      <section className="auth-hero">
+        <div className="auth-hero-copy">
+          <span className="auth-kicker">{activeRealmInfo.label}</span>
+          <h1>把灵感、设定和 AI 写作组织成一张创作星图。</h1>
+          <p>
+            AINovel 将小说项目、角色设定、世界观、提示词和多模型协作放在同一个清爽工作台里，
+            让想象力保持流动，管理保持克制。
           </p>
-          <div className="brand-features">
-            <div className="brand-feature delay-0">✦ AI 智能续写</div>
-            <div className="brand-feature delay-1">✦ 角色世界观构建</div>
-            <div className="brand-feature delay-2">✦ 多模型协作</div>
+          <div className="auth-hero-actions">
+            <Button type="primary" size="large" onClick={() => openAuth('login')}>
+              进入工作台 <ArrowRightOutlined />
+            </Button>
+            <Button size="large" onClick={() => openAuth('register')}>
+              创建新账号
+            </Button>
           </div>
         </div>
 
-        <div className="auth-spacer" />
+        <div className="realm-switcher" aria-label="切换登录页元素风格">
+          {SHAPE_LIST.map((realm) => (
+            <button
+              key={realm.key}
+              className={realm.key === activeRealm ? 'active' : ''}
+              onClick={() => setActiveRealm(realm.key)}
+              type="button"
+            >
+              <span>{realm.name}</span>
+              <small>{realm.label}</small>
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <Card className="auth-card" bordered={false}>
+      <section className="auth-scroll-story">
+        <div className="story-card story-card-primary">
+          <span>01</span>
+          <h2>设定沉淀</h2>
+          <p>把角色、组织、地点、世界规则沉淀成可检索资产，写作时随时调用。</p>
+        </div>
+        <div className="story-card story-card-secondary">
+          <span>02</span>
+          <h2>多模型协作</h2>
+          <p>按场景切换模型、提示词和工作流，让 AI 成为稳定的创作伙伴。</p>
+        </div>
+        <div className="story-card story-card-tertiary">
+          <span>03</span>
+          <h2>专注写作</h2>
+          <p>项目内界面回归简洁科技风，减少装饰噪音，把空间留给文本。</p>
+        </div>
+      </section>
 
+      <Modal
+        open={authOpen}
+        footer={null}
+        centered
+        width={460}
+        onCancel={() => setAuthOpen(false)}
+        className="auth-glass-modal"
+        rootClassName="auth-glass-modal-root"
+      >
+        <div className="auth-modal-head">
+          <span>AINovel Access</span>
+          <h2>{activeTab === 'login' ? '欢迎回来' : '开始创作'}</h2>
+          <p>{activeTab === 'login' ? '登录后继续你的小说项目。' : '创建账号，建立你的第一套创作系统。'}</p>
+        </div>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           centered
-          className="auth-tabs"
-        >
-          <TabPane tab="登录" key="login">
-            <Form
-              form={loginForm}
-              name="login"
-              onFinish={handleLogin}
-              autoComplete="off"
-              className="auth-form"
-            >
-              <Form.Item
-                name="username"
-                rules={[{ required: true, message: '请输入用户名' }]}
-                className="auth-input"
-              >
-                <Input
-                  prefix={<UserOutlined />}
-                  placeholder="用户名"
-                  size="large"
-                  disabled={isLoginLoading}
-                  bordered={false}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                rules={[{ required: true, message: '请输入密码' }]}
-                className="auth-input"
-              >
-                <Input.Password
-                  prefix={<LockOutlined />}
-                  placeholder="密码"
-                  size="large"
-                  disabled={isLoginLoading}
-                  iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  bordered={false}
-                />
-              </Form.Item>
-
-              <Form.Item>
-                <div className="auth-meta">
-                  <Checkbox
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  >
-                    记住我
-                  </Checkbox>
-                  <Button
-                    type="link"
-                    onClick={handleForgotPassword}
-                  >
-                    忘记密码？
-                  </Button>
-                </div>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={isLoginLoading}
-                  block
-                  size="large"
-                  className="auth-button"
-                >
-                  登录
-                </Button>
-              </Form.Item>
-            </Form>
-          </TabPane>
-
-          <TabPane tab="注册" key="register">
-            <Form
-              form={registerForm}
-              name="register"
-              onFinish={handleRegister}
-              autoComplete="off"
-              className="auth-form"
-            >
-              <Form.Item
-                name="username"
-                rules={[
-                  { required: true, message: '请输入用户名' },
-                  { min: 3, message: '用户名至少需要3个字符' },
-                  { max: 50, message: '用户名不能超过50个字符' }
-                ]}
-                className="auth-input"
-              >
-                <Input
-                  prefix={<UserOutlined />}
-                  placeholder="用户名"
-                  size="large"
-                  disabled={isRegisterLoading}
-                  bordered={false}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="email"
-                rules={[
-                  { required: true, message: '请输入电子邮箱' },
-                  { type: 'email', message: '请输入有效的邮箱地址' }
-                ]}
-                className="auth-input"
-              >
-                <Input
-                  prefix={<MailOutlined />}
-                  placeholder="电子邮箱"
-                  size="large"
-                  disabled={isRegisterLoading}
-                  bordered={false}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="password"
-                rules={[
-                  { required: true, message: '请输入密码' },
-                  { min: 6, message: '密码至少需要6个字符' },
-                  { max: 50, message: '密码不能超过50个字符' }
-                ]}
-                className="auth-input"
-              >
-                <Input.Password
-                  prefix={<LockOutlined />}
-                  placeholder="密码"
-                  size="large"
-                  disabled={isRegisterLoading}
-                  iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
-                  onChange={handlePasswordChange}
-                  bordered={false}
-                />
-              </Form.Item>
-              
-              {passwordStrength > 0 && (
-                <div className="pwd-strength">
-                  <span>密码强度</span>
-                  <div className="pwd-strength-bar">
-                    <div
-                      className={`pwd-strength-fill ${passwordStrength < 40 ? 'weak' : passwordStrength < 70 ? 'medium' : 'strong'}`}
-                      style={{ width: `${passwordStrength}%` }}
-                    />
-                  </div>
-                  <span>{passwordStrength < 40 ? '弱' : passwordStrength < 70 ? '中' : '强'}</span>
-                </div>
-              )}
-
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={isRegisterLoading}
-                  block
-                  size="large"
-                  className="auth-button"
-                >
-                  注册
-                </Button>
-              </Form.Item>
-            </Form>
-          </TabPane>
-        </Tabs>
-        
+          items={[
+            { key: 'login', label: '登录', children: loginFormContent },
+            { key: 'register', label: '注册', children: registerFormContent },
+          ]}
+        />
         <Divider className="auth-divider">或</Divider>
         <div className="auth-social">
-            <Button
-              icon={<GithubOutlined />}
-              onClick={() => handleSocialLogin('GitHub')}
-              size="large"
-            >
-              GitHub
-            </Button>
-            <Button
-              icon={<WechatOutlined />}
-              onClick={() => handleSocialLogin('微信')}
-              size="large"
-            >
-              微信
-            </Button>
-          </div>
-        
-        </Card>
-      
-      <div className="auth-footer">
-        <Switch checked={isDarkMode} onChange={(checked) => setThemeMode(checked ? 'dark' : 'light')} checkedChildren="🌙" unCheckedChildren="☀️" />
-        <div className="auth-version">AINovel v1.0.0</div>
-      </div>
-
-      <div className="shape-settings">
-        <button
-          className="shape-settings-trigger"
-          onClick={() => setShowShapeSettings(v => !v)}
-          title="粒子形状设置"
-        >
-          <SettingOutlined spin={showShapeSettings} />
-        </button>
-        {showShapeSettings && (
-          <div className="shape-settings-panel">
-            <div className="shape-settings-title">粒子形状</div>
-            {SHAPE_LIST.map(s => (
-              <label key={s.key} className="shape-settings-item">
-                <input
-                  type="checkbox"
-                  checked={enabledShapes.includes(s.key)}
-                  onChange={() => toggleShape(s.key)}
-                />
-                <span>{s.name}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-      </div>
-    </div>
+          <Button icon={<GithubOutlined />} onClick={() => handleSocialLogin('GitHub')}>
+            GitHub
+          </Button>
+          <Button icon={<WechatOutlined />} onClick={() => handleSocialLogin('微信')}>
+            微信
+          </Button>
+        </div>
+      </Modal>
+    </main>
   );
 };
 

@@ -47,39 +47,39 @@
 
 :root {
   /* 亮色模式（默认） */
-  --bg-color: #FAF8F5;
-  --sidebar-bg: #F0EBE3;
-  --content-bg: #FAF8F5;
+  --bg-color: #f7f7f5;
+  --sidebar-bg: #f3f4f6;
+  --content-bg: #fbfbfa;
   --elevated-bg: #FFFFFF;
-  --hover-bg: #F0EBE3;
+  --hover-bg: #f1f5f9;
   --textarea-bg: #FFFFFF;
-  --paper-fiber: radial-gradient(circle at 20% 20%, rgba(199, 91, 57, 0.06), transparent 26%), radial-gradient(circle at 80% 0%, rgba(139, 94, 60, 0.06), transparent 30%);
-  --seal-soft: rgba(199, 91, 57, 0.1);
-  --text-color: #2C2825;
-  --secondary-text-color: #7A6E63;
-  --muted-text-color: #9B8E82;
-  --primary-color: #C75B39;
-  --primary-hover: #B5502F;
-  --primary-pressed: #9E4528;
-  --border-color: #DDD5CA;
-  --gradient-primary: linear-gradient(135deg, #C75B39 0%, #8B5E3C 100%);
-  --gradient-ink: linear-gradient(90deg, #C75B39 0%, #8B5E3C 50%, #2C2825 100%);
-  --success-color: #5A8F5C;
-  --warning-color: #C4922E;
-  --error-color: #C4463A;
-  --active-menu-bg: #C75B39;
+  --paper-fiber: radial-gradient(circle at 16% 10%, rgba(96, 165, 250, 0.08), transparent 28%), radial-gradient(circle at 86% 2%, rgba(16, 163, 127, 0.08), transparent 30%);
+  --seal-soft: rgba(16, 163, 127, 0.1);
+  --text-color: #101114;
+  --secondary-text-color: #5f6368;
+  --muted-text-color: #8a8f98;
+  --primary-color: #111827;
+  --primary-hover: #0f172a;
+  --primary-pressed: #020617;
+  --border-color: #e4e7ec;
+  --gradient-primary: linear-gradient(135deg, #111827 0%, #2563eb 100%);
+  --gradient-ink: linear-gradient(90deg, #111827 0%, #10a37f 48%, #60a5fa 100%);
+  --success-color: #10a37f;
+  --warning-color: #d97706;
+  --error-color: #dc2626;
+  --active-menu-bg: #111827;
   --active-menu-text: #FFFFFF;
-  --sidebar-shadow: 0 0 32px rgba(44, 40, 37, 0.04);
-  --menu-item-bg: rgba(139, 94, 60, 0.04);
-  --menu-item-hover: rgba(199, 91, 57, 0.08);
-  --shadow-sm: 0 1px 2px rgba(44, 40, 37, 0.05);
-  --shadow-md: 0 4px 12px rgba(44, 40, 37, 0.08);
-  --shadow-lg: 0 12px 32px rgba(44, 40, 37, 0.12);
+  --sidebar-shadow: 0 0 0 1px rgba(17, 24, 39, 0.06);
+  --menu-item-bg: rgba(17, 24, 39, 0.03);
+  --menu-item-hover: rgba(17, 24, 39, 0.06);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 10px 24px rgba(17, 24, 39, 0.08);
+  --shadow-lg: 0 24px 70px rgba(17, 24, 39, 0.12);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --font-family: Inter, system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-display: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+  --font-display: Inter, system-ui, -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-literary: "LXGW WenKai", "霞鹜文楷", "KaiTi", serif;
 
   /* 动画变量 */
@@ -93,13 +93,13 @@
   --duration-slower: 800ms;
 
   /* Studio 变量（写作区兼容） */
-  --studio-bg: #FAF8F5;
-  --studio-surface: #FAF8F5;
-  --studio-surface-muted: #F0EBE3;
-  --studio-border: #DDD5CA;
-  --studio-text: #2C2825;
-  --studio-text-soft: #7A6E63;
-  --studio-primary: #C75B39;
+  --studio-bg: #f7f7f5;
+  --studio-surface: #ffffff;
+  --studio-surface-muted: #f3f4f6;
+  --studio-border: #e4e7ec;
+  --studio-text: #101114;
+  --studio-text-soft: #5f6368;
+  --studio-primary: #111827;
   --studio-border-strong: color-mix(in srgb, var(--studio-border) 80%, var(--studio-text) 20%);
   --studio-primary-soft: color-mix(in srgb, var(--studio-primary) 10%, transparent);
   --studio-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 3%, transparent), 0 8px 24px color-mix(in srgb, var(--text-color) 5%, transparent);
@@ -121,43 +121,43 @@
 
 .dark {
   /* 暗色模式：墨韵·Ink & Moonlight */
-  --bg-color: #1A1714;
-  --sidebar-bg: #222019;
-  --content-bg: #1A1714;
-  --elevated-bg: #2A2520;
-  --hover-bg: #2A2520;
-  --textarea-bg: #1A1714;
-  --paper-fiber: radial-gradient(circle at 20% 20%, rgba(212, 145, 92, 0.08), transparent 28%), radial-gradient(circle at 80% 0%, rgba(232, 93, 58, 0.06), transparent 32%);
-  --seal-soft: rgba(212, 145, 92, 0.14);
-  --text-color: #E8E0D6;
-  --secondary-text-color: #A89B8E;
-  --muted-text-color: #7A6E63;
-  --primary-color: #D4915C;
-  --primary-hover: #E0A06E;
-  --primary-pressed: #B87D4E;
-  --border-color: #3D3630;
-  --gradient-primary: linear-gradient(135deg, #D4915C 0%, #E85D3A 100%);
-  --gradient-ink: linear-gradient(90deg, #D4915C 0%, #E85D3A 50%, #E8E0D6 100%);
-  --success-color: #6AAF6C;
-  --warning-color: #D4A43E;
-  --error-color: #E05A4E;
-  --active-menu-bg: #D4915C;
-  --active-menu-text: #1A1714;
-  --sidebar-shadow: 0 0 32px rgba(0, 0, 0, 0.3);
-  --menu-item-bg: rgba(212, 145, 92, 0.04);
-  --menu-item-hover: rgba(212, 145, 92, 0.08);
+  --bg-color: #0b0c0f;
+  --sidebar-bg: #111318;
+  --content-bg: #0b0c0f;
+  --elevated-bg: #17191f;
+  --hover-bg: #20232b;
+  --textarea-bg: #101216;
+  --paper-fiber: radial-gradient(circle at 18% 16%, rgba(96, 165, 250, 0.12), transparent 30%), radial-gradient(circle at 82% 0%, rgba(16, 163, 127, 0.12), transparent 30%);
+  --seal-soft: rgba(16, 163, 127, 0.14);
+  --text-color: #f4f4f5;
+  --secondary-text-color: #a1a1aa;
+  --muted-text-color: #71717a;
+  --primary-color: #10a37f;
+  --primary-hover: #19c499;
+  --primary-pressed: #0e8f70;
+  --border-color: #272a33;
+  --gradient-primary: linear-gradient(135deg, #f4f4f5 0%, #10a37f 100%);
+  --gradient-ink: linear-gradient(90deg, #f4f4f5 0%, #10a37f 50%, #60a5fa 100%);
+  --success-color: #10a37f;
+  --warning-color: #f59e0b;
+  --error-color: #f87171;
+  --active-menu-bg: #f4f4f5;
+  --active-menu-text: #0b0c0f;
+  --sidebar-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --menu-item-bg: rgba(244, 244, 245, 0.04);
+  --menu-item-hover: rgba(244, 244, 245, 0.08);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 
   /* Studio 变量（写作区兼容） */
-  --studio-bg: #1A1714;
-  --studio-surface: #222019;
-  --studio-surface-muted: #2A2520;
-  --studio-border: #3D3630;
-  --studio-text: #E8E0D6;
-  --studio-text-soft: #A89B8E;
-  --studio-primary: #D4915C;
+  --studio-bg: #0b0c0f;
+  --studio-surface: #17191f;
+  --studio-surface-muted: #111318;
+  --studio-border: #272a33;
+  --studio-text: #f4f4f5;
+  --studio-text-soft: #a1a1aa;
+  --studio-primary: #10a37f;
 }
 
 a {

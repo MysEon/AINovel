@@ -17,6 +17,7 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.17.0",
     "streamdown": "^1.0.12",
+    "three": "^0.184.0",
     "tsparticles": "^3.9.1"
   },
   "devDependencies": {

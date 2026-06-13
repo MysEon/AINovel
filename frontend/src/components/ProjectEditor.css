@@ -451,3 +451,159 @@
     padding: 0.5rem;
   }
 }
+
+/* Codex-style product shell refresh */
+.app-container {
+  gap: 10px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, #60a5fa 10%, transparent), transparent 28%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--success-color) 10%, transparent), transparent 30%),
+    var(--bg-color);
+}
+
+.app-container .sidebar {
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 52%, transparent), transparent 38%),
+    var(--sidebar-bg);
+  box-shadow: var(--sidebar-shadow);
+}
+
+.app-container .sidebar-header {
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+}
+
+.app-container .app-title-section h1 {
+  color: var(--text-color);
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  letter-spacing: 0;
+}
+
+.app-container .app-subtitle,
+.app-container .sidebar-project-card span,
+.app-container .menu-section h3,
+.app-container .menu-section h2 {
+  color: var(--secondary-text-color);
+}
+
+.app-container .sidebar-project-card {
+  border-radius: 13px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--elevated-bg) 72%, transparent);
+  box-shadow: none;
+}
+
+.app-container .sidebar-project-card strong {
+  color: var(--text-color);
+}
+
+.app-container .collapse-btn {
+  border-radius: 12px;
+  color: var(--secondary-text-color);
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--elevated-bg) 72%, transparent);
+}
+
+.app-container .collapse-btn:hover {
+  color: var(--text-color);
+  background: var(--elevated-bg);
+}
+
+.app-container .sidebar-menu {
+  padding: 0.7rem 0.62rem 0.5rem;
+}
+
+.app-container .menu-section {
+  margin-bottom: 0.72rem;
+}
+
+.app-container .menu-section h3,
+.app-container .menu-section h2 {
+  padding: 0 0.62rem;
+  font-size: 0.7rem;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-container .menu-section li a {
+  min-height: 38px;
+  padding: 0 0.68rem;
+  border-radius: 11px;
+  color: var(--secondary-text-color);
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: 620;
+}
+
+.app-container .menu-section li a:hover {
+  color: var(--text-color);
+  border-color: var(--border-color);
+  background: var(--menu-item-hover);
+  transform: none;
+}
+
+.app-container .menu-section li.active a {
+  color: var(--active-menu-text);
+  border-color: var(--active-menu-bg);
+  background: var(--active-menu-bg);
+  box-shadow: none;
+}
+
+.app-container .sidebar-utility-panel {
+  border-top: 1px solid var(--border-color);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 68%, transparent), var(--sidebar-bg));
+}
+
+.app-container .sidebar-utility-button {
+  border-radius: 12px;
+  color: var(--secondary-text-color);
+  border-color: var(--border-color);
+  background: color-mix(in srgb, var(--elevated-bg) 58%, transparent);
+  font-weight: 650;
+}
+
+.app-container .sidebar-utility-button:hover {
+  color: var(--text-color);
+  border-color: color-mix(in srgb, var(--border-color) 70%, var(--text-color));
+  background: var(--elevated-bg);
+  transform: none;
+}
+
+.app-container .content {
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--elevated-bg) 38%, transparent), transparent 280px),
+    var(--content-bg);
+  box-shadow: none;
+}
+
+.app-container.sidebar-collapsed .sidebar {
+  width: 68px;
+}
+
+@media (max-width: 1024px) {
+  .app-container {
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0;
+    gap: 0;
+  }
+
+  .app-container .content {
+    border-radius: 0;
+    border: 0;
+  }
+}
