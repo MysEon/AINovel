@@ -1,0 +1,691 @@
+/* Final AI settings popover polish */
+.writing-editor .editor-footer .footer-ai-options {
+  position: relative;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-line) 82%, transparent);
+  background: color-mix(in srgb, var(--desk-paper) 34%, transparent);
+  color: var(--desk-muted);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only:hover,
+.writing-editor .editor-footer .footer-ai-options[open] .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-teal) 64%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 18%, var(--desk-paper));
+  color: var(--desk-teal);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline {
+  right: -0.45rem;
+  bottom: calc(100% + 0.85rem);
+  width: min(332px, calc(100vw - 32px));
+  min-width: 0;
+  gap: 0.7rem !important;
+  padding: 0.72rem !important;
+  border-radius: 8px !important;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 94%, transparent), color-mix(in srgb, var(--desk-shell) 96%, transparent)),
+    color-mix(in srgb, var(--desk-panel) 92%, black 8%) !important;
+  box-shadow:
+    0 18px 44px color-mix(in srgb, black 38%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent) !important;
+  backdrop-filter: blur(22px);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::before {
+  content: "AI 辅助设置";
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 0.1rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--desk-line) 68%, transparent);
+  color: var(--desk-ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::after {
+  content: "";
+  position: absolute;
+  right: 1.05rem;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  background: color-mix(in srgb, var(--desk-shell) 96%, transparent);
+  transform: rotate(45deg);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-selector {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.45rem !important;
+  width: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-label {
+  display: flex !important;
+  align-items: center;
+  padding: 0 !important;
+  color: var(--desk-muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-buttons {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0.25rem !important;
+  width: 100% !important;
+  padding: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 74%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-paper) 30%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button {
+  width: 100% !important;
+  min-height: 36px !important;
+  justify-content: center !important;
+  padding: 0 0.7rem !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--desk-muted) !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+  transition: all 0.24s ease;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button:hover {
+  color: var(--desk-ink) !important;
+  background: color-mix(in srgb, var(--desk-paper) 46%, transparent) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button.active {
+  border-color: color-mix(in srgb, var(--desk-accent) 72%, transparent) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--desk-accent) 92%, white 8%), var(--desk-accent)) !important;
+  color: var(--active-menu-text) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--desk-accent) 26%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0 0.8rem !important;
+  border-radius: 8px !important;
+  border-color: color-mix(in srgb, var(--desk-line) 74%, transparent) !important;
+  background: color-mix(in srgb, var(--desk-paper) 28%, transparent) !important;
+  color: var(--desk-ink) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle svg {
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle span {
+  display: inline !important;
+  margin: 0 !important;
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle:hover {
+  border-color: color-mix(in srgb, var(--desk-teal) 70%, var(--desk-line)) !important;
+  background: color-mix(in srgb, var(--desk-teal) 16%, var(--desk-paper)) !important;
+  color: var(--desk-teal) !important;
+}
+
+/* Keep editor agent status visually attached to the manuscript surface. */
+.editor-agent-strip {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 980px);
+  max-width: 980px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  box-sizing: border-box;
+  margin: 0 auto -1px;
+  padding: 0.42rem clamp(1.1rem, 3vw, 2rem);
+  border: 1px solid color-mix(in srgb, var(--desk-line) 92%, transparent);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--desk-paper-soft) 78%, transparent), color-mix(in srgb, var(--desk-paper) 92%, transparent)),
+    var(--desk-paper);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+    0 10px 26px color-mix(in srgb, black 8%, transparent);
+}
+
+.editor-agent-strip + .editor-paper {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.editor-agent-strip .agent-status-badge {
+  min-height: 22px;
+  padding: 0.18rem 0.48rem;
+  border-radius: 6px !important;
+  border-color: color-mix(in srgb, var(--desk-line) 86%, transparent);
+  background: color-mix(in srgb, var(--desk-paper-soft) 54%, transparent);
+  color: var(--desk-muted);
+  box-shadow: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.editor-agent-strip .agent-status-badge.active {
+  color: var(--desk-accent);
+  border-color: color-mix(in srgb, var(--desk-accent) 30%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-accent) 10%, var(--desk-paper));
+  transform: none;
+}
+
+.editor-agent-strip .agent-status-badge.tone-slate.active {
+  color: var(--desk-muted);
+  border-color: color-mix(in srgb, var(--desk-muted) 24%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-muted) 8%, var(--desk-paper));
+}
+
+.editor-agent-strip .agent-status-badge.tone-rose.active {
+  color: var(--desk-plum);
+  border-color: color-mix(in srgb, var(--desk-plum) 28%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-plum) 9%, var(--desk-paper));
+}
+
+.editor-agent-strip .agent-status-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.ai-toolbar-status-strip .agent-status-badge {
+  min-height: 24px;
+  border-radius: 6px !important;
+}
+
+.restoration-progress-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--studio-border);
+}
+
+.restoration-progress-bar::-webkit-progress-bar {
+  background: var(--studio-border);
+}
+
+.restoration-progress-bar::-webkit-progress-value {
+  background: var(--studio-primary);
+  transition: width 0.3s ease;
+}
+
+.restoration-progress-bar::-moz-progress-bar {
+  background: var(--studio-primary);
+}
+
+@media (max-width: 1200px) {
+  .editor-footer,
+  .editor-footer.is-ai-active {
+    grid-template-columns: 1fr;
+  }
+
+  .writing-editor .editor-footer .footer-left {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .ai-writing-layout-shell {
+    flex-direction: column !important;
+  }
+
+  .ai-chat-sider-shell,
+  .editor-canvas-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ai-chat-sider-shell {
+    min-height: 320px;
+    order: 2;
+  }
+
+  .editor-canvas-pane {
+    min-height: 520px;
+    order: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .writing-editor .editor-content {
+    padding: 0.5rem;
+  }
+
+  .rich-text-editor,
+  .ai-writing-interface.modern-ai-layout {
+    border-radius: 8px;
+  }
+
+  .rich-text-editor,
+  .ai-writing-interface.modern-ai-layout {
+    padding: 0.5rem;
+  }
+
+  .editor-paper-head {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: auto;
+    gap: 0.65rem;
+  }
+
+  .editor-paper-title h2 {
+    white-space: normal;
+  }
+
+  .content-textarea,
+  .editor-canvas-textarea.ant-input {
+    padding: 1.1rem 1rem 1.4rem 1.4rem !important;
+    font-size: 15px !important;
+    line-height: 1.85 !important;
+  }
+
+  .editor-paper::before,
+  .editor-paper::after {
+    display: none;
+  }
+
+  .editor-footer {
+    margin: 0.45rem 0.5rem 0.5rem;
+  }
+}
+
+/* Project writing surface: Codex-style neutral studio */
+.light-theme .writing-editor,
+.writing-editor {
+  --desk-bg: #f7f7f5;
+  --desk-shell: #eeeeeb;
+  --desk-panel: #ffffff;
+  --desk-paper: #fbfbfa;
+  --desk-paper-soft: #f3f3f0;
+  --desk-ink: #111827;
+  --desk-muted: #68707d;
+  --desk-line: rgba(17, 24, 39, 0.1);
+  --desk-line-strong: rgba(16, 163, 127, 0.3);
+  --desk-accent: #111827;
+  --desk-teal: #10a37f;
+  --desk-plum: #64748b;
+  --desk-shadow: 0 18px 48px rgba(17, 24, 39, 0.08);
+}
+
+.dark-theme .writing-editor {
+  --desk-bg: #0b0c0f;
+  --desk-shell: #111318;
+  --desk-panel: #17191f;
+  --desk-paper: #14161b;
+  --desk-paper-soft: #1d2028;
+  --desk-ink: #f4f4f5;
+  --desk-muted: #9ca3af;
+  --desk-line: rgba(255, 255, 255, 0.1);
+  --desk-line-strong: rgba(16, 163, 127, 0.36);
+  --desk-accent: #f4f4f5;
+  --desk-teal: #10a37f;
+  --desk-plum: #a1a1aa;
+  --desk-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+}
+
+.writing-editor {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-paper-soft) 42%, transparent), transparent 320px),
+    var(--desk-bg) !important;
+}
+
+.writing-editor .editor-content {
+  padding: clamp(8px, 1.2vw, 14px) clamp(8px, 1.4vw, 18px) 0;
+}
+
+.rich-text-editor,
+.ai-writing-interface.modern-ai-layout {
+  border-color: var(--desk-line);
+  border-radius: 10px;
+  background: var(--desk-shell);
+  box-shadow: none;
+}
+
+.rich-text-editor::before,
+.ai-writing-interface.modern-ai-layout::before {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 54%, transparent), transparent 220px),
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--desk-teal) 5%, transparent), transparent);
+  opacity: 1;
+}
+
+.editor-paper {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  border-color: var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-paper);
+  box-shadow: var(--desk-shadow);
+}
+
+.light-theme .editor-paper {
+  box-shadow: var(--desk-shadow);
+}
+
+.editor-paper::before,
+.editor-paper::after {
+  display: none;
+}
+
+.editor-paper-head {
+  min-height: 64px;
+  padding: 0.78rem clamp(1rem, 2.4vw, 1.6rem);
+  border-bottom-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 92%, var(--desk-paper-soft));
+}
+
+.editor-paper-kicker {
+  color: var(--desk-teal);
+  font-size: 0.68rem;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+}
+
+.editor-paper-title h2 {
+  font-size: clamp(1rem, 1.12vw, 1.18rem);
+  font-weight: 760;
+}
+
+.editor-paper-stats span,
+.editor-meta-pill,
+.canvas-tool-btn,
+.canvas-tool-chip,
+.agent-status-badge {
+  border-radius: 8px !important;
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper-soft) 74%, transparent);
+  color: var(--desk-muted);
+}
+
+.content-textarea,
+.editor-canvas-textarea.ant-input {
+  padding:
+    clamp(22px, 2.6vw, 38px)
+    clamp(22px, 4vw, 64px)
+    clamp(26px, 3.6vw, 48px) !important;
+  background: var(--desk-paper) !important;
+  caret-color: var(--desk-teal);
+  font-family: var(--font-sans);
+  font-size: clamp(16px, 0.9vw, 18px) !important;
+  line-height: 1.9 !important;
+  scrollbar-color: color-mix(in srgb, var(--desk-teal) 46%, var(--desk-line)) transparent;
+}
+
+.content-textarea:focus,
+.editor-canvas-textarea.ant-input:focus,
+.editor-canvas-textarea.ant-input-focused {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--desk-teal) 18%, transparent) !important;
+}
+
+.editor-lock-overlay,
+.editor-lock-overlay.modern {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line)) !important;
+  color: var(--desk-teal);
+}
+
+.ai-writing-interface.modern-ai-layout {
+  padding: clamp(8px, 1.2vw, 14px);
+}
+
+.ai-writing-layout-shell {
+  gap: 0.6rem;
+}
+
+.ai-chat-drawer {
+  border-color: var(--desk-line);
+  border-radius: 8px;
+  background: var(--desk-panel);
+}
+
+.ai-assistant-toolbar-card {
+  border-bottom-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 88%, var(--desk-paper-soft));
+}
+
+.ai-assistant-toolbar-header {
+  min-height: 46px;
+}
+
+.ai-assistant-title-text {
+  color: var(--desk-ink);
+  font-weight: 760;
+}
+
+.ai-toolbar-text-btn.ant-btn,
+.ai-toolbar-icon-btn.ant-btn {
+  color: var(--desk-muted) !important;
+}
+
+.ai-toolbar-text-btn.ant-btn:hover,
+.ai-toolbar-icon-btn.ant-btn:hover,
+.ai-toolbar-icon-btn.selected.ant-btn {
+  color: var(--desk-teal) !important;
+}
+
+.ai-toolbar-tag.model.ant-tag,
+.ai-toolbar-tag.prompt.ant-tag {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 12%, transparent);
+  color: var(--desk-teal);
+}
+
+.ai-chat-container {
+  background: color-mix(in srgb, var(--desk-panel) 82%, var(--desk-paper)) !important;
+}
+
+.chat-message-avatar.assistant.ant-avatar {
+  background: var(--desk-accent);
+}
+
+.chat-message-avatar.user.ant-avatar {
+  background: var(--desk-teal);
+}
+
+.chat-message-bubble.assistant {
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 82%, var(--desk-panel));
+  color: var(--desk-ink);
+}
+
+.chat-message-bubble.user {
+  background: var(--desk-teal);
+  color: #ffffff;
+}
+
+.chat-input-area {
+  border-top-color: var(--desk-line) !important;
+  background: color-mix(in srgb, var(--desk-panel) 96%, transparent) !important;
+}
+
+.chat-input-wrapper {
+  border-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+
+.editor-footer {
+  margin: 0.5rem clamp(8px, 1.4vw, 18px) clamp(8px, 1.2vw, 14px);
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 92%, transparent);
+  box-shadow: none;
+}
+
+.writing-editor .editor-footer .footer-panel,
+.writing-editor .editor-footer .chapter-selector,
+.writing-editor .editor-footer .footer-metric {
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-paper) 68%, transparent);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only {
+  border-color: var(--desk-line);
+  background: var(--desk-paper);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-trigger.icon-only:hover,
+.writing-editor .editor-footer .footer-ai-options[open] .footer-options-trigger.icon-only {
+  border-color: color-mix(in srgb, var(--desk-teal) 42%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, var(--desk-paper));
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline {
+  border-color: var(--desk-line) !important;
+  background: color-mix(in srgb, var(--desk-panel) 96%, transparent) !important;
+  box-shadow: 0 18px 50px color-mix(in srgb, black 24%, transparent) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::before {
+  content: "AI Assistant";
+  border-bottom-color: var(--desk-line);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-options-popover.footer-ai-inline::after {
+  border-color: var(--desk-line);
+  background: var(--desk-panel);
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-buttons,
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .footer-layout-toggle {
+  border-color: var(--desk-line) !important;
+  background: var(--desk-paper) !important;
+}
+
+.writing-editor .editor-footer .footer-ai-options .footer-ai-inline .ai-mode-button.active {
+  border-color: var(--desk-accent) !important;
+  background: var(--desk-accent) !important;
+  color: var(--desk-bg) !important;
+  box-shadow: none;
+}
+
+.editor-agent-strip {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  border-color: var(--desk-line);
+  background: color-mix(in srgb, var(--desk-panel) 92%, transparent);
+  box-shadow: none;
+}
+
+.editor-agent-strip .agent-status-badge.active,
+.editor-meta-pill.generating,
+.canvas-tool-chip.ai,
+.canvas-tool-btn.ai {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, transparent);
+  color: var(--desk-teal);
+}
+
+.writing-editor .empty-chapters-notice {
+  position: relative;
+  width: min(100%, 1040px);
+  max-width: 1040px;
+  height: 100%;
+  min-height: 420px;
+  margin: 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 56px);
+  border: 1px solid var(--desk-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--desk-teal) 12%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 98%, transparent), color-mix(in srgb, var(--desk-paper) 90%, transparent)),
+    var(--desk-paper);
+  color: var(--desk-muted);
+  box-shadow: var(--desk-shadow);
+  text-align: left;
+}
+
+.writing-editor .empty-chapters-notice::before {
+  content: "START";
+  position: absolute;
+  top: clamp(20px, 4vw, 48px);
+  right: clamp(20px, 4vw, 52px);
+  color: color-mix(in srgb, var(--desk-ink) 7%, transparent);
+  font-size: clamp(4.2rem, 13vw, 11rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 0.82;
+  pointer-events: none;
+}
+
+.writing-editor .empty-chapters-notice h3 {
+  position: relative;
+  max-width: 680px;
+  margin: 0 0 0.7rem;
+  color: var(--desk-ink);
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.writing-editor .empty-chapters-notice p {
+  position: relative;
+  max-width: 460px;
+  margin: 0 0 1.35rem;
+  color: var(--desk-muted);
+  font-size: clamp(0.94rem, 1vw, 1.06rem);
+  line-height: 1.72;
+}
+
+.writing-editor .empty-chapters-notice .create-chapter-button {
+  position: relative;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 1.1rem;
+  border: 1px solid var(--desk-accent);
+  border-radius: 8px;
+  background: var(--desk-accent);
+  color: var(--desk-bg);
+  box-shadow: none;
+  font-size: 0.92rem;
+  font-weight: 760;
+}
+
+.writing-editor .empty-chapters-notice .create-chapter-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+  background: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+}
+
+@media (max-width: 768px) {
+  .writing-editor .empty-chapters-notice {
+    min-height: 360px;
+    padding: 24px;
+  }
+
+  .writing-editor .empty-chapters-notice::before {
+    font-size: clamp(3.6rem, 21vw, 6rem);
+  }
+}
+

@@ -1,0 +1,536 @@
+.writing-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--studio-surface);
+  color: var(--studio-text);
+}
+
+/* ===== Writing Footer V2 (appended override) ===== */
+.writing-editor .editor-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.8rem;
+  max-height: none;
+  overflow: visible;
+  background: color-mix(in srgb, var(--studio-surface) 90%, white 10%);
+  border-radius: 16px;
+}
+
+.writing-editor .editor-footer .footer-left,
+.writing-editor .editor-footer .footer-right {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.writing-editor .editor-footer .footer-left {
+  justify-content: flex-start;
+}
+
+.writing-editor .editor-footer .footer-right {
+  justify-content: flex-end;
+}
+
+.writing-editor .editor-footer .footer-panel {
+  background: color-mix(in srgb, var(--studio-surface) 96%, white 4%);
+  border: 1px solid color-mix(in srgb, var(--studio-border) 88%, white 12%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.writing-editor .editor-footer .footer-panel-chapter {
+  flex: 1 1 340px;
+}
+
+.writing-editor .editor-footer .footer-panel-actions {
+  flex: 1 1 320px;
+}
+
+.writing-editor .editor-footer .footer-panel-ai,
+.writing-editor .editor-footer .footer-panel-session {
+  flex: 1 1 360px;
+  padding: 0.55rem 0.65rem;
+  gap: 0.4rem;
+}
+
+.writing-editor .editor-footer .footer-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.writing-editor .editor-footer .footer-panel-head.compact {
+  justify-content: flex-start;
+}
+
+.writing-editor .editor-footer .footer-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--studio-text);
+  letter-spacing: 0.01em;
+}
+
+.writing-editor .editor-footer .footer-panel-title svg {
+  color: var(--studio-primary);
+  flex-shrink: 0;
+}
+
+.writing-editor .editor-footer .footer-panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.writing-editor .editor-footer .footer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--studio-surface-muted);
+  color: var(--studio-text-soft);
+  border: 1px solid var(--studio-border);
+}
+
+.writing-editor .editor-footer .footer-chip.warning {
+  background: color-mix(in srgb, var(--error-color) 10%, transparent);
+  color: var(--error-color);
+  border-color: color-mix(in srgb, var(--error-color) 20%, transparent);
+}
+
+.writing-editor .editor-footer .footer-panel-subtext {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--studio-text-soft);
+  display: none;
+}
+
+.writing-editor .editor-footer .chapter-selector {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 12px;
+  padding: 0.35rem;
+  background: color-mix(in srgb, var(--studio-surface-muted) 70%, transparent);
+  border: 1px solid var(--studio-border);
+}
+
+.writing-editor .editor-footer .chapter-selector label {
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--studio-text-soft);
+  white-space: nowrap;
+}
+
+.writing-editor .editor-footer .chapter-selector select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--studio-border) 75%, white 25%);
+  border-radius: 10px;
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.writing-editor .editor-footer .chapter-selector select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, var(--studio-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--studio-primary) 15%, transparent);
+}
+
+.writing-editor .editor-footer .footer-icon-action {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--error-color) 20%, transparent);
+  background: color-mix(in srgb, var(--error-color) 10%, transparent);
+  color: var(--error-color);
+  cursor: pointer;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.writing-editor .editor-footer .footer-icon-action:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--error-color) 15%, transparent);
+  border-color: color-mix(in srgb, var(--error-color) 25%, transparent);
+}
+
+.writing-editor .editor-footer .footer-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.writing-editor .editor-footer .footer-action-row > button {
+  min-height: 38px;
+}
+
+.writing-editor .editor-footer .footer-cta {
+  box-shadow: none;
+  padding-inline: 0.6rem;
+  font-size: 12px;
+  background: transparent;
+  color: var(--studio-primary);
+  border: 1px solid color-mix(in srgb, var(--studio-primary) 25%, var(--studio-border));
+}
+
+.writing-editor .editor-footer .footer-secondary-btn,
+.writing-editor .editor-footer .new-chapter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface);
+  color: var(--studio-text);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.writing-editor .editor-footer .footer-secondary-btn:hover:not(:disabled),
+.writing-editor .editor-footer .new-chapter-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--studio-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.writing-editor .editor-footer .new-chapter-button {
+  background: transparent;
+  color: var(--studio-primary);
+  border-color: color-mix(in srgb, var(--studio-primary) 22%, var(--studio-border));
+}
+
+.writing-editor .editor-footer .footer-save-btn {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--primary-color) 30%, var(--studio-border));
+  color: var(--primary-color);
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.writing-editor .editor-footer .footer-save-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  transform: none;
+}
+
+.writing-editor .editor-footer .footer-ai-toggle {
+  min-width: 112px;
+}
+
+.writing-editor .editor-footer .footer-ai-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.5rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--studio-surface-muted) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--studio-border) 80%, white 20%);
+}
+
+.writing-editor .editor-footer .footer-ai-inline-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--studio-text-soft);
+}
+
+.writing-editor .editor-footer .footer-ai-inline-head svg {
+  color: var(--studio-primary);
+}
+
+.writing-editor .editor-footer .footer-ai-inline-body {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.writing-editor .editor-footer .footer-ai-inline .ai-mode-selector {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.writing-editor .editor-footer .footer-layout-toggle {
+  flex-shrink: 0;
+}
+
+/* Desktop compact mode for the right session panel */
+.writing-editor .editor-footer .footer-panel-session {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head actions"
+    "ai ai";
+  align-items: center;
+  column-gap: 0.5rem;
+  row-gap: 0.4rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session > .footer-panel-head {
+  grid-area: head;
+  align-items: center;
+}
+
+.writing-editor .editor-footer .footer-panel-session > .footer-action-row {
+  grid-area: actions;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.writing-editor .editor-footer .footer-panel-session > .footer-panel-subtext {
+  display: none;
+}
+
+.writing-editor .editor-footer .footer-panel-session > .footer-ai-inline {
+  grid-area: ai;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  gap: 0.3rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-ai-inline-head {
+  display: none;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-ai-inline-body {
+  width: 100%;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-ai-inline .ai-mode-selector {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.writing-editor .editor-footer .footer-panel-session .ai-mode-selector {
+  padding: 0.15rem;
+  gap: 0.2rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .ai-mode-label {
+  font-size: 0.7rem;
+  padding-left: 0.45rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .ai-mode-button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.74rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-action-row .footer-save-btn,
+.writing-editor .editor-footer .footer-panel-session .footer-action-row .footer-ai-toggle {
+  min-height: 36px;
+  padding: 0.48rem 0.8rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-metrics {
+  gap: 0.25rem;
+}
+
+.writing-editor .editor-footer .footer-panel-session .footer-metric {
+  padding: 0.2rem 0.38rem;
+}
+
+.writing-editor .editor-footer .footer-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.writing-editor .editor-footer .footer-metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  border-radius: 10px;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface-muted);
+}
+
+.writing-editor .editor-footer .footer-metric strong {
+  font-size: 0.82rem;
+  line-height: 1;
+  color: var(--studio-text);
+}
+
+.writing-editor .editor-footer .footer-metric span {
+  font-size: 0.7rem;
+  color: var(--studio-text-soft);
+  font-weight: 600;
+}
+
+.writing-editor .editor-footer kbd {
+  display: inline-block;
+  min-width: 1.35em;
+  padding: 0.08rem 0.3rem;
+  border-radius: 6px;
+  border: 1px solid var(--studio-border);
+  background: var(--studio-surface-muted);
+  color: var(--studio-text);
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--studio-text) 5%, transparent);
+}
+
+.dark-theme .writing-editor .editor-footer .footer-ai-inline {
+  background: color-mix(in srgb, var(--elevated-bg) 3%, transparent);
+  border-color: color-mix(in srgb, var(--elevated-bg) 8%, transparent);
+}
+
+@media (max-width: 1400px) {
+  .writing-editor .editor-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .writing-editor .editor-footer .footer-right {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .writing-editor .editor-footer .footer-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .writing-editor .editor-footer .footer-panel-meta {
+    justify-content: flex-start;
+  }
+
+  .writing-editor .editor-footer .chapter-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .writing-editor .editor-footer .chapter-selector label {
+    padding: 0.1rem 0.25rem 0;
+  }
+
+  .writing-editor .editor-footer .footer-icon-action {
+    width: 100%;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .writing-editor .editor-footer .footer-panel-session {
+    display: flex;
+    grid-template-columns: none;
+    grid-template-areas: none;
+    align-items: stretch;
+    column-gap: 0;
+    row-gap: 0;
+  }
+
+  .writing-editor .editor-footer .footer-panel-session > .footer-action-row {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .writing-editor .editor-footer .footer-panel-session .footer-ai-inline {
+    padding: 0.5rem;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--studio-surface-muted) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--studio-border) 80%, white 20%);
+  }
+
+  .writing-editor .editor-footer .footer-panel-session .footer-ai-inline-head {
+    display: inline-flex;
+  }
+
+  .writing-editor .editor-footer .footer-panel-session .footer-panel-subtext {
+    display: block;
+  }
+
+  .writing-editor .editor-footer .footer-ai-inline-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .writing-editor .editor-footer .footer-layout-toggle {
+    width: 100%;
+  }
+
+  .writing-editor .editor-footer .footer-panel-subtext {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .writing-editor .editor-footer {
+    margin: 0.35rem 0.4rem 0.4rem;
+    padding: 0.7rem;
+    gap: 0.6rem;
+  }
+
+  .writing-editor .editor-footer .footer-left,
+  .writing-editor .editor-footer .footer-right {
+    gap: 0.6rem;
+  }
+
+  .writing-editor .editor-footer .footer-panel {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 12px;
+  }
+
+  .writing-editor .editor-footer .footer-action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .writing-editor .editor-footer .footer-action-row > button {
+    width: 100%;
+  }
+
+  .writing-editor .editor-footer .footer-panel-session .footer-action-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .writing-editor .editor-footer .footer-metrics {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
