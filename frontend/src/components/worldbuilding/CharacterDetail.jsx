@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-  Card, Tag, Space, Typography, Tooltip, Button, Popconfirm,
+  Button, Popconfirm, Tag, Tooltip,
 } from 'antd';
 import {
-  UserOutlined, EditOutlined, DeleteOutlined,
+  DeleteOutlined, EditOutlined, UserOutlined,
 } from '@ant-design/icons';
 import {
   getMergedTemplateFromRegistry,
@@ -25,16 +25,28 @@ import {
   formatDynamicValue,
 } from './characterConstants';
 
-const { Text, Paragraph } = Typography;
+const getText = (value) => String(value || '').trim();
 
-const CharacterDetail = ({ character, templateRegistry, expanded, onToggleExpand, onEdit, onDelete }) => {
-  // 基础描述字段
-  const descFields = [
-    { label: '性格', value: character.personality, color: 'blue' },
-    { label: '外貌', value: character.appearance, color: 'purple' },
-    { label: '背景', value: character.background, color: 'green' },
+const getDimensionRows = (dimensions) => {
+  if (!dimensions || typeof dimensions !== 'object') return [];
+  const known = DIMENSION_KEYS
+    .filter((dimension) => dimensions[dimension.key] != null)
+    .map((dimension) => [dimension.key, dimensions[dimension.key]]);
+  const knownKeys = new Set(known.map(([key]) => key));
+  const extra = Object.entries(dimensions).filter(([key]) => !knownKeys.has(key));
+  return [...known, ...extra].slice(0, 10);
+};
+
+const CharacterDetail = ({ character, templateRegistry, onEdit, onDelete }) => {
+  const coreFields = [
+    { label: '角色简介', value: character.description },
+    { label: '性格', value: character.personality },
+    { label: '外貌', value: character.appearance },
+    { label: '背景', value: character.background },
+    { label: '能力 / 技能', value: character.abilities },
+    { label: '弱点 / 缺陷', value: character.weaknesses },
   ];
-  // 参数字段
+
   const paramFields = [
     { label: '性别', value: character.gender },
     { label: '年龄', value: character.age },
@@ -45,13 +57,17 @@ const CharacterDetail = ({ character, templateRegistry, expanded, onToggleExpand
     { label: '种族', value: character.species },
     { label: '阵营', value: character.alignment },
   ];
-  const filledParams = paramFields.filter(f => f.value);
-  const allFilled = [...descFields, ...paramFields].filter(f => f.value).length;
-  const totalFields = descFields.length + paramFields.length;
 
-  // 解析三维属性
-  let dims = null;
-  try { dims = character.dimensions ? JSON.parse(character.dimensions) : null; } catch { /* ignore */ }
+  const filledCore = coreFields.filter((field) => getText(field.value));
+  const filledParams = paramFields.filter((field) => getText(field.value));
+
+  let parsedDimensions = null;
+  try {
+    parsedDimensions = character.dimensions ? JSON.parse(character.dimensions) : null;
+  } catch {
+    parsedDimensions = null;
+  }
+  const dimensionRows = getDimensionRows(parsedDimensions);
 
   const extraAttrs = parseJsonObject(character.extra_attributes);
   const genderProfile = sanitizeGenderProfile(extraAttrs[GENDER_PROFILE_KEY]) || parseLegacyGenderStringToProfile(character.gender);
@@ -61,7 +77,7 @@ const CharacterDetail = ({ character, templateRegistry, expanded, onToggleExpand
     ? extraAttrs.__template_deltas.filter(Boolean)
     : [];
   const mergedTemplate = getMergedTemplateFromRegistry(templateRegistry, selectedTemplateDeltas);
-  const extraFieldLabelMap = new Map((mergedTemplate?.fields || []).map(field => [field.key, field.label]));
+  const extraFieldLabelMap = new Map((mergedTemplate?.fields || []).map((field) => [field.key, field.label]));
   const extraEntries = Object.entries(extraAttrs)
     .filter(([key, value]) => (
       !EXTRA_ATTR_RESERVED_KEYS.has(key)
@@ -70,196 +86,160 @@ const CharacterDetail = ({ character, templateRegistry, expanded, onToggleExpand
     ));
 
   return (
-    <Card
-      className={`character-card ${expanded ? 'expanded' : ''}`}
-      hoverable
-      onClick={onToggleExpand}
-    >
-      <div className="character-card-header">
-        <div className="character-avatar">
-          <UserOutlined />
-        </div>
-        <div className="character-card-info">
-          <div className="character-card-name">
-            {character.name}
-            {character.gender && <Tag className="gender-tag">{character.gender}</Tag>}
+    <article className="character-profile-panel">
+      <header className="character-profile-head">
+        <div className="character-profile-identity">
+          <div className="character-profile-avatar">
+            <UserOutlined />
           </div>
-          <Text type="secondary" className="character-card-desc" ellipsis={{ rows: 1 }}>
-            {character.description || '暂无简介'}
-          </Text>
+          <div>
+            <span>角色档案</span>
+            <h3>{character.name}</h3>
+            <p>{character.description || '暂未填写角色简介。'}</p>
+          </div>
         </div>
-        <Space className="character-card-actions" onClick={e => e.stopPropagation()}>
-          <Tooltip title="编辑">
-            <Button type="text" size="small" icon={<EditOutlined />} onClick={onEdit} />
+        <div className="character-profile-actions">
+          <Tooltip title="编辑角色">
+            <Button icon={<EditOutlined />} onClick={onEdit}>
+              编辑
+            </Button>
           </Tooltip>
           <Popconfirm
-            title="确定删除该角色？"
-            description="删除后不可恢复"
+            title="删除角色"
+            description={`确定删除「${character.name}」吗？删除后不可恢复。`}
             onConfirm={onDelete}
             okText="删除"
             cancelText="取消"
             okButtonProps={{ danger: true }}
           >
-            <Tooltip title="删除">
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
+            <Button danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
           </Popconfirm>
-        </Space>
-      </div>
+        </div>
+      </header>
 
-      {/* 快捷信息条 */}
-      <div className="character-card-quick">
-        {filledParams.slice(0, 4).map(f => (
-          <span key={f.label} className="quick-item">{f.label}: {f.value}</span>
+      <div className="character-profile-tags">
+        <Tag className={character.description ? 'is-filled' : ''}>简介</Tag>
+        <Tag className={character.personality ? 'is-filled' : ''}>性格</Tag>
+        <Tag className={character.background ? 'is-filled' : ''}>背景</Tag>
+        <Tag className={character.appearance ? 'is-filled' : ''}>外貌</Tag>
+        {character.species && <Tag className="is-filled">{character.species}</Tag>}
+        {character.alignment && <Tag className="is-filled">{character.alignment}</Tag>}
+        {genderTimeline.length > 1 && <Tag className="is-filled">性别轨迹 {genderTimeline.length - 1} 次转变</Tag>}
+        {selectedTemplateDeltas.map((deltaKey) => (
+          <Tag key={`tpl-${deltaKey}`} className="is-filled">{getTemplateDeltaLabel(deltaKey)}</Tag>
         ))}
+        {extraEntries.length > 0 && <Tag className="is-filled">扩展字段 {extraEntries.length}</Tag>}
       </div>
 
-      <div className="character-card-tags">
-        <Tag color="default">完善度 {allFilled}/{totalFields}</Tag>
-        {descFields.map(f => f.value && <Tag key={f.label} color={f.color}>{f.label}</Tag>)}
-        {character.species && <Tag color="orange">{character.species}</Tag>}
-        {character.alignment && <Tag color="red">{character.alignment}</Tag>}
-        {genderTimeline.length > 1 && <Tag color="purple">性别轨迹 {genderTimeline.length - 1} 次转变</Tag>}
-        {selectedTemplateDeltas.map(deltaKey => (
-          <Tag key={`tpl-${deltaKey}`} color="geekblue">{getTemplateDeltaLabel(deltaKey)}</Tag>
+      {filledParams.length > 0 && (
+        <section className="character-profile-params">
+          {filledParams.map((field) => (
+            <div key={field.label} className="character-param">
+              <span>{field.label}</span>
+              <strong>{field.value}</strong>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {dimensionRows.length > 0 && (
+        <section className="character-profile-section character-dimensions-section">
+          <h4>能力维度</h4>
+          <div className="character-dimension-list">
+            {dimensionRows.map(([key, value]) => {
+              const numericValue = Number(value);
+              const progressValue = Number.isFinite(numericValue) ? Math.max(0, Math.min(100, numericValue)) : 0;
+              return (
+                <div key={key} className="character-dimension-row">
+                  <span>{key}</span>
+                  <progress value={progressValue} max="100" />
+                  <strong>{String(value)}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className="character-profile-grid">
+        {coreFields.map((field) => (
+          <article key={field.label} className="character-profile-section">
+            <h4>{field.label}</h4>
+            <p>{field.value || '暂未填写。'}</p>
+          </article>
         ))}
-        {extraEntries.length > 0 && <Tag color="cyan">扩展属性 {extraEntries.length}</Tag>}
-      </div>
+      </section>
 
-      {expanded && (
-        <div className="character-card-detail">
-          {/* 参数区 */}
-          {filledParams.length > 0 && (
-            <div className="detail-params">
-              {filledParams.map(f => (
-                <div key={f.label} className="param-item">
-                  <Text type="secondary" className="param-label">{f.label}</Text>
-                  <Text className="param-value">{f.value}</Text>
+      {genderTimeline.length > 0 && (
+        <section className="character-profile-section character-profile-wide">
+          <h4>性别轨迹</h4>
+          <p>{genderTimeline.join(' -> ')}</p>
+          {initialFemaleTraitsSummary.length > 0 && (
+            <div className="character-profile-params compact">
+              {initialFemaleTraitsSummary.map((item, index) => (
+                <div key={`gender-initial-female-${index}`} className="character-param">
+                  <span>初始女性特征</span>
+                  <strong>{item}</strong>
                 </div>
               ))}
             </div>
           )}
-
-          {/* 三维属性 */}
-          {dims && Object.keys(dims).length > 0 && (
-            <div className="detail-dimensions">
-              <Text strong className="detail-label">三维属性</Text>
-              <div className="dimension-bars">
-                {DIMENSION_KEYS.map(d => dims[d.key] != null && (
-                  <div key={d.key} className="dimension-row">
-                    <span className="dim-name">{d.key}</span>
-                    <div className="dim-bar-bg">
-                      <div className="dim-bar-fill" style={{ width: `${dims[d.key]}%`, background: d.color }} />
-                    </div>
-                    <span className="dim-val">{dims[d.key]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 描述区 */}
-          {descFields.map(f => (
-            <div key={f.label} className="detail-section">
-              <Text strong className="detail-label">{f.label}</Text>
-              <Paragraph className="detail-content">
-                {f.value || <Text type="secondary">未填写</Text>}
-              </Paragraph>
-            </div>
-          ))}
-
-          {/* 能力 & 弱点 */}
-          {character.abilities && (
-            <div className="detail-section">
-              <Text strong className="detail-label">能力 / 技能</Text>
-              <Paragraph className="detail-content">{character.abilities}</Paragraph>
-            </div>
-          )}
-          {character.weaknesses && (
-            <div className="detail-section">
-              <Text strong className="detail-label">弱点 / 缺陷</Text>
-              <Paragraph className="detail-content">{character.weaknesses}</Paragraph>
-            </div>
-          )}
-
-          {genderTimeline.length > 0 && (
-            <div className="detail-section">
-              <Text strong className="detail-label">性别轨迹</Text>
-              <Paragraph className="detail-content">
-                {genderTimeline.join(' → ')}
-              </Paragraph>
-              {initialFemaleTraitsSummary.length > 0 && (
-                <div className="detail-params">
-                  {initialFemaleTraitsSummary.map((item, idx) => (
-                    <div key={`gender-initial-female-${idx}`} className="param-item">
-                      <Text type="secondary" className="param-label">初始女性特征</Text>
-                      <Text className="param-value">{item}</Text>
-                    </div>
-                  ))}
+          {Array.isArray(genderProfile?.transitions) && genderProfile.transitions.length > 0 && (
+            <div className="character-profile-params compact">
+              {genderProfile.transitions.map((step, index) => (
+                <div key={`gender-step-${index}`} className="character-param">
+                  <span>第 {index + 1} 次 · {step.to_gender || '未设定目标'}</span>
+                  <strong>
+                    {[
+                      step.method,
+                      isExistenceGenderTransitionMethod(step.method)
+                        ? '存在级转变'
+                        : null,
+                      step.appearance_only ? '仅外观 / 体表转变' : null,
+                      step.retain_original_genitals
+                        ? ({
+                          yes: '保留原性器官',
+                          no: '不保留原性器官',
+                          partial: '部分改变/混合状态',
+                          unknown: '性器官状态未设定',
+                        }[step.retain_original_genitals] || null)
+                        : null,
+                      step.chest_size ? `胸部大小：${step.chest_size}` : null,
+                      formatThreeSizes(step),
+                      step.hair_length ? `头发长度：${step.hair_length}` : null,
+                      step.hair_notes ? `头发特征：${step.hair_notes}` : null,
+                    ].filter(Boolean).join(' / ') || '未填写方式'}
+                  </strong>
                 </div>
-              )}
-              {Array.isArray(genderProfile?.transitions) && genderProfile.transitions.length > 0 && (
-                <div className="detail-params">
-                  {genderProfile.transitions.map((step, idx) => (
-                    <div key={`gender-step-${idx}`} className="param-item">
-                      <Text type="secondary" className="param-label">
-                        第 {idx + 1} 次 · {step.to_gender || '未设定目标'}
-                      </Text>
-                      <Text className="param-value">
-                        {[
-                          step.method,
-                          isExistenceGenderTransitionMethod(step.method)
-                            ? '存在转变（概念级改写：他人记忆/记录/身份认知同步）'
-                            : null,
-                          step.appearance_only ? '仅外观/体表转变' : null,
-                          step.retain_original_genitals
-                            ? ({
-                              yes: '保留原性器官',
-                              no: '不保留原性器官',
-                              partial: '部分改变/混合状态',
-                              unknown: '性器官状态未设定',
-                            }[step.retain_original_genitals] || null)
-                            : null,
-                          step.chest_size ? `胸部大小：${step.chest_size}` : null,
-                          formatThreeSizes(step),
-                          step.hair_length ? `头发长度：${step.hair_length}` : null,
-                          step.hair_notes ? `头发特征：${step.hair_notes}` : null,
-                        ].filter(Boolean).join(' / ') || '未填写方式'}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
           )}
-
-          {(selectedTemplateDeltas.length > 0 || extraEntries.length > 0) && (
-            <div className="detail-section">
-              <Text strong className="detail-label">扩展属性</Text>
-              {selectedTemplateDeltas.length > 0 && (
-                <Paragraph className="detail-content">
-                  模板增量：{selectedTemplateDeltas.map(getTemplateDeltaLabel).join(' / ')}
-                </Paragraph>
-              )}
-              {extraEntries.length > 0 ? (
-                <div className="detail-params">
-                  {extraEntries.slice(0, 12).map(([key, value]) => (
-                    <div key={key} className="param-item">
-                      <Text type="secondary" className="param-label">
-                        {extraFieldLabelMap.get(key) || key}
-                      </Text>
-                      <Text className="param-value">{formatDynamicValue(value)}</Text>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Text type="secondary">暂无扩展字段值</Text>
-              )}
-            </div>
-          )}
-        </div>
+        </section>
       )}
-    </Card>
+
+      {(selectedTemplateDeltas.length > 0 || extraEntries.length > 0) && (
+        <section className="character-profile-section character-profile-wide">
+          <h4>扩展属性</h4>
+          {selectedTemplateDeltas.length > 0 && (
+            <p>模板增量：{selectedTemplateDeltas.map(getTemplateDeltaLabel).join(' / ')}</p>
+          )}
+          {extraEntries.length > 0 ? (
+            <div className="character-profile-params compact">
+              {extraEntries.slice(0, 12).map(([key, value]) => (
+                <div key={key} className="character-param">
+                  <span>{extraFieldLabelMap.get(key) || key}</span>
+                  <strong>{formatDynamicValue(value)}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>暂无扩展字段值。</p>
+          )}
+        </section>
+      )}
+    </article>
   );
 };
 
