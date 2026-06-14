@@ -216,6 +216,295 @@
   height: 5px;
 }
 
+.editor-selection-menu {
+  position: absolute;
+  z-index: 8;
+  top: calc(64px + 0.8rem);
+  right: clamp(0.7rem, 2vw, 1.3rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  max-width: min(620px, calc(100% - 1.4rem));
+  padding: 0.28rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 88%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--desk-panel) 96%, transparent);
+  box-shadow: 0 14px 34px color-mix(in srgb, black 14%, transparent);
+  backdrop-filter: blur(18px);
+  animation: proposalReveal 160ms ease;
+}
+
+.editor-selection-menu-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 0.52rem;
+  border-right: 1px solid color-mix(in srgb, var(--desk-line) 86%, transparent);
+  color: var(--desk-muted);
+  font-size: 0.72rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.editor-selection-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  min-height: 30px;
+  padding: 0 0.58rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--desk-ink);
+  font-size: 0.75rem;
+  font-weight: 760;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.editor-selection-action:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--desk-teal) 32%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, transparent);
+  color: var(--desk-teal);
+}
+
+.editor-selection-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.selection-action-spinner {
+  animation: spin 900ms linear infinite;
+}
+
+.editor-selection-menu.anchor-0,
+.editor-ai-proposal-card.anchor-0 {
+  top: calc(64px + 0.95rem);
+}
+
+.editor-selection-menu.anchor-1,
+.editor-ai-proposal-card.anchor-1 {
+  top: 24%;
+}
+
+.editor-selection-menu.anchor-2,
+.editor-ai-proposal-card.anchor-2 {
+  top: 38%;
+}
+
+.editor-selection-menu.anchor-3,
+.editor-ai-proposal-card.anchor-3 {
+  top: 52%;
+}
+
+.editor-selection-menu.anchor-4,
+.editor-ai-proposal-card.anchor-4 {
+  top: 66%;
+}
+
+.editor-ai-proposal-card {
+  position: absolute;
+  z-index: 9;
+  top: calc(64px + 0.95rem);
+  right: clamp(0.8rem, 2vw, 1.45rem);
+  width: min(430px, calc(100% - 1.6rem));
+  max-height: calc(100% - 88px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+  padding: 0.78rem;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--desk-teal) 28%, var(--desk-line));
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--desk-panel) 98%, transparent), color-mix(in srgb, var(--desk-paper) 96%, transparent)),
+    var(--desk-panel);
+  box-shadow:
+    0 22px 58px color-mix(in srgb, black 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+  color: var(--desk-ink);
+  animation: proposalReveal 180ms ease;
+}
+
+.editor-ai-proposal-card.is-reference {
+  border-color: color-mix(in srgb, var(--desk-plum) 30%, var(--desk-line));
+}
+
+.editor-ai-proposal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.editor-ai-proposal-title {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.editor-ai-proposal-kicker {
+  color: var(--desk-teal);
+  font-size: 0.68rem;
+  font-weight: 820;
+}
+
+.editor-ai-proposal-title strong {
+  color: var(--desk-ink);
+  font-size: 0.92rem;
+  font-weight: 820;
+  line-height: 1.35;
+}
+
+.editor-ai-proposal-icon-btn {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 92%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--desk-paper) 76%, transparent);
+  color: var(--desk-muted);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.editor-ai-proposal-icon-btn:hover {
+  border-color: color-mix(in srgb, var(--error-color) 32%, var(--desk-line));
+  background: color-mix(in srgb, var(--error-color) 9%, transparent);
+  color: var(--error-color);
+}
+
+.editor-ai-proposal-context,
+.editor-ai-proposal-preview,
+.editor-ai-proposal-compare section {
+  display: grid;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.editor-ai-proposal-context span,
+.editor-ai-proposal-preview span,
+.editor-ai-proposal-compare span {
+  color: var(--desk-muted);
+  font-size: 0.7rem;
+  font-weight: 820;
+}
+
+.editor-ai-proposal-context p,
+.editor-ai-proposal-preview p,
+.editor-ai-proposal-compare p {
+  max-height: 220px;
+  margin: 0;
+  padding: 0.68rem 0.72rem;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 86%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--desk-paper-soft) 44%, transparent);
+  color: var(--desk-ink);
+  font-size: 0.82rem;
+  line-height: 1.72;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.editor-ai-proposal-preview p,
+.editor-ai-proposal-compare section:last-child p {
+  border-color: color-mix(in srgb, var(--desk-teal) 24%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 7%, var(--desk-paper));
+}
+
+.editor-ai-proposal-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.editor-ai-proposal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.editor-ai-proposal-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 0.46rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 80%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--desk-paper) 62%, transparent);
+  color: var(--desk-muted);
+  font-size: 0.68rem;
+  font-weight: 760;
+}
+
+.editor-ai-proposal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+}
+
+.editor-ai-proposal-btn {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  padding: 0 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--desk-line) 86%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--desk-paper) 70%, transparent);
+  color: var(--desk-ink);
+  font-size: 0.76rem;
+  font-weight: 820;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.editor-ai-proposal-btn:hover {
+  border-color: color-mix(in srgb, var(--desk-teal) 34%, var(--desk-line));
+  background: color-mix(in srgb, var(--desk-teal) 10%, var(--desk-paper));
+  color: var(--desk-teal);
+}
+
+.editor-ai-proposal-btn.primary {
+  border-color: var(--desk-accent);
+  background: var(--desk-accent);
+  color: var(--desk-bg);
+}
+
+.editor-ai-proposal-btn.primary:hover {
+  border-color: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+  background: color-mix(in srgb, var(--desk-accent) 82%, var(--desk-teal));
+  color: var(--desk-bg);
+}
+
+.editor-ai-proposal-btn.subtle {
+  color: var(--desk-muted);
+}
+
+.editor-ai-proposal-btn.icon {
+  width: 34px;
+  padding: 0;
+}
+
+@keyframes proposalReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .ai-toolbar-status-strip .agent-status-badge {
   min-height: 24px;
   border-radius: 6px !important;
@@ -803,5 +1092,50 @@
 
   .writing-editor .empty-chapters-notice::before {
     font-size: clamp(3.6rem, 21vw, 6rem);
+  }
+
+  .editor-selection-menu,
+  .editor-ai-proposal-card {
+    top: auto;
+    right: 0.65rem;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    width: auto;
+    max-width: none;
+  }
+
+  .editor-selection-menu[class*="anchor-"],
+  .editor-ai-proposal-card[class*="anchor-"] {
+    top: auto;
+  }
+
+  .editor-selection-menu {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .editor-selection-menu-label {
+    width: 100%;
+    min-height: 24px;
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--desk-line) 86%, transparent);
+  }
+
+  .editor-selection-action {
+    flex: 1 1 0;
+    min-width: 74px;
+  }
+
+  .editor-ai-proposal-card {
+    max-height: min(70%, 460px);
+  }
+
+  .editor-ai-proposal-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-ai-proposal-btn.primary,
+  .editor-ai-proposal-btn.subtle {
+    flex: 1 1 calc(50% - 0.4rem);
   }
 }

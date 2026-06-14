@@ -270,6 +270,12 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                   showCompletionActions={aiWriting.showGenerationActions}
                   onAccept={aiWriting.handleAcceptGeneratedResult}
                   onRewrite={aiWriting.handleRewriteGeneratedResult}
+                  editorProposal={aiWriting.editorProposal}
+                  onApplyProposal={aiWriting.handleApplyEditorProposal}
+                  onDismissProposal={aiWriting.handleDismissEditorProposal}
+                  onCopyProposal={aiWriting.handleCopyEditorProposal}
+                  onSelectionAction={aiWriting.handleSelectionAction}
+                  selectionActionLoading={aiWriting.selectionActionLoading}
                 />
               )}
               <Divider type="vertical" className="ai-layout-divider" />
@@ -288,6 +294,12 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                   showCompletionActions={aiWriting.showGenerationActions}
                   onAccept={aiWriting.handleAcceptGeneratedResult}
                   onRewrite={aiWriting.handleRewriteGeneratedResult}
+                  editorProposal={aiWriting.editorProposal}
+                  onApplyProposal={aiWriting.handleApplyEditorProposal}
+                  onDismissProposal={aiWriting.handleDismissEditorProposal}
+                  onCopyProposal={aiWriting.handleCopyEditorProposal}
+                  onSelectionAction={aiWriting.handleSelectionAction}
+                  selectionActionLoading={aiWriting.selectionActionLoading}
                 />
               ) : (
                 <AIChatPanel

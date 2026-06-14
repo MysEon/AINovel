@@ -18,7 +18,13 @@ const EditorPanel = ({
   selectedModelName,
   showCompletionActions = false,
   onAccept,
-  onRewrite
+  onRewrite,
+  editorProposal,
+  onApplyProposal,
+  onDismissProposal,
+  onCopyProposal,
+  onSelectionAction,
+  selectionActionLoading
 }) => {
   if (isAiAssisted) {
     return (
@@ -36,6 +42,12 @@ const EditorPanel = ({
           showCompletionActions={showCompletionActions}
           onAccept={onAccept}
           onRewrite={onRewrite}
+          editorProposal={editorProposal}
+          onApplyProposal={onApplyProposal}
+          onDismissProposal={onDismissProposal}
+          onCopyProposal={onCopyProposal}
+          onSelectionAction={onSelectionAction}
+          selectionActionLoading={selectionActionLoading}
         />
       </Content>
     );
