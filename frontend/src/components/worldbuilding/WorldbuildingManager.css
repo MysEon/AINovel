@@ -1,0 +1,487 @@
+.worldbuilding-manager {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px;
+  color: #0d0d0d;
+}
+
+.worldbuilding-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.worldbuilding-title-block {
+  max-width: 720px;
+}
+
+.worldbuilding-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: #737373;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.worldbuilding-title-block h2 {
+  margin: 0;
+  color: #0d0d0d;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.worldbuilding-title-block p {
+  margin: 10px 0 0;
+  color: #525252;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.worldbuilding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.worldbuilding-manager .ant-btn {
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.worldbuilding-manager .ant-btn-primary {
+  background: #0d0d0d;
+  border-color: #0d0d0d;
+  box-shadow: none;
+}
+
+.worldbuilding-manager .ant-btn-primary:hover {
+  background: #2b2b2b !important;
+  border-color: #2b2b2b !important;
+}
+
+.worldbuilding-metrics {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.worldbuilding-metric {
+  min-width: 0;
+  min-height: 104px;
+  padding: 18px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.worldbuilding-metric-primary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.worldbuilding-metric-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #0d0d0d;
+  color: #ffffff;
+  flex: 0 0 auto;
+}
+
+.worldbuilding-metric span {
+  display: block;
+  color: #737373;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.worldbuilding-metric strong {
+  display: block;
+  margin-top: 6px;
+  color: #0d0d0d;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.worldbuilding-metric small {
+  display: block;
+  margin-top: 8px;
+  color: #737373;
+  font-size: 0.78rem;
+}
+
+.worldbuilding-progress {
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eeeeee;
+}
+
+.worldbuilding-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #0d0d0d;
+}
+
+.worldbuilding-progress-fill-0 { width: 0%; }
+.worldbuilding-progress-fill-1 { width: 10%; }
+.worldbuilding-progress-fill-2 { width: 20%; }
+.worldbuilding-progress-fill-3 { width: 30%; }
+.worldbuilding-progress-fill-4 { width: 40%; }
+.worldbuilding-progress-fill-5 { width: 50%; }
+.worldbuilding-progress-fill-6 { width: 60%; }
+.worldbuilding-progress-fill-7 { width: 70%; }
+.worldbuilding-progress-fill-8 { width: 80%; }
+.worldbuilding-progress-fill-9 { width: 90%; }
+.worldbuilding-progress-fill-10 { width: 100%; }
+
+.worldbuilding-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(420px, 1.5fr) minmax(260px, 0.85fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.worldbuilding-list-panel,
+.worldbuilding-detail-panel,
+.worldbuilding-side-panel {
+  min-width: 0;
+}
+
+.worldbuilding-list-panel,
+.worldbuilding-detail-panel,
+.worldbuilding-hint-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.worldbuilding-list-panel {
+  padding: 12px;
+}
+
+.worldbuilding-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 8px;
+  color: #737373;
+}
+
+.worldbuilding-search .ant-input-affix-wrapper,
+.worldbuilding-search .ant-input {
+  border-radius: 8px;
+}
+
+.worldbuilding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.worldbuilding-loading {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+}
+
+.worldbuilding-row {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.24s ease;
+}
+
+.worldbuilding-row:hover,
+.worldbuilding-row.is-active {
+  border-color: #d4d4d4;
+  background: #f7f7f8;
+}
+
+.worldbuilding-row.is-active {
+  box-shadow: inset 3px 0 0 #0d0d0d;
+}
+
+.worldbuilding-row-title {
+  display: block;
+  color: #0d0d0d;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.worldbuilding-row-summary {
+  display: block;
+  margin-top: 5px;
+  color: #525252;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.worldbuilding-row-meta {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 999px;
+  color: #525252;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.worldbuilding-detail-panel {
+  min-height: 500px;
+  padding: 20px;
+}
+
+.worldbuilding-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.worldbuilding-detail-head span {
+  color: #737373;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.worldbuilding-detail-head h3 {
+  margin: 4px 0 0;
+  color: #0d0d0d;
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.worldbuilding-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.worldbuilding-field-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.worldbuilding-field-tags .ant-tag {
+  margin: 0;
+  border-radius: 999px;
+  color: #737373;
+  font-weight: 700;
+}
+
+.worldbuilding-field-tags .ant-tag.is-filled {
+  border-color: #0d0d0d;
+  color: #0d0d0d;
+  background: #f7f7f8;
+}
+
+.worldbuilding-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.worldbuilding-section-card {
+  min-width: 0;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid #eeeeee;
+  border-radius: 8px;
+  background: #fbfbfb;
+}
+
+.worldbuilding-section-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #737373;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.worldbuilding-section-card p {
+  margin: 0;
+  color: #171717;
+  font-size: 0.91rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.worldbuilding-empty-detail {
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 40px;
+  color: #737373;
+  text-align: center;
+}
+
+.worldbuilding-empty-detail svg {
+  margin-bottom: 14px;
+  color: #0d0d0d;
+  font-size: 2.2rem;
+}
+
+.worldbuilding-empty-detail h3 {
+  margin: 0;
+  color: #0d0d0d;
+  font-size: 1.2rem;
+}
+
+.worldbuilding-empty-detail p {
+  max-width: 360px;
+  margin: 10px auto 18px;
+  line-height: 1.7;
+}
+
+.worldbuilding-side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.worldbuilding-hint-card {
+  padding: 16px;
+}
+
+.worldbuilding-side-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #0d0d0d;
+  font-weight: 800;
+}
+
+.worldbuilding-hint-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: #525252;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.worldbuilding-muted {
+  margin: 0;
+  color: #737373;
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.worldbuilding-ai-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.worldbuilding-ai-result p {
+  margin: 0;
+  color: #262626;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.worldbuilding-focus-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.worldbuilding-focus-list dt {
+  color: #737373;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.worldbuilding-focus-list dd {
+  margin: 0;
+  color: #0d0d0d;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.worldbuilding-modal .ant-modal-content {
+  border-radius: 8px;
+}
+
+.worldbuilding-modal .ant-modal-title {
+  font-weight: 800;
+}
+
+.worldbuilding-modal .ant-input,
+.worldbuilding-modal .ant-input-outlined {
+  border-radius: 8px;
+}
+
+@media (max-width: 1200px) {
+  .worldbuilding-metrics,
+  .worldbuilding-workspace {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .worldbuilding-detail-panel {
+    grid-column: span 2;
+    order: 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .worldbuilding-manager {
+    padding: 18px;
+  }
+
+  .worldbuilding-header,
+  .worldbuilding-detail-head {
+    flex-direction: column;
+  }
+
+  .worldbuilding-actions,
+  .worldbuilding-detail-actions,
+  .worldbuilding-actions .ant-btn {
+    width: 100%;
+  }
+
+  .worldbuilding-metrics,
+  .worldbuilding-workspace,
+  .worldbuilding-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .worldbuilding-detail-panel {
+    grid-column: auto;
+  }
+}

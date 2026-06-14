@@ -16,6 +16,7 @@ const ProjectDashboard = React.lazy(() => import('../components/ProjectDashboard
 const WritingEditor = React.lazy(() => import('../components/writing/WritingEditor'));
 const CharacterManager = React.lazy(() => import('../components/CharacterManager'));
 const KnowledgeBase = React.lazy(() => import('../components/KnowledgeBase'));
+const WorldbuildingManager = React.lazy(() => import('../components/worldbuilding/WorldbuildingManager'));
 const AIWorkflowManager = React.lazy(() => import('../components/AIWorkflowManager'));
 const ProjectOverview = React.lazy(() => import('../components/ProjectOverview'));
 const KanbanBoard = React.lazy(() => import('../components/KanbanBoard'));
@@ -113,6 +114,11 @@ const KnowledgeBaseWrapper = () => {
   return <KnowledgeBase projectId={parseInt(id, 10)} />;
 };
 
+const WorldbuildingSectionWrapper = ({ type }) => {
+  const { id } = useParams();
+  return <WorldbuildingManager projectId={parseInt(id, 10)} type={type} />;
+};
+
 const AIWorkflowManagerWrapper = () => {
   const { id } = useParams();
   return <AIWorkflowManager projectId={parseInt(id, 10)} />;
@@ -191,6 +197,30 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<Loading text="加载知识库..." />}>
             <KnowledgeBaseWrapper />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'worldviews',
+        element: (
+          <Suspense fallback={<Loading text="加载世界观管理..." />}>
+            <WorldbuildingSectionWrapper type="worldviews" />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'locations',
+        element: (
+          <Suspense fallback={<Loading text="加载地点管理..." />}>
+            <WorldbuildingSectionWrapper type="locations" />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'organizations',
+        element: (
+          <Suspense fallback={<Loading text="加载组织管理..." />}>
+            <WorldbuildingSectionWrapper type="organizations" />
           </Suspense>
         ),
       },
