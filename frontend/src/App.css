@@ -921,15 +921,15 @@ button:active {
 
 .app-container .menu-section li.active a,
 .app-container .start-writing.active a {
-  border-color: light-dark(rgba(17, 24, 39, 0.1), rgba(255, 255, 255, 0.1)) !important;
-  background: light-dark(rgba(16, 163, 127, 0.11), rgba(16, 163, 127, 0.16)) !important;
+  border-color: transparent !important;
+  background: light-dark(#ececec, rgba(255, 255, 255, 0.1)) !important;
   color: var(--text-color) !important;
   box-shadow: none !important;
 }
 
 .app-container .menu-section li.active a svg,
 .app-container .start-writing.active a svg {
-  color: var(--success-color) !important;
+  color: var(--text-color) !important;
 }
 
 .app-container .menu-section li.active a::before {

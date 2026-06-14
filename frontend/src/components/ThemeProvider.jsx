@@ -23,7 +23,7 @@ const getStoredMode = () => {
   } catch {
     // ignore
   }
-  return 'dark'; // 默认暗色（沉浸写作风主推）
+  return 'light';
 };
 
 const getSystemTheme = () => {

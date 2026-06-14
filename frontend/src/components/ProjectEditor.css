@@ -452,6 +452,253 @@
   }
 }
 
+/* ChatGPT-style unified workspace override */
+.app-container {
+  --workspace-canvas: light-dark(#ffffff, #0b0c0f);
+  --workspace-shell: light-dark(#f9f9f9, #111318);
+  --workspace-panel: light-dark(#ffffff, #17191f);
+  --workspace-panel-soft: light-dark(#f7f7f8, #20232b);
+  --workspace-border: light-dark(#e5e5e5, rgba(255, 255, 255, 0.1));
+  --workspace-border-strong: light-dark(#d0d0d0, rgba(255, 255, 255, 0.18));
+  --workspace-text: light-dark(#0d0d0d, #f4f4f5);
+  --workspace-muted: light-dark(#6b7280, #a1a1aa);
+  --workspace-accent: #10a37f;
+  --workspace-accent-soft: light-dark(rgba(16, 163, 127, 0.1), rgba(16, 163, 127, 0.16));
+  gap: 0;
+  padding: 0;
+  background: var(--workspace-canvas);
+}
+
+.app-container .sidebar {
+  width: 260px;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  border-color: var(--workspace-border);
+  background: var(--workspace-shell);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-container .sidebar-header {
+  min-height: 124px;
+  padding: 14px 12px 12px;
+  border-bottom: 1px solid var(--workspace-border);
+}
+
+.app-container .app-title-section {
+  margin: 0;
+}
+
+.app-container .app-title-section h1 {
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+.app-container .app-subtitle {
+  font-size: 0.72rem;
+  color: var(--workspace-muted);
+}
+
+.app-container .sidebar-project-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.app-container .sidebar-project-card span,
+.app-container .sidebar-project-card strong {
+  text-align: left;
+}
+
+.app-container .sidebar-project-card strong {
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.app-container .collapse-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.app-container .sidebar-menu {
+  padding: 8px;
+}
+
+.app-container .menu-section {
+  margin-bottom: 10px;
+}
+
+.app-container .menu-section h3,
+.app-container .menu-section h2 {
+  padding: 7px 8px 4px;
+  color: var(--workspace-muted);
+  font-size: 0.68rem;
+  font-weight: 680;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.app-container .menu-section li a {
+  min-height: 34px;
+  margin: 1px 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--workspace-muted);
+  font-size: 0.84rem;
+  font-weight: 560;
+}
+
+.app-container .menu-section li a svg {
+  width: 14px;
+  min-width: 14px;
+  font-size: 0.94rem;
+}
+
+.app-container .menu-section li a:hover,
+.app-container .menu-section li.active a {
+  border-color: transparent;
+  background: var(--hover-bg);
+  color: var(--workspace-text);
+}
+
+.app-container .menu-section li.active a svg {
+  color: var(--workspace-text) !important;
+}
+
+.app-container .sidebar-utility-panel {
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--workspace-border);
+  background: var(--workspace-shell);
+}
+
+.app-container .sidebar-utility-button {
+  min-height: 36px;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--workspace-muted);
+  font-size: 0.82rem;
+  font-weight: 560;
+}
+
+.app-container .sidebar-utility-button:hover {
+  border-color: transparent;
+  background: var(--hover-bg);
+  color: var(--workspace-text);
+}
+
+.app-container .content {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--workspace-canvas);
+  box-shadow: none;
+}
+
+.app-container .content > .prompt-manager-container,
+.app-container .content > .model-config-manager,
+.app-container .content > .knowledge-base,
+.app-container .content > .character-manager,
+.app-container .content > .ai-workflow-manager,
+.app-container .content > .published-chapters,
+.app-container .content > .project-overview,
+.app-container .content > .kanban-board,
+.app-container .content > .progress-tracking {
+  min-height: 100%;
+  padding: 24px;
+  border: 0;
+  border-radius: 0;
+  background: var(--workspace-canvas);
+  box-shadow: none;
+}
+
+.app-container .content :where(h1, h2, h3).ant-typography,
+.app-container .content :where(.manager-header h2, .manager-header h3, .character-manager-header h2, .prompt-manager-title.ant-typography) {
+  color: var(--workspace-text) !important;
+  font-size: 26px !important;
+  line-height: 1.22 !important;
+  font-weight: 720 !important;
+  letter-spacing: 0 !important;
+}
+
+.app-container .content .ant-card,
+.app-container .content .prompt-manager-card,
+.app-container .content .config-card,
+.app-container .content .character-card,
+.app-container .content .knowledge-section,
+.app-container .content .manager-card,
+.app-container .content .dashboard-card,
+.app-container .content .stat-card,
+.app-container .content .kanban-column,
+.app-container .content .published-card {
+  border-radius: 8px !important;
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-panel) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-card:hover,
+.app-container .content .config-card:hover,
+.app-container .content .character-card:hover {
+  transform: none !important;
+  border-color: var(--workspace-border-strong) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-btn,
+.app-container .content button {
+  border-radius: 8px;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-btn-primary,
+.app-container .content .btn-primary,
+.app-container .content .new-config-btn,
+.app-container .content .create-config-btn,
+.app-container .content .add-knowledge-btn,
+.app-container .content .prompt-manager-toolbar .ant-btn-primary {
+  border-color: var(--workspace-text) !important;
+  background: var(--workspace-text) !important;
+  color: var(--workspace-canvas) !important;
+}
+
+.app-container .content .ant-input,
+.app-container .content .ant-input-affix-wrapper,
+.app-container .content .ant-select-selector,
+.app-container .content .ant-input-number,
+.app-container .content textarea {
+  border-radius: 8px !important;
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-panel) !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-table-thead > tr > th,
+.app-container .content .ant-card-head,
+.app-container .content .prompt-table-head {
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-panel-soft) !important;
+}
+
+.app-container .content .prompt-manager-kicker,
+.app-container .content .model-config-kicker,
+.app-container .content .model-config-scenario-tag {
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-panel-soft) !important;
+  color: var(--workspace-muted) !important;
+}
+
+.app-container.sidebar-collapsed .sidebar {
+  width: 58px;
+}
+
 /* Codex-style product shell refresh */
 .app-container {
   gap: 10px;
@@ -988,4 +1235,226 @@
     border-left: 0;
     border-right: 0;
   }
+}
+
+/* ChatGPT web app alignment: final neutral workspace skin */
+.app-container {
+  --workspace-canvas: #ffffff;
+  --workspace-shell: #f9f9f9;
+  --workspace-panel: #ffffff;
+  --workspace-panel-soft: #ececec;
+  --workspace-border: #e5e5e5;
+  --workspace-border-strong: #d0d0d0;
+  --workspace-text: #0d0d0d;
+  --workspace-muted: #6b7280;
+  --workspace-accent: #0d0d0d;
+  --workspace-accent-soft: #ececec;
+  --workspace-shadow: none;
+  gap: 0;
+  padding: 0;
+  background: #ffffff;
+}
+
+.app-container .sidebar {
+  width: 272px;
+  border-radius: 0;
+  border: 0;
+  border-right: 1px solid var(--workspace-border);
+  background: var(--workspace-shell);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-container .sidebar-header {
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid var(--workspace-border);
+}
+
+.app-container .sidebar-project-card {
+  border-color: var(--workspace-border);
+  background: #ffffff;
+}
+
+.app-container .collapse-btn,
+.app-container .sidebar-utility-button {
+  border-color: var(--workspace-border);
+  background: #ffffff;
+  color: var(--workspace-muted);
+}
+
+.app-container .collapse-btn:hover,
+.app-container .sidebar-utility-button:hover,
+.app-container .menu-section li a:hover {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel-soft);
+  color: var(--workspace-text);
+}
+
+.app-container .menu-section li.active a {
+  border-color: transparent;
+  background: var(--workspace-panel-soft);
+  color: var(--workspace-text);
+  box-shadow: none;
+}
+
+.app-container .menu-section li.active a svg {
+  color: var(--workspace-text);
+}
+
+.app-container .content {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--workspace-canvas);
+  box-shadow: none;
+}
+
+.app-container .content > .prompt-manager-container,
+.app-container .content > .model-config-manager,
+.app-container .content > .ant-layout,
+.app-container .content > .knowledge-base,
+.app-container .content > .character-manager,
+.app-container .content > .ai-workflow-manager,
+.app-container .content > .published-chapters,
+.app-container .content > .project-overview,
+.app-container .content > .kanban-board,
+.app-container .content > .progress-tracking {
+  min-height: 100%;
+  padding: 28px 32px;
+  border: 0;
+  border-radius: 0;
+  background: var(--workspace-canvas) !important;
+  box-shadow: none;
+}
+
+.app-container .content h1,
+.app-container .content h2 {
+  color: var(--workspace-text);
+  letter-spacing: 0;
+}
+
+.app-container .content .ant-card,
+.app-container .content .ant-table-wrapper,
+.app-container .content .ant-list,
+.app-container .content .ant-collapse,
+.app-container .content .ant-tabs-content-holder,
+.app-container .content .knowledge-section,
+.app-container .content .manager-card,
+.app-container .content .dashboard-card,
+.app-container .content .stat-card,
+.app-container .content .kanban-column,
+.app-container .content .published-card {
+  border-color: var(--workspace-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .ant-card-head,
+.app-container .content .ant-table-thead > tr > th,
+.app-container .content .ant-collapse-header {
+  background: #f9f9f9 !important;
+}
+
+.app-container .content .model-fetch-button,
+.app-container .content .model-test-button,
+.app-container .content .prompt-manager-kicker,
+.app-container .content .model-config-kicker,
+.app-container .content .knowledge-module.active,
+.app-container .content .prompt-stat-pill,
+.app-container .content .stats-badge {
+  border-color: var(--workspace-border) !important;
+  background: var(--workspace-panel-soft) !important;
+  color: var(--workspace-text) !important;
+}
+
+.app-container .content .ant-empty {
+  background: #fafafa;
+}
+
+.app-container .content > .ant-layout {
+  border: 0;
+  background: #ffffff !important;
+  box-shadow: none;
+}
+
+@media (max-width: 1024px) {
+  .app-container .sidebar,
+  .app-container .content {
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container .content > .prompt-manager-container,
+  .app-container .content > .model-config-manager,
+  .app-container .content > .knowledge-base,
+  .app-container .content > .character-manager,
+  .app-container .content > .ai-workflow-manager,
+  .app-container .content > .published-chapters,
+  .app-container .content > .project-overview,
+  .app-container .content > .kanban-board,
+  .app-container .content > .progress-tracking {
+    padding: 20px 16px;
+  }
+}
+
+.app-container .content .module-card {
+  border-color: var(--workspace-border) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.app-container .content .module-card.active,
+.app-container .content .module-card:hover {
+  border-color: var(--workspace-border-strong) !important;
+  background: var(--workspace-panel-soft) !important;
+  transform: none !important;
+}
+
+.app-container .content .module-card::before,
+.app-container .content .active-indicator,
+.app-container .content .knowledge-content::before {
+  background: var(--workspace-text) !important;
+}
+
+.app-container .content .module-icon,
+.app-container .content .avatar-icon,
+.app-container .content .empty-icon,
+.app-container .content .worldview-icon,
+.app-container .content .scene-icon,
+.app-container .content .technique-icon {
+  color: var(--workspace-muted) !important;
+}
+
+.app-container .content .module-card.active .module-icon,
+.app-container .content .module-card:hover .module-icon {
+  color: var(--workspace-text) !important;
+}
+
+.app-container .content .ant-tag:not(.ant-tag-red),
+.app-container .content .character-card-tags .ant-tag,
+.app-container .content .gender-tag,
+.app-container .content .character-tags .tag,
+.app-container .content .feature-tag,
+.app-container .content .location-tag,
+.app-container .content .model-config-scenario-tag,
+.app-container .content .prompt-manager-table .ant-tag {
+  border-color: var(--workspace-border) !important;
+  background: #f7f7f8 !important;
+  color: var(--workspace-text) !important;
+}
+
+.app-container .content .ant-tag-blue,
+.app-container .content .ant-tag-green,
+.app-container .content .ant-tag-purple,
+.app-container .content .ant-tag-cyan,
+.app-container .content .ant-tag-geekblue,
+.app-container .content .ant-tag-lime,
+.app-container .content .ant-tag-orange,
+.app-container .content .ant-tag-gold,
+.app-container .content .ant-tag-magenta,
+.app-container .content .ant-tag-volcano {
+  border-color: var(--workspace-border) !important;
+  background: #f7f7f8 !important;
+  color: var(--workspace-text) !important;
 }

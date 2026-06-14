@@ -1,419 +1,551 @@
-import React, { useState, useEffect } from 'react';
-import { FaBrain, FaChartLine, FaMagic, FaLightbulb, FaUsers, FaSpinner } from 'react-icons/fa';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  FaBookOpen,
+  FaBrain,
+  FaBuilding,
+  FaCheck,
+  FaExclamationTriangle,
+  FaGlobe,
+  FaLayerGroup,
+  FaLightbulb,
+  FaMapMarkedAlt,
+  FaPenNib,
+  FaRobot,
+  FaSyncAlt,
+  FaUsers,
+} from 'react-icons/fa';
 import { aiService } from '../services/aiService';
-import { getKnowledgeModule } from '../services/knowledgeService';
+import { getProjectContext } from '../services/knowledgeService';
 import { useNotification } from './NotificationManager';
 import './KnowledgeBase.css';
 
+const EMPTY_CONTEXT = {
+  projectName: '未命名项目',
+  projectDescription: '',
+  characters: [],
+  worldviews: [],
+  locations: [],
+  organizations: [],
+  chapters: [],
+};
+
+const KNOWLEDGE_SECTIONS = [
+  {
+    id: 'characters',
+    label: '角色',
+    noun: '角色',
+    Icon: FaUsers,
+    description: '人物档案、性格、背景与外貌线索',
+    empty: '还没有角色档案',
+  },
+  {
+    id: 'worldviews',
+    label: '世界观',
+    noun: '设定',
+    Icon: FaGlobe,
+    description: '世界规则、魔法体系与核心设定',
+    empty: '还没有世界观设定',
+  },
+  {
+    id: 'locations',
+    label: '地点',
+    noun: '地点',
+    Icon: FaMapMarkedAlt,
+    description: '地点、地理结构与场景空间',
+    empty: '还没有地点资料',
+  },
+  {
+    id: 'organizations',
+    label: '组织',
+    noun: '组织',
+    Icon: FaBuilding,
+    description: '势力、机构、目的与影响力',
+    empty: '还没有组织资料',
+  },
+  {
+    id: 'chapters',
+    label: '章节上下文',
+    noun: '章节',
+    Icon: FaBookOpen,
+    description: '已写章节、摘要与 AI 可引用前文',
+    empty: '还没有章节上下文',
+  },
+];
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const truncate = (value, length = 120) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  return text.length > length ? `${text.slice(0, length)}...` : text;
+};
+
+const compactJoin = (...parts) => parts.filter(Boolean).join(' / ');
+
+const normalizeContext = (payload) => {
+  const raw = payload?.context || payload || {};
+
+  return {
+    projectName: raw.project_name || EMPTY_CONTEXT.projectName,
+    projectDescription: raw.project_description || '',
+    characters: toArray(raw.characters),
+    worldviews: toArray(raw.worldviews),
+    locations: toArray(raw.locations),
+    organizations: toArray(raw.organizations),
+    chapters: toArray(raw.previous_chapters || raw.chapters),
+  };
+};
+
+const getSectionItems = (context, sectionId) => {
+  if (sectionId === 'chapters') return context.chapters;
+  return context[sectionId] || [];
+};
+
+const getItemTitle = (sectionId, item, index) => {
+  if (sectionId === 'chapters') {
+    return item.title || `第 ${item.number || index + 1} 章`;
+  }
+  return item.name || `未命名${index + 1}`;
+};
+
+const getItemSummary = (sectionId, item) => {
+  if (sectionId === 'characters') {
+    return truncate(item.description || item.personality || item.background || item.appearance || '暂无角色摘要', 150);
+  }
+  if (sectionId === 'worldviews') {
+    return truncate(item.description || item.rules || item.magic_system || '暂无世界观摘要', 150);
+  }
+  if (sectionId === 'locations') {
+    return truncate(item.description || item.geography || '暂无地点摘要', 150);
+  }
+  if (sectionId === 'organizations') {
+    return truncate(item.description || item.purpose || '暂无组织摘要', 150);
+  }
+  return truncate(item.summary || '暂无章节摘要', 170);
+};
+
+const getItemMeta = (sectionId, item) => {
+  if (sectionId === 'characters') {
+    return [
+      item.personality ? '性格已录入' : null,
+      item.background ? '背景已录入' : null,
+      item.appearance ? '外貌已录入' : null,
+    ].filter(Boolean);
+  }
+  if (sectionId === 'worldviews') {
+    return [
+      item.rules ? '规则' : null,
+      item.magic_system ? '体系' : null,
+    ].filter(Boolean);
+  }
+  if (sectionId === 'locations') {
+    return [item.geography ? '地理' : null].filter(Boolean);
+  }
+  if (sectionId === 'organizations') {
+    return [item.purpose ? '目的' : null].filter(Boolean);
+  }
+  return [
+    item.number ? `第 ${item.number} 章` : null,
+    Number.isFinite(item.word_count) ? `${item.word_count} 字` : null,
+  ].filter(Boolean);
+};
+
+const normalizeAiText = (result) => {
+  if (!result) return '';
+  if (typeof result === 'string') return result;
+  return result.ideas || result.content || result.message || JSON.stringify(result, null, 2);
+};
+
+const buildInsightPrompt = (context, kind) => {
+  const compactContext = {
+    project_name: context.projectName,
+    project_description: context.projectDescription,
+    counts: {
+      characters: context.characters.length,
+      worldviews: context.worldviews.length,
+      locations: context.locations.length,
+      organizations: context.organizations.length,
+      chapters: context.chapters.length,
+    },
+    samples: {
+      characters: context.characters.slice(0, 6).map((item) => ({
+        name: item.name,
+        description: item.description,
+        personality: item.personality,
+      })),
+      worldviews: context.worldviews.slice(0, 4),
+      locations: context.locations.slice(0, 5),
+      organizations: context.organizations.slice(0, 5),
+      chapters: context.chapters.slice(-5),
+    },
+  };
+
+  if (kind === 'diagnosis') {
+    return [
+      '你是一个 AI 小说项目知识库架构顾问。请基于下面的项目上下文做一次“AI 可用性诊断”。',
+      '请直接给出：1）当前知识库强项；2）最影响后续写作/AI 对话的缺口；3）下一步最值得补的 3 个资料项；4）如果马上继续写作，AI 应优先记住的上下文。',
+      '输出使用中文，结构清晰，避免空泛建议。',
+      '',
+      JSON.stringify(compactContext, null, 2),
+    ].join('\n');
+  }
+
+  return [
+    '你是一个专业小说策划与 AI 写作搭档。请基于下面的项目知识库，生成可直接用于推进小说的创作洞察。',
+    '请给出：1）可延展的冲突线；2）角色/世界观/地点之间可建立的连接；3）下一章或下一场戏的 3 个方向；4）一个大胆但合理的设定增强建议。',
+    '输出使用中文，允许提出有创意的方案，不要过度保守。',
+    '',
+    JSON.stringify(compactContext, null, 2),
+  ].join('\n');
+};
+
 const KnowledgeBase = ({ projectId }) => {
-  const [activeModule, setActiveModule] = useState('characters');
-  const [knowledgeData, setKnowledgeData] = useState({});
+  const [contextData, setContextData] = useState(EMPTY_CONTEXT);
+  const [selectedSectionId, setSelectedSectionId] = useState('characters');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiMode, setAiMode] = useState('');
   const { addNotification } = useNotification();
 
-  // 四个知识库模块
-  const modules = [
-    {
-      id: 'characters',
-      name: '角色知识库',
-      icon: '👥',
-      description: '管理角色信息、关系图谱、对话风格',
-      color: 'var(--primary-color)'
-    },
-    {
-      id: 'worldviews',
-      name: '世界观知识库',
-      icon: '🌍',
-      description: '构建世界观、魔法体系、时间线',
-      color: 'var(--success-color)'
-    },
-    {
-      id: 'scenes',
-      name: '场景知识库',
-      icon: '🏞️',
-      description: '场景管理、氛围标签、模板库',
-      color: 'var(--primary-hover)'
-    },
-    {
-      id: 'techniques',
-      name: '创作技巧库',
-      icon: '✍️',
-      description: '写作技巧、灵感收集、案例分析',
-      color: 'var(--warning-color)'
-    }
-  ];
+  const loadContext = useCallback(async () => {
+    if (!projectId) return;
 
-  useEffect(() => {
-    if (projectId) {
-      loadKnowledgeData();
-    }
-  }, [projectId, activeModule]);
-
-  const loadKnowledgeData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const data = await getKnowledgeModule(activeModule, projectId);
-      setKnowledgeData(prev => ({ ...prev, [activeModule]: data }));
+      const payload = await getProjectContext(projectId, 'full');
+      setContextData(normalizeContext(payload));
     } catch (error) {
-      console.error('加载知识库数据失败:', error);
-      addNotification({
-        message: '加载知识库数据失败: ' + error.message,
-        type: 'error'
-      });
+      setLoadError(error.message || '知识库上下文加载失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
-  const performAIAnalysis = async () => {
-    if (!projectId) return;
+  useEffect(() => {
+    loadContext();
+  }, [loadContext]);
 
+  const metrics = useMemo(() => {
+    const checks = [
+      {
+        id: 'description',
+        label: '项目简介',
+        ready: Boolean(contextData.projectDescription),
+        detail: contextData.projectDescription ? '可用于提示词背景' : '缺少项目背景，会削弱 AI 对作品基调的判断',
+      },
+      ...KNOWLEDGE_SECTIONS.map((section) => {
+        const count = getSectionItems(contextData, section.id).length;
+        return {
+          id: section.id,
+          label: section.label,
+          ready: count > 0,
+          detail: count > 0 ? `${count} 个${section.noun}` : section.empty,
+        };
+      }),
+    ];
+    const readyCount = checks.filter((check) => check.ready).length;
+    const score = Math.round((readyCount / checks.length) * 100);
+    const totalAssets = KNOWLEDGE_SECTIONS.reduce(
+      (sum, section) => sum + getSectionItems(contextData, section.id).length,
+      0,
+    );
+
+    return { checks, readyCount, score, totalAssets };
+  }, [contextData]);
+
+  const selectedSection = KNOWLEDGE_SECTIONS.find((section) => section.id === selectedSectionId) || KNOWLEDGE_SECTIONS[0];
+  const selectedItems = getSectionItems(contextData, selectedSection.id);
+  const latestChapter = contextData.chapters[contextData.chapters.length - 1];
+  const gapChecks = metrics.checks.filter((check) => !check.ready);
+
+  const handleAiInsight = async (kind) => {
+    if (!projectId || aiAnalyzing) return;
+
+    setAiMode(kind);
     setAiAnalyzing(true);
     try {
-      let analysisResult;
-      switch (activeModule) {
-        case 'characters':
-          analysisResult = await aiService.analyzeCharacterRelationships(projectId);
-          break;
-        case 'worldviews':
-          analysisResult = await aiService.checkWorldviewConsistency(projectId, '');
-          break;
-        case 'scenes':
-          analysisResult = await aiService.generateCreativeIdeas(projectId, '分析场景知识库并提供改进建议');
-          break;
-        case 'techniques':
-          analysisResult = await aiService.getWritingSuggestions(projectId, '', { type: 'techniques' });
-          break;
-        default:
-          analysisResult = await aiService.analyzeKnowledgeBase(projectId, activeModule);
-      }
-      
-      setAiAnalysis(analysisResult);
+      const result = await aiService.generateCreativeIdeas(
+        projectId,
+        buildInsightPrompt(contextData, kind),
+        kind === 'diagnosis' ? 'knowledge-diagnosis' : 'knowledge-story-insight',
+      );
+      setAiAnalysis({
+        kind,
+        title: kind === 'diagnosis' ? 'AI 知识库诊断' : 'AI 创作洞察',
+        text: normalizeAiText(result),
+      });
       addNotification({
-        message: 'AI分析完成',
-        type: 'success'
+        message: kind === 'diagnosis' ? 'AI 诊断已生成' : 'AI 创作洞察已生成',
+        type: 'success',
       });
     } catch (error) {
       addNotification({
-        message: 'AI分析失败: ' + error.message,
-        type: 'error'
+        message: `AI 生成失败: ${error.message}`,
+        type: 'error',
       });
     } finally {
       setAiAnalyzing(false);
+      setAiMode('');
     }
   };
 
-  const generateAIInsights = async () => {
-    if (!projectId) return;
-
-    setAiAnalyzing(true);
-    try {
-      const insights = await aiService.generateCreativeIdeas(projectId, `基于${activeModule}知识库提供创作建议`);
-      setAiAnalysis(insights);
-      addNotification({
-        message: 'AI洞察生成完成',
-        type: 'success'
-      });
-    } catch (error) {
-      addNotification({
-        message: 'AI洞察生成失败: ' + error.message,
-        type: 'error'
-      });
-    } finally {
-      setAiAnalyzing(false);
-    }
-  };
-
-  const renderModuleContent = () => {
-    switch (activeModule) {
-      case 'characters':
-        return <CharacterKnowledgeBase data={knowledgeData.characters || []} />;
-      case 'worldviews':
-        return <WorldviewKnowledgeBase data={knowledgeData.worldviews || []} />;
-      case 'scenes':
-        return <SceneKnowledgeBase data={knowledgeData.scenes || []} />;
-      case 'techniques':
-        return <WritingTechniqueKnowledgeBase data={knowledgeData.techniques || []} />;
-      default:
-        return <div>请选择一个知识库模块</div>;
-    }
-  };
+  const ReadinessIcon = metrics.score >= 70 ? FaCheck : FaExclamationTriangle;
 
   return (
-    <div className="knowledge-base">
-      <div className="knowledge-header">
-        <h2>知识库</h2>
-        <p>系统化管理您的创作素材和技巧</p>
-        <div className="ai-actions">
-          <button 
-            className="ai-action-btn analysis"
-            onClick={performAIAnalysis}
-            disabled={aiAnalyzing || !projectId}
-          >
-            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaBrain />}
-            {aiAnalyzing ? '分析中...' : 'AI分析'}
+    <div className="knowledge-base knowledge-console">
+      <header className="knowledge-console-header">
+        <div className="knowledge-title-block">
+          <span className="knowledge-kicker">Knowledge Console</span>
+          <h2>知识库总览</h2>
+          <p>查看 AI 当前能调用的小说上下文，快速发现角色、设定、地点、组织和章节之间的缺口。</p>
+        </div>
+        <div className="knowledge-header-actions" aria-label="知识库操作">
+          <button type="button" className="knowledge-action-btn ghost" onClick={loadContext} disabled={loading}>
+            <FaSyncAlt className={loading ? 'spin' : ''} />
+            刷新上下文
           </button>
-          <button 
-            className="ai-action-btn insights"
-            onClick={generateAIInsights}
-            disabled={aiAnalyzing || !projectId}
+          <button
+            type="button"
+            className="knowledge-action-btn primary"
+            onClick={() => handleAiInsight('diagnosis')}
+            disabled={aiAnalyzing || loading || !projectId}
           >
-            {aiAnalyzing ? <FaSpinner className="spinner" /> : <FaLightbulb />}
-            {aiAnalyzing ? '生成中...' : 'AI洞察'}
+            {aiAnalyzing && aiMode === 'diagnosis' ? <FaSyncAlt className="spin" /> : <FaBrain />}
+            AI 诊断
+          </button>
+          <button
+            type="button"
+            className="knowledge-action-btn primary"
+            onClick={() => handleAiInsight('insight')}
+            disabled={aiAnalyzing || loading || !projectId}
+          >
+            {aiAnalyzing && aiMode === 'insight' ? <FaSyncAlt className="spin" /> : <FaLightbulb />}
+            生成创作洞察
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="knowledge-modules">
-        {modules.map(module => (
-          <div
-            key={module.id}
-            className={`module-card ${activeModule === module.id ? 'active' : ''}`}
-            onClick={() => setActiveModule(module.id)}
-            style={{ '--module-color': module.color }}
-          >
-            <div className="module-icon">{module.icon}</div>
-            <div className="module-info">
-              <h3>{module.name}</h3>
-              <p>{module.description}</p>
+      {loadError && (
+        <div className="knowledge-alert" role="alert">
+          <FaExclamationTriangle />
+          <span>{loadError}</span>
+        </div>
+      )}
+
+      <section className="knowledge-overview-grid" aria-label="知识库概览">
+        <article className="knowledge-readiness-card">
+          <div className="knowledge-score-row">
+            <div className="knowledge-score">
+              <strong>{metrics.score}</strong>
+              <span>%</span>
             </div>
-            <div className="module-indicator">{activeModule === module.id && <div className="active-indicator"></div>}</div>
+            <div>
+              <div className="knowledge-card-label">
+                <ReadinessIcon />
+                上下文准备度
+              </div>
+              <p>{metrics.readyCount} / {metrics.checks.length} 项可供 AI 稳定引用</p>
+            </div>
           </div>
-        ))}
-      </div>
+          <progress className="knowledge-score-progress" value={metrics.score} max="100" aria-label="上下文准备度" />
+          <div className="knowledge-check-list">
+            {metrics.checks.map((check) => (
+              <div key={check.id} className={`knowledge-check ${check.ready ? 'ready' : 'missing'}`}>
+                {check.ready ? <FaCheck /> : <FaExclamationTriangle />}
+                <span>{check.label}</span>
+              </div>
+            ))}
+          </div>
+        </article>
 
-      <div className="knowledge-content">
-        {loading ? (
-          <div className="loading">
-            <div className="loading-spinner"></div>
-            <p>加载中...</p>
+        <article className="knowledge-context-brief">
+          <div className="knowledge-card-label">
+            <FaLayerGroup />
+            AI 已知项目
           </div>
-        ) : (
-          <div className="knowledge-content-wrapper">
-            {aiAnalysis && (
-              <div className="ai-analysis-panel">
-                <div className="ai-analysis-header">
-                  <FaBrain className="ai-icon" />
-                  <h3>AI分析结果</h3>
-                  <button 
-                    className="close-analysis"
-                    onClick={() => setAiAnalysis(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="ai-analysis-content">
-                  {typeof aiAnalysis === 'string' ? (
-                    <p>{aiAnalysis}</p>
-                  ) : (
-                    <div className="ai-analysis-structured">
-                      {aiAnalysis.content && <p>{aiAnalysis.content}</p>}
-                      {aiAnalysis.suggestions && (
-                        <div className="suggestions-list">
-                          <h4>建议:</h4>
-                          <ul>
-                            {aiAnalysis.suggestions.map((suggestion, index) => (
-                              <li key={index}>{suggestion}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiAnalysis.insights && (
-                        <div className="insights-list">
-                          <h4>洞察:</h4>
-                          <ul>
-                            {aiAnalysis.insights.map((insight, index) => (
-                              <li key={index}>{insight}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {aiAnalysis.recommendations && (
-                        <div className="recommendations-list">
-                          <h4>推荐:</h4>
-                          <ul>
-                            {aiAnalysis.recommendations.map((recommendation, index) => (
-                              <li key={index}>{recommendation}</li>
-                            ))}
-                          </ul>
+          <h3>{contextData.projectName}</h3>
+          <p>{contextData.projectDescription || '尚未填写项目简介。建议补充作品类型、核心冲突、主角目标和世界规则。'}</p>
+          <div className="knowledge-brief-meta">
+            <span>{metrics.totalAssets} 条资料</span>
+            <span>{contextData.chapters.length} 章上下文</span>
+            {latestChapter && <span>最新：{latestChapter.title || `第 ${latestChapter.number} 章`}</span>}
+          </div>
+        </article>
+
+        <article className="knowledge-ai-card">
+          <div className="knowledge-card-label">
+            <FaRobot />
+            AI 工作入口
+          </div>
+          <h3>让模型检查这套记忆</h3>
+          <p>不会自动消耗 token。点击后直接使用你的模型配置，生成诊断或创作建议。</p>
+          <div className="knowledge-ai-mini-actions">
+            <button type="button" onClick={() => handleAiInsight('diagnosis')} disabled={aiAnalyzing || loading}>
+              诊断缺口
+            </button>
+            <button type="button" onClick={() => handleAiInsight('insight')} disabled={aiAnalyzing || loading}>
+              推进创作
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className="knowledge-section-strip" aria-label="知识库分类">
+        {KNOWLEDGE_SECTIONS.map((section) => {
+          const count = getSectionItems(contextData, section.id).length;
+          const Icon = section.Icon;
+          const active = selectedSection.id === section.id;
+          const firstItem = getSectionItems(contextData, section.id)[0];
+
+          return (
+            <button
+              type="button"
+              key={section.id}
+              className={`knowledge-section-card ${active ? 'active' : ''}`}
+              onClick={() => setSelectedSectionId(section.id)}
+              aria-pressed={active}
+            >
+              <span className="knowledge-section-icon"><Icon /></span>
+              <span className="knowledge-section-main">
+                <span className="knowledge-section-name">{section.label}</span>
+                <span className="knowledge-section-desc">{section.description}</span>
+                <span className="knowledge-section-preview">
+                  {firstItem ? getItemTitle(section.id, firstItem, 0) : section.empty}
+                </span>
+              </span>
+              <strong>{count}</strong>
+            </button>
+          );
+        })}
+      </section>
+
+      <main className="knowledge-workspace">
+        <section className="knowledge-entity-panel">
+          <div className="knowledge-panel-header">
+            <div>
+              <span className="knowledge-kicker">{selectedSection.label}</span>
+              <h3>{selectedSection.label}上下文</h3>
+            </div>
+            <span className="knowledge-count-pill">{selectedItems.length} 个{selectedSection.noun}</span>
+          </div>
+
+          {loading ? (
+            <div className="knowledge-loading">
+              <FaSyncAlt className="spin" />
+              <span>正在读取项目上下文...</span>
+            </div>
+          ) : selectedItems.length > 0 ? (
+            <div className="knowledge-entity-list">
+              {selectedItems.slice(0, 12).map((item, index) => {
+                const Icon = selectedSection.Icon;
+                const meta = getItemMeta(selectedSection.id, item);
+
+                return (
+                  <article key={`${selectedSection.id}-${getItemTitle(selectedSection.id, item, index)}-${index}`} className="knowledge-entity-row">
+                    <div className="knowledge-entity-icon"><Icon /></div>
+                    <div className="knowledge-entity-body">
+                      <div className="knowledge-entity-title-row">
+                        <h4>{getItemTitle(selectedSection.id, item, index)}</h4>
+                        {selectedSection.id === 'chapters' && item.word_count > 0 && (
+                          <span>{item.word_count} 字</span>
+                        )}
+                      </div>
+                      <p>{getItemSummary(selectedSection.id, item)}</p>
+                      {meta.length > 0 && (
+                        <div className="knowledge-entity-tags">
+                          {meta.map((tag) => <span key={tag}>{tag}</span>)}
                         </div>
                       )}
                     </div>
-                  )}
+                  </article>
+                );
+              })}
+              {selectedItems.length > 12 && (
+                <div className="knowledge-more-row">还有 {selectedItems.length - 12} 条资料已进入 AI 上下文</div>
+              )}
+            </div>
+          ) : (
+            <div className="knowledge-empty-state">
+              <selectedSection.Icon />
+              <h4>{selectedSection.empty}</h4>
+              <p>这类资料为空时，AI 对相关情节的判断会更依赖章节正文。建议先补 1-3 条核心资料。</p>
+            </div>
+          )}
+        </section>
+
+        <aside className="knowledge-side-rail">
+          {aiAnalysis && (
+            <section className="knowledge-ai-result">
+              <div className="knowledge-panel-header compact">
+                <div>
+                  <span className="knowledge-kicker">AI Result</span>
+                  <h3>{aiAnalysis.title}</h3>
                 </div>
+                <button type="button" className="knowledge-icon-btn" onClick={() => setAiAnalysis(null)} aria-label="关闭 AI 结果">
+                  ×
+                </button>
               </div>
+              <div className="knowledge-ai-output">
+                {aiAnalysis.text.split('\n').filter(Boolean).map((line, index) => (
+                  <p key={`${line}-${index}`}>{line}</p>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="knowledge-gap-panel">
+            <div className="knowledge-card-label">
+              <FaExclamationTriangle />
+              待补强
+            </div>
+            {gapChecks.length > 0 ? (
+              <ul>
+                {gapChecks.slice(0, 5).map((gap) => (
+                  <li key={gap.id}>
+                    <strong>{gap.label}</strong>
+                    <span>{gap.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>核心上下文都已具备。下一步可以让 AI 做一致性诊断或生成冲突线。</p>
             )}
-            {renderModuleContent()}
-          </div>
-        )}
-      </div>
+          </section>
+
+          <section className="knowledge-memory-panel">
+            <div className="knowledge-card-label">
+              <FaPenNib />
+              写作记忆摘要
+            </div>
+            <dl>
+              <div>
+                <dt>角色焦点</dt>
+                <dd>{contextData.characters.slice(0, 3).map((item) => item.name).filter(Boolean).join('、') || '待建立'}</dd>
+              </div>
+              <div>
+                <dt>设定焦点</dt>
+                <dd>{contextData.worldviews.slice(0, 2).map((item) => item.name).filter(Boolean).join('、') || '待建立'}</dd>
+              </div>
+              <div>
+                <dt>空间焦点</dt>
+                <dd>{compactJoin(
+                  contextData.locations[0]?.name,
+                  contextData.organizations[0]?.name,
+                ) || '待建立'}</dd>
+              </div>
+              <div>
+                <dt>最近章节</dt>
+                <dd>{latestChapter ? (latestChapter.title || `第 ${latestChapter.number} 章`) : '暂无章节'}</dd>
+              </div>
+            </dl>
+          </section>
+        </aside>
+      </main>
     </div>
   );
 };
-
-// 角色知识库总览组件
-const CharacterKnowledgeBase = ({ data }) => (
-  <div className="character-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>角色知识库</h3>
-      <div className="stats-badge">{data.length} 个角色</div>
-    </div>
-    {data.length > 0 ? (
-      <div className="characters-overview">
-        {data.slice(0, 6).map(character => (
-          <div key={character.id} className="character-summary-card">
-            <div className="character-avatar">
-              <div className="avatar-icon">👤</div>
-            </div>
-            <div className="character-summary-info">
-              <h4>{character.name}</h4>
-              <p className="character-personality">{character.personality || '暂无性格描述'}</p>
-              <div className="character-tags">
-                <span className="tag">{character.dialogue_style || '对话风格未设置'}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-        {data.length > 6 && (
-          <div className="view-more">
-            <span>+{data.length - 6} 个更多角色</span>
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="empty-state">
-        <div className="empty-icon">👥</div>
-        <p>暂无角色数据</p>
-        <span className="empty-hint">开始创建您的第一个角色</span>
-      </div>
-    )}
-  </div>
-);
-
-// 世界观知识库总览组件
-const WorldviewKnowledgeBase = ({ data }) => (
-  <div className="worldview-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>世界观知识库</h3>
-      <div className="stats-badge">{data.length} 个世界观</div>
-    </div>
-    {data.length > 0 ? (
-      <div className="worldviews-overview">
-        {data.slice(0, 4).map(worldview => (
-          <div key={worldview.id} className="worldview-summary-card">
-            <div className="worldview-icon">🌍</div>
-            <div className="worldview-summary-info">
-              <h4>{worldview.name}</h4>
-              <p className="worldview-desc">{worldview.description || '暂无描述'}</p>
-              <div className="worldview-features">
-                {worldview.magic_system && (
-                  <span className="feature-tag">魔法: {worldview.magic_system}</span>
-                )}
-                {worldview.technology_level && (
-                  <span className="feature-tag">科技: {worldview.technology_level}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {data.length > 4 && (
-          <div className="view-more">
-            <span>+{data.length - 4} 个更多世界观</span>
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="empty-state">
-        <div className="empty-icon">🌍</div>
-        <p>暂无世界观数据</p>
-        <span className="empty-hint">开始构建您的世界观</span>
-      </div>
-    )}
-  </div>
-);
-
-// 场景知识库总览组件
-const SceneKnowledgeBase = ({ data }) => (
-  <div className="scene-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>场景知识库</h3>
-      <div className="stats-badge">{data.length} 个场景</div>
-    </div>
-    {data.length > 0 ? (
-      <div className="scenes-overview">
-        {data.slice(0, 6).map(scene => (
-          <div key={scene.id} className="scene-summary-card">
-            <div className="scene-icon">🏞️</div>
-            <div className="scene-summary-info">
-              <h4>{scene.name}</h4>
-              <p className="scene-desc">{scene.description || '暂无描述'}</p>
-              <div className="scene-meta">
-                <span className="usage-count">使用 {scene.usage_count || 0} 次</span>
-                {scene.geography && (
-                  <span className="location-tag">{scene.geography}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {data.length > 6 && (
-          <div className="view-more">
-            <span>+{data.length - 6} 个更多场景</span>
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="empty-state">
-        <div className="empty-icon">🏞️</div>
-        <p>暂无场景数据</p>
-        <span className="empty-hint">开始创建您的场景库</span>
-      </div>
-    )}
-  </div>
-);
-
-// 创作技巧知识库总览组件
-const WritingTechniqueKnowledgeBase = ({ data }) => (
-  <div className="technique-knowledge">
-    <div className="knowledge-overview-header">
-      <h3>创作技巧库</h3>
-      <div className="stats-badge">{data.length} 个分类</div>
-    </div>
-    {data.length > 0 ? (
-      <div className="techniques-overview">
-        {data.slice(0, 3).map(technique => (
-          <div key={technique.id} className="technique-summary-card">
-            <div className="technique-icon">✍️</div>
-            <div className="technique-summary-info">
-              <h4>{technique.name}</h4>
-              <span className="technique-category-badge">{technique.category}</span>
-              <div className="technique-preview">
-                <p>{technique.inspiration_notes && technique.inspiration_notes.length > 0 
-                  ? technique.inspiration_notes[0] 
-                  : '暂无灵感记录'}</p>
-              </div>
-              <div className="technique-stats">
-                <span className="technique-count">{technique.techniques ? technique.techniques.length : 0} 个技巧</span>
-              </div>
-            </div>
-          </div>
-        ))}
-        {data.length > 3 && (
-          <div className="view-more">
-            <span>+{data.length - 3} 个更多分类</span>
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="empty-state">
-        <div className="empty-icon">✍️</div>
-        <p>暂无技巧数据</p>
-        <span className="empty-hint">开始收集创作技巧</span>
-      </div>
-    )}
-  </div>
-);
 
 export default KnowledgeBase;
