@@ -148,13 +148,14 @@ class AIService {
   }
 
   // AI智能体对话 - 流式输出
-  async chatWithAIStream(projectId, message, history = [], callbacks = {}, promptTemplateId = null) {
+  async chatWithAIStream(projectId, message, history = [], callbacks = {}, promptTemplateId = null, currentChapterId = null) {
     const body = await this._withModelConfig({
       project_id: projectId,
       message,
       history,
     });
     if (promptTemplateId) body.prompt_template_id = promptTemplateId;
+    if (currentChapterId) body.current_chapter_id = currentChapterId;
 
     const response = await rawFetch('/ai/chat-stream', { method: 'POST', body, ...LEGACY_AI_OPTS });
     if (!response.body) {

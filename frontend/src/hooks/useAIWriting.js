@@ -481,6 +481,8 @@ const useAIWriting = ({
     // 受控 chat messages（项目级持久化，由 useExternalStoreRuntime 消费）
     messages: chatMessages,
     setMessages: setChatMessages,
+    // 当前编辑章节（透传给 AIChatPanel，用于后端分层章节注入）
+    currentChapter,
   };
 };
 

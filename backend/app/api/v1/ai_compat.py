@@ -55,6 +55,7 @@ async def legacy_chat(
         history=body.history,
         user_id=user.id,
         prompt_template_id=body.prompt_template_id,
+        current_chapter_id=body.current_chapter_id,
     )
 
 
@@ -75,6 +76,7 @@ async def legacy_chat_stream(
         history=body.history,
         user_id=user.id,
         prompt_template_id=body.prompt_template_id,
+        current_chapter_id=body.current_chapter_id,
     )
     return StreamingResponse(
         stream,

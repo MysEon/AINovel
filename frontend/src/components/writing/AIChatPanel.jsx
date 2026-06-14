@@ -136,6 +136,8 @@ const AIChatPanel = ({
   onAssistantRunningChange,
   onRegisterNewChat,
   projectId,
+  // 用户当前编辑的章节（从 useAIWriting 透传）。后端按 L1/L2/L3 分层注入章节上下文
+  currentChapter,
   // 受控 messages（来自 useWritingPersistentState，按 projectId 持久化）
   messages = [],
   setMessages,
@@ -201,6 +203,7 @@ const AIChatPanel = ({
         userText,
         history,
         selectedPromptTemplate,
+        currentChapterId: currentChapter?.id || null,
         abortSignal: controller.signal,
         onUpdate: (payload) => {
           // payload.content 是累积的完整 content array，每次 emit 用它替换 assistant 消息
@@ -231,7 +234,7 @@ const AIChatPanel = ({
       setIsRunning(false);
       abortControllerRef.current = null;
     }
-  }, [setMessages, messages, projectId, selectedPromptTemplate]);
+  }, [setMessages, messages, projectId, selectedPromptTemplate, currentChapter]);
 
   const runtime = useExternalStoreRuntime({
     isRunning,

@@ -38,6 +38,7 @@ const createTextPart = (text) => ({ type: 'text', text });
  *
  * 用于 useExternalStoreRuntime 的 onNew 流程：
  * - history 是已经在 messages 数组里、且不含本次 userText 的历史
+ * - currentChapterId：用户当前编辑的章节 ID，后端按 L1/L2/L3 分层注入章节上下文
  * - onUpdate 每次有新内容（text/trace/error）就被调用一次，参数是「累积后的完整 content array」
  * - onUpdate 不应改变 onUpdate 之间的引用：调用方应该用它来 setMessages 更新对应 assistantId
  * - 返回 Promise<void>，resolve 表示流式结束（包括 abort）；reject 仅在非 abort 错误时
@@ -47,6 +48,7 @@ export const runChatStream = async ({
   userText,
   history,
   selectedPromptTemplate,
+  currentChapterId,
   abortSignal,
   onUpdate,
 }) => {
@@ -141,7 +143,8 @@ export const runChatStream = async ({
       userText,
       history,
       callbacks,
-      selectedPromptTemplate?.id || null
+      selectedPromptTemplate?.id || null,
+      currentChapterId || null
     );
   } catch (err) {
     if (aborted) return;
@@ -159,7 +162,7 @@ export const runChatStream = async ({
  * useExternalStoreRuntime + runChatStream，这个 factory 暂时保留是为了未来
  * 单测复用或其他 LocalRuntime 场景。
  */
-export const createAINovelChatAdapter = ({ projectId, selectedPromptTemplate }) => ({
+export const createAINovelChatAdapter = ({ projectId, selectedPromptTemplate, currentChapterId }) => ({
   async *run({ messages, abortSignal }) {
     const userMessage = [...messages].reverse().find((message) => message.role === 'user');
     const userText = getTextFromParts(userMessage?.content).trim();
@@ -186,6 +189,7 @@ export const createAINovelChatAdapter = ({ projectId, selectedPromptTemplate }) 
       userText,
       history,
       selectedPromptTemplate,
+      currentChapterId,
       abortSignal,
       onUpdate: (payload) => {
         chunks.push(payload);

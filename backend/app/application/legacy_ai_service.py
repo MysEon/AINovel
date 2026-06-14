@@ -2,6 +2,8 @@
 
 职责：
 - chat / chat_stream：消息历史构建、role 映射、system prompt 注入
+- 章节分层注入：L1 当前章全文 / L2 近 3 章详细 / L3 更早 ≤6 章简要（共 ≤10 章）
+- context 超限三段渐进降级（保最新内容优先）
 - simple_generate：通用单轮生成（6 个遗留端点共用）
 """
 
@@ -13,7 +15,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.secrets import get_encryption_service
 
@@ -22,6 +24,35 @@ from .project_service import ProjectService
 logger = logging.getLogger(__name__)
 
 _encryption_service = get_encryption_service()
+
+
+# Context 超限渐进降级 stage：
+# stage 0: L1 全文，保留 L2
+# stage 1: L1 截断到最后 1 万字，保留 L2
+# stage 2: L1 截断到最后 5 千字，丢 L2 仅保留 L3
+DEGRADATION_STAGES: list[dict] = [
+    {"l1_tail_chars": None, "include_l2": True, "label": "full"},
+    {"l1_tail_chars": 10000, "include_l2": True, "label": "trim-l1-10k"},
+    {"l1_tail_chars": 5000, "include_l2": False, "label": "trim-l1-5k+drop-l2"},
+]
+
+# Context 超限错误关键词：匹配 LLM provider 常见 token-limit 文案
+_CONTEXT_LIMIT_KEYWORDS = (
+    "context length",
+    "maximum context",
+    "context window",
+    "token limit",
+    "context_length_exceeded",
+    "prompt is too long",
+    "request too large",
+    "input length",
+)
+
+
+def _is_context_length_error(exc: Exception) -> bool:
+    """判断 LLM 抛出的异常是否属于 context 超限。"""
+    msg = str(exc).lower()
+    return any(kw in msg for kw in _CONTEXT_LIMIT_KEYWORDS)
 
 
 class LegacyAIService:
@@ -137,6 +168,36 @@ class LegacyAIService:
         messages.append(HumanMessage(content=message))
         return messages
 
+    async def _load_tiered_chapter_segment(
+        self,
+        project_id: int,
+        current_chapter_id: int | None,
+        chat_model,
+        *,
+        stage: dict,
+    ) -> str | None:
+        """获取分层章节上下文并按 stage 渲染为 prompt 段。
+
+        无 current_chapter_id 时返回 None（向后兼容旧无章节注入路径）。
+        摘要生成失败的章节在渲染段中标记『（摘要生成失败，本章已跳过）』，
+        不致命；只有 LLM context 超限错误才会冒出到外层降级链。
+        """
+        if not current_chapter_id:
+            return None
+        from app.application.ai_context_builder import AIContextBuilder
+
+        builder = AIContextBuilder(self.db)
+        tiered = await builder.get_tiered_chapter_context(
+            project_id=project_id,
+            current_chapter_id=current_chapter_id,
+            chat_model=chat_model,
+        )
+        return AIContextBuilder.render_tiered_chapter_segment(
+            tiered,
+            l1_tail_chars=stage["l1_tail_chars"],
+            include_l2=stage["include_l2"],
+        )
+
     async def chat(
         self,
         project_id: int,
@@ -145,8 +206,9 @@ class LegacyAIService:
         history: list | None,
         user_id: int,
         prompt_template_id: int | None = None,
+        current_chapter_id: int | None = None,
     ) -> dict:
-        """兼容旧 /api/ai/chat — 非流式对话"""
+        """兼容旧 /api/ai/chat — 非流式对话，含章节分层注入与三段渐进降级。"""
         project = await self.proj_service.require_user_project(project_id, user_id)
         model = await self._get_config_and_model(model_config_id, user_id)
 
@@ -161,16 +223,42 @@ class LegacyAIService:
             user_id=user_id,
             prompt_template_id=prompt_template_id,
         )
+
         graph = graph_registry.get("chat_assistant")(model=model)
-        context = ChatAssistantContext(
-            project_id=project_id,
-            session_factory=self._get_session_factory(),
-            injected_system_prompt=injected_system_prompt,
-        )
-        result = await graph.ainvoke(
-            {"messages": self._build_chat_messages(message, history)},
-            context=context,
-        )
+        last_error: Exception | None = None
+        for stage in DEGRADATION_STAGES:
+            chapter_segment = await self._load_tiered_chapter_segment(
+                project_id, current_chapter_id, model, stage=stage
+            )
+            context = ChatAssistantContext(
+                project_id=project_id,
+                session_factory=self._get_session_factory(),
+                injected_system_prompt=injected_system_prompt,
+                chapter_context_segment=chapter_segment,
+            )
+            try:
+                result = await graph.ainvoke(
+                    {"messages": self._build_chat_messages(message, history)},
+                    context=context,
+                )
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                if not _is_context_length_error(exc):
+                    raise
+                logger.warning(
+                    "chat 触发 context 超限降级 stage=%s project_id=%s chapter_id=%s error=%s",
+                    stage["label"],
+                    project_id,
+                    current_chapter_id,
+                    exc,
+                )
+        else:
+            raise ValidationError(
+                "当前章节内容过长，请考虑分章后再使用 AI 助手",
+                detail=str(last_error),
+            )
+
         if prompt_template_id is not None:
             await self._record_prompt_template_usage(prompt_template_id, user_id)
         response = result["messages"][-1].content
@@ -189,8 +277,9 @@ class LegacyAIService:
         history: list | None,
         user_id: int,
         prompt_template_id: int | None = None,
+        current_chapter_id: int | None = None,
     ) -> AsyncIterator[str]:
-        """兼容旧 /api/ai/chat-stream — SSE 流式对话"""
+        """兼容旧 /api/ai/chat-stream — SSE 流式对话，含章节分层注入与三段渐进降级。"""
         project = await self.proj_service.require_user_project(project_id, user_id)
         model = await self._get_config_and_model(model_config_id, user_id)
 
@@ -206,19 +295,49 @@ class LegacyAIService:
             user_id=user_id,
             prompt_template_id=prompt_template_id,
         )
-        graph = graph_registry.get("chat_assistant")(model=model)
-        context = ChatAssistantContext(
-            project_id=project_id,
-            session_factory=self._get_session_factory(),
-            injected_system_prompt=injected_system_prompt,
-        )
-        input_state = {"messages": self._build_chat_messages(message, history)}
 
+        graph = graph_registry.get("chat_assistant")(model=model)
+
+        # 流式场景：先尝试每个 stage 的"准备阶段"——因为 SSE 一旦开始 yield 就无法回滚，
+        # 这里只是把章节段渲染为 stage[0] 默认值；如果整个 ainvoke 在第一个 chunk 之前抛
+        # context 错，外层 generate() 仍可在迭代器内捕获并切换到下一 stage。
         async def generate():
-            async for event in stream_agent_events(graph, input_state, context=context):
-                yield event
-            if prompt_template_id is not None:
-                await self._record_prompt_template_usage(prompt_template_id, user_id)
+            last_error: Exception | None = None
+            for stage in DEGRADATION_STAGES:
+                chapter_segment = await self._load_tiered_chapter_segment(
+                    project_id, current_chapter_id, model, stage=stage
+                )
+                context = ChatAssistantContext(
+                    project_id=project_id,
+                    session_factory=self._get_session_factory(),
+                    injected_system_prompt=injected_system_prompt,
+                    chapter_context_segment=chapter_segment,
+                )
+                input_state = {"messages": self._build_chat_messages(message, history)}
+                stage_started = False
+                try:
+                    async for event in stream_agent_events(graph, input_state, context=context):
+                        stage_started = True
+                        yield event
+                    if prompt_template_id is not None:
+                        await self._record_prompt_template_usage(prompt_template_id, user_id)
+                    return
+                except Exception as exc:  # noqa: BLE001
+                    last_error = exc
+                    # 已经开始 yield 了无法重试，直接抛
+                    if stage_started or not _is_context_length_error(exc):
+                        raise
+                    logger.warning(
+                        "chat_stream 触发 context 超限降级 stage=%s project_id=%s chapter_id=%s error=%s",
+                        stage["label"],
+                        project_id,
+                        current_chapter_id,
+                        exc,
+                    )
+            raise ValidationError(
+                "当前章节内容过长，请考虑分章后再使用 AI 助手",
+                detail=str(last_error),
+            )
 
         return generate()
 

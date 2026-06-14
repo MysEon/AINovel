@@ -47,6 +47,9 @@ async def project_prompt(request: ModelRequest[ChatAssistantContext]) -> SystemM
         BASE_SYSTEM_PROMPT,
         "# 项目上下文\n" + (request.state.get("project_context") or ""),
     ]
+    # 分层章节段（L1 全文 + L2 详细 + L3 简要），由调用方按降级链预渲染
+    if ctx.chapter_context_segment:
+        parts.append("# 章节内容\n" + ctx.chapter_context_segment)
     if ctx.injected_system_prompt:
         parts.append("# 用户提示词模板\n" + ctx.injected_system_prompt)
     return SystemMessage(content="\n\n".join(parts))

@@ -5,9 +5,12 @@ AI 上下文构建器 — 从项目数据统一组装 LLM 上下文
 - 按项目 ID 聚合角色、世界观、地点、组织、章节摘要
 - 为不同工作流提供不同粒度的上下文（outline/chat/revision）
 - 控制上下文体积（截断策略）
+- 章节分层注入：L1 当前章全文 / L2 近 3 章详细 / L3 更早 ≤6 章简要（共 ≤10 章）
 """
 
+import asyncio
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,11 +24,28 @@ logger = logging.getLogger(__name__)
 MAX_CONTEXT_CHARS = 8000
 CHAT_CONTEXT_MAX_CHARS = 4000
 
+# ── 分层章节摘要参数 ─────────────────────────────────────────────────────
+TIERED_TOTAL_CHAPTERS = 10  # L1 + L2 + L3 共最多注入这么多章
+TIERED_L2_MAX = 3  # L2 详细概括最多几章（当前章前 3 章）
+TIERED_L3_MAX = 6  # L3 简要概括最多几章（L2 之前的 6 章）
+TIERED_L2_TARGET_CHARS = 500  # L2 详细概括目标字数
+TIERED_L3_TARGET_CHARS = 150  # L3 简要概括目标字数
+
 
 def _truncate(text: str, max_len: int = 500) -> str:
     if not text or len(text) <= max_len:
         return text or ""
     return text[:max_len] + "…"
+
+
+@dataclass
+class TieredChapterContext:
+    """分层章节上下文聚合结果。"""
+
+    l1: Chapter | None  # 当前章节（全文）
+    l2: list[Chapter]  # 近 3 章（用 summary_detailed）
+    l3: list[Chapter]  # 更早 ≤6 章（用 summary_brief）
+    summary_errors: list[Exception]  # 摘要生成期间收集的异常（不致命）
 
 
 def count_tokens_estimate(text: str) -> int:
@@ -300,6 +320,220 @@ class AIContextBuilder:
     def format_for_chat(self, ctx: dict) -> str:
         """格式化 chat 用轻量上下文：项目元数据 + 角色基础列表。"""
         return self._format_chat_characters(ctx, field_limit=200, compact=False)
+
+    # ── 分层章节注入（L1 当前章全文 / L2 近 3 章详细 / L3 更早 ≤6 章简要） ──
+
+    async def get_tiered_chapter_context(
+        self,
+        project_id: int,
+        current_chapter_id: int,
+        chat_model,
+    ) -> "TieredChapterContext":
+        """
+        按 L1/L2/L3 分层选择章节并按需生成摘要。
+
+        - L1 = current_chapter（全文，不截断）
+        - L2 = current 之前 chapter_number 排序的最多 3 章（用 summary_detailed）
+        - L3 = L2 之前的最多 6 章（用 summary_brief），与 L1+L2 合计 ≤10 章
+        - 三层之外的章节不注入（远处摘要也是噪音）
+
+        如果 L2/L3 章节的 summary 字段缺失或 word_count 与
+        summary_source_word_count 不一致 → 调用 chat_model 重新生成并落库。
+        L2 / L3 各自的所有缺失摘要任务用 asyncio.gather 并发执行。
+
+        chat_model 由调用方提供（来自 _get_config_and_model），失败时
+        TieredChapterContext.summary_errors 收集异常，调用方按需降级。
+        """
+        # 1. 拉取本项目所有章节（按 chapter_number 升序）
+        result = await self.db.execute(
+            select(Chapter).where(Chapter.project_id == project_id).order_by(Chapter.chapter_number)
+        )
+        all_chapters = list(result.scalars().all())
+        if not all_chapters:
+            return TieredChapterContext(l1=None, l2=[], l3=[], summary_errors=[])
+
+        # 2. 找当前章的位置
+        current_idx = next(
+            (i for i, ch in enumerate(all_chapters) if ch.id == current_chapter_id),
+            None,
+        )
+        if current_idx is None:
+            # 章节 id 不属于本项目，退化为"取末尾章作为 L1"
+            logger.warning(
+                "current_chapter_id=%s 不属于项目 %s，退化为最末章作为 L1",
+                current_chapter_id,
+                project_id,
+            )
+            current_idx = len(all_chapters) - 1
+
+        l1_chapter = all_chapters[current_idx]
+
+        # 3. 切 L2 / L3 滑动窗口
+        l2_start = max(0, current_idx - TIERED_L2_MAX)
+        l2_chapters = all_chapters[l2_start:current_idx]  # 最多 3 章
+
+        # L1+L2 已占用的章数；剩下的额度给 L3
+        used = 1 + len(l2_chapters)
+        l3_budget = min(TIERED_L3_MAX, TIERED_TOTAL_CHAPTERS - used)
+        l3_start = max(0, l2_start - l3_budget)
+        l3_chapters = all_chapters[l3_start:l2_start]
+
+        # 4. 按需生成 L2 / L3 摘要（并发）
+        summary_errors: list[Exception] = []
+
+        async def _ensure_l2_summary(ch: Chapter) -> None:
+            if not self._is_summary_stale(ch, "detailed"):
+                return
+            try:
+                summary = await self._generate_chapter_summary(
+                    ch, chat_model, target_chars=TIERED_L2_TARGET_CHARS, level="detailed"
+                )
+                ch.summary_detailed = summary
+                ch.summary_source_word_count = ch.word_count or 0
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("L2 摘要生成失败 chapter_id=%s: %s", ch.id, exc, exc_info=True)
+                summary_errors.append(exc)
+
+        async def _ensure_l3_summary(ch: Chapter) -> None:
+            if not self._is_summary_stale(ch, "brief"):
+                return
+            try:
+                summary = await self._generate_chapter_summary(
+                    ch, chat_model, target_chars=TIERED_L3_TARGET_CHARS, level="brief"
+                )
+                ch.summary_brief = summary
+                ch.summary_source_word_count = ch.word_count or 0
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("L3 摘要生成失败 chapter_id=%s: %s", ch.id, exc, exc_info=True)
+                summary_errors.append(exc)
+
+        tasks = [_ensure_l2_summary(ch) for ch in l2_chapters] + [
+            _ensure_l3_summary(ch) for ch in l3_chapters
+        ]
+        if tasks:
+            await asyncio.gather(*tasks)
+            # 任何摘要写入需 commit；如失败章节字段维持 None / 旧值
+            await self.db.commit()
+            for ch in l2_chapters + l3_chapters:
+                await self.db.refresh(ch)
+
+        return TieredChapterContext(
+            l1=l1_chapter,
+            l2=list(l2_chapters),
+            l3=list(l3_chapters),
+            summary_errors=summary_errors,
+        )
+
+    @staticmethod
+    def _is_summary_stale(chapter: Chapter, level: str) -> bool:
+        """判断章节摘要是否过期或缺失。"""
+        if not chapter.content or not chapter.content.strip():
+            return False  # 空章节没必要生成摘要
+        target_field = "summary_detailed" if level == "detailed" else "summary_brief"
+        existing = getattr(chapter, target_field, None)
+        if not existing:
+            return True
+        # word_count 快照对不上 → 摘要过期
+        return (chapter.word_count or 0) != (chapter.summary_source_word_count or 0)
+
+    @staticmethod
+    async def _generate_chapter_summary(
+        chapter: Chapter,
+        chat_model,
+        *,
+        target_chars: int,
+        level: str,
+    ) -> str:
+        """调用 LLM 生成单章摘要。失败抛异常由调用方 collect。"""
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        from app.schemas.legacy_ai import ChapterSummarySchema
+
+        if level == "detailed":
+            instruction = (
+                f"请用约 {target_chars} 字概括以下章节，保留人物动作、关键转折、"
+                "情绪线、伏笔。要事实性陈述，不要文学化润色，不要剧透角色心理推测。"
+            )
+        else:
+            instruction = (
+                f"请用约 {target_chars} 字概括以下章节的主线进展和关键事件，"
+                "不保留细节描写，只抓最重要的剧情节点。"
+            )
+
+        system_prompt = (
+            "你是一个小说章节摘要器。严格按以下 JSON schema 输出：\n"
+            '{ "summary": "string，章节摘要内容" }\n\n'
+            f"{instruction}"
+        )
+        user_content = (
+            f"章节标题：{chapter.title or '未命名'}\n"
+            f"章节序号：{chapter.chapter_number}\n\n"
+            f"章节正文：\n{chapter.content or ''}"
+        )
+
+        try:
+            structured = chat_model.with_structured_output(ChapterSummarySchema, method="json_mode")
+        except TypeError:
+            structured = chat_model.with_structured_output(ChapterSummarySchema)
+
+        result = await structured.ainvoke(
+            [SystemMessage(content=system_prompt), HumanMessage(content=user_content)]
+        )
+        if isinstance(result, ChapterSummarySchema):
+            return result.summary.strip()
+        return ChapterSummarySchema.model_validate(result).summary.strip()
+
+    @staticmethod
+    def render_tiered_chapter_segment(
+        tiered: "TieredChapterContext",
+        *,
+        l1_tail_chars: int | None = None,
+        include_l2: bool = True,
+    ) -> str:
+        """
+        把分层章节上下文渲染为 prompt 文本段（系统提示插入用）。
+
+        l1_tail_chars: 当前章超长时取最后 N 字（用于渐进降级）；None = 全文
+        include_l2: 第三段降级时丢弃 L2，仅保留 L3
+        """
+        parts: list[str] = []
+
+        # L3 简要（最早的章节先呈现，让 AI 按时间顺序读）
+        if tiered.l3:
+            lines = ["【小说前情简述】"]
+            for ch in tiered.l3:
+                summary = (ch.summary_brief or "").strip()
+                if summary:
+                    lines.append(f"- 第{ch.chapter_number}章《{ch.title or '未命名'}》：{summary}")
+                else:
+                    lines.append(f"- 第{ch.chapter_number}章《{ch.title or '未命名'}》：（摘要生成失败，本章已跳过）")
+            parts.append("\n".join(lines))
+
+        # L2 详细
+        if include_l2 and tiered.l2:
+            lines = ["【近期章节回顾】"]
+            for ch in tiered.l2:
+                summary = (ch.summary_detailed or "").strip()
+                if summary:
+                    lines.append(f"\n第{ch.chapter_number}章《{ch.title or '未命名'}》：\n{summary}")
+                else:
+                    lines.append(f"\n第{ch.chapter_number}章《{ch.title or '未命名'}》：（摘要生成失败，本章已跳过）")
+            parts.append("\n".join(lines))
+
+        # L1 当前章全文（或截断后）
+        if tiered.l1:
+            ch = tiered.l1
+            content = ch.content or ""
+            header = f"【当前章节正在写的内容（第{ch.chapter_number}章《{ch.title or '未命名'}》）】"
+            if l1_tail_chars is not None and len(content) > l1_tail_chars:
+                omitted = len(content) - l1_tail_chars
+                content = (
+                    f"【...前文 {omitted} 字已省略，以下是当前章节最近的内容...】\n\n"
+                    + content[-l1_tail_chars:]
+                )
+            parts.append(f"{header}\n{content}")
+
+        return "\n\n".join(parts)
 
     def format_for_chat_with_budget(self, ctx: dict, max_chars: int = CHAT_CONTEXT_MAX_CHARS) -> str:
         """按角色数量自适应预算格式化 chat 上下文。"""
