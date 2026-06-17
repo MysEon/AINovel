@@ -750,7 +750,7 @@ class KnowledgeGraphService:
             "你的任务是从稳定章节正文中提取会影响正史知识库的事件级变更提案。"
             "只基于章节内容和已知实体，不要编造不存在的实体。"
             "如果没有明确变化，返回空 proposals。"
-            "所有输出必须符合结构化 schema。"
+            "所有输出必须符合结构化 schema，并以 JSON 对象形式返回（json）。"
         )
 
     def _build_chapter_analysis_prompt(self, chapter: Chapter, entities: dict[str, list[dict[str, Any]]]) -> str:
