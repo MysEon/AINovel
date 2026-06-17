@@ -85,7 +85,7 @@ class AIContextBuilder:
         if mode in ("full", "outline", "chat"):
             ctx["characters"] = await self._get_characters(project_id)
 
-        if mode in ("full", "outline"):
+        if mode in ("full", "outline", "chat"):
             ctx["worldviews"] = await self._get_worldviews(project_id)
             ctx["locations"] = await self._get_locations(project_id)
             ctx["organizations"] = await self._get_organizations(project_id)
@@ -545,17 +545,36 @@ class AIContextBuilder:
             field_limit = 200 if count <= 3 else max(100, 200 - (count - 3) * 20)
             text = self._format_chat_characters(ctx, field_limit=field_limit, compact=False)
 
+        # 追加世界观/地点/组织（如存在）
+        wb_text = self._format_chat_worldbuilding(ctx, field_limit=120)
+        if wb_text:
+            text = text + "\n\n" + wb_text
+
         if len(text) <= max_chars:
             return text
 
+        # 降级 1：更紧凑的角色格式 + 保留世界building
         if count <= 8:
             text = self._format_chat_characters(ctx, field_limit=100, compact=False)
+            wb_text = self._format_chat_worldbuilding(ctx, field_limit=80)
+            if wb_text:
+                text = text + "\n\n" + wb_text
             if len(text) <= max_chars:
                 return text
 
+        # 降级 2：最紧凑角色格式 + 保留世界building
+        text = self._format_chat_characters(ctx, field_limit=100, compact=True)
+        wb_text = self._format_chat_worldbuilding(ctx, field_limit=60)
+        if wb_text:
+            text = text + "\n\n" + wb_text
+        if len(text) <= max_chars:
+            return text
+
+        # 降级 3：仅保留角色，丢弃世界building
         text = self._format_chat_characters(ctx, field_limit=100, compact=True)
         if len(text) <= max_chars:
             return text
+
         return text[: max(0, max_chars - 8)] + "\n…（已截断）"
 
     def _format_chat_characters(self, ctx: dict, *, field_limit: int, compact: bool) -> str:
@@ -589,6 +608,39 @@ class AIContextBuilder:
                 )
         parts.append("\n".join(lines))
         return "\n\n".join(parts)
+
+    def _format_chat_worldbuilding(self, ctx: dict, *, field_limit: int) -> str:
+        """格式化 chat 用的世界观/地点/组织精简段。"""
+        sections: list[str] = []
+
+        worldviews = ctx.get("worldviews") or []
+        if worldviews:
+            lines = ["【世界观】"]
+            for w in worldviews:
+                name = w.get("name", "未命名")
+                desc = _truncate(w.get("description", ""), field_limit)
+                lines.append(f"- {name}：{desc}" if desc else f"- {name}")
+            sections.append("\n".join(lines))
+
+        locations = ctx.get("locations") or []
+        if locations:
+            lines = ["【地点】"]
+            for loc in locations:
+                name = loc.get("name", "未命名")
+                desc = _truncate(loc.get("description", ""), field_limit)
+                lines.append(f"- {name}：{desc}" if desc else f"- {name}")
+            sections.append("\n".join(lines))
+
+        organizations = ctx.get("organizations") or []
+        if organizations:
+            lines = ["【组织】"]
+            for org in organizations:
+                name = org.get("name", "未命名")
+                desc = _truncate(org.get("description", ""), field_limit)
+                lines.append(f"- {name}：{desc}" if desc else f"- {name}")
+            sections.append("\n".join(lines))
+
+        return "\n\n".join(sections) if sections else ""
 
     def count_tokens_estimate(self, text: str) -> int:
         """实例方法包装，便于调用方从 builder 使用。"""

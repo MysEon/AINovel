@@ -4,7 +4,12 @@ import pytest
 
 from app.application.ai_context_builder import AIContextBuilder, count_tokens_estimate
 from app.infrastructure.db.models.projects import Project
-from app.infrastructure.db.models.worldbuilding import Character
+from app.infrastructure.db.models.worldbuilding import (
+    Character,
+    Location,
+    Organization,
+    Worldview,
+)
 
 
 async def _create_project_with_characters(db_session, user_id: int, count: int):
@@ -22,6 +27,46 @@ async def _create_project_with_characters(db_session, user_id: int, count: int):
                 appearance="外貌" + "丁" * 260,
             )
         )
+    await db_session.commit()
+    return project
+
+
+async def _create_project_with_worldbuilding(db_session, user_id: int):
+    project = Project(name="世界building项目", description="项目简介", user_id=user_id)
+    db_session.add(project)
+    await db_session.flush()
+    db_session.add(
+        Character(
+            project_id=project.id,
+            name="主角",
+            description="主角描述",
+            personality="主角性格",
+        )
+    )
+    db_session.add(
+        Worldview(
+            project_id=project.id,
+            name="灵能纪元",
+            description="万物皆有灵",
+            rules="灵能者受约束",
+        )
+    )
+    db_session.add(
+        Location(
+            project_id=project.id,
+            name="旧城",
+            description="被遗忘的古城",
+            geography="山谷之中",
+        )
+    )
+    db_session.add(
+        Organization(
+            project_id=project.id,
+            name="灰烬公会",
+            description="地下势力",
+            purpose="控制港口",
+        )
+    )
     await db_session.commit()
     return project
 
@@ -94,3 +139,51 @@ async def test_truncation_keeps_valid_unicode_text(db_session, test_user):
     assert encoded.decode("utf-8") == text
     assert "阿宁" in text
     assert len(text) <= 500
+
+
+@pytest.mark.asyncio
+async def test_chat_context_includes_worldbuilding(db_session, test_user):
+    project = await _create_project_with_worldbuilding(db_session, test_user.id)
+    builder = AIContextBuilder(db_session)
+
+    ctx = await builder.get_project_context(project.id, mode="chat")
+
+    assert "characters" in ctx
+    assert "worldviews" in ctx
+    assert "locations" in ctx
+    assert "organizations" in ctx
+    assert len(ctx["worldviews"]) == 1
+    assert len(ctx["locations"]) == 1
+    assert len(ctx["organizations"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_format_for_chat_with_budget_includes_worldbuilding(db_session, test_user):
+    project = await _create_project_with_worldbuilding(db_session, test_user.id)
+    builder = AIContextBuilder(db_session)
+
+    ctx = await builder.get_project_context(project.id, mode="chat")
+    text = builder.format_for_chat_with_budget(ctx, max_chars=4000)
+
+    assert "【世界观】" in text
+    assert "灵能纪元" in text
+    assert "【地点】" in text
+    assert "旧城" in text
+    assert "【组织】" in text
+    assert "灰烬公会" in text
+    assert len(text) <= 4000
+
+
+@pytest.mark.asyncio
+async def test_format_for_chat_budget_omits_worldbuilding_when_tight(db_session, test_user):
+    """当预算极紧时，应优先保留角色，可丢弃 worldbuilding。"""
+    project = await _create_project_with_worldbuilding(db_session, test_user.id)
+    builder = AIContextBuilder(db_session)
+
+    ctx = await builder.get_project_context(project.id, mode="chat")
+    # 给一个极小的预算迫使降级到丢弃 worldbuilding
+    text = builder.format_for_chat_with_budget(ctx, max_chars=100)
+
+    assert "项目：" in text
+    assert "【角色基础列表】" in text
+    assert len(text) <= 100
