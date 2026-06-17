@@ -66,7 +66,8 @@ class EntityStateEvent(Base, TimestampMixin):
     proposal_id = Column(Integer, nullable=True, index=True)
     proposal_operation_id = Column(Integer, nullable=True, index=True)
     # 冗余叙事时序：取自 chapters.order_index，便于按故事顺序而非写入时间排列时间线
-    chapter_order = Column(Integer, nullable=True, index=True)
+    # 复合索引 ix_entity_state_events_chapter_order (project_id, chapter_order) 由迁移 0008 创建
+    chapter_order = Column(Integer, nullable=True)
 
     project = relationship("Project", back_populates="entity_state_events")
     chapter = relationship("Chapter")
