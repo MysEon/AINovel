@@ -770,3 +770,43 @@
 - 验证：ruff 全绿；PR1 相关测试全绿；迁移在 dev ainovel.db 升级/降级干净，schema 对象已落地；全量套件 9 失败均为既有问题（8 契约测试在 clean HEAD 即失败，1 character_ai 测试受契约测试日志污染的顺序敏感 flaky，隔离运行通过）。
 
 **后续 PR**：PR2 自动触发+异步可观测、PR3 自动写分流、PR4 AI 工具+上下文、PR5 提案生命周期 bug。
+
+**PR2 — 自动触发 + 异步可观测（已完成并提交，7ec4c0f 后端 + 4407bf7 前端）**
+- chapter_service 发布路径（create/update→published、batch_publish）自动提交知识分析后台任务，不阻塞发布响应；_trigger_chapter_analysis try/except 兜底。
+- knowledge_graph_service 新增 submit_chapter_analysis（去重/自动选 knowledge_update 模型/建 AIRun/经 BackgroundTaskRunner 提交）、get_latest_chapter_analysis_run（按 chapter 查最近 AIRun 状态）、模块级 _run_chapter_analysis_background（独立 db session、Semaphore(2) 限流、RUNNING→SUCCEEDED/FAILED、解析失败降级记 failed）。
+- 新增 GET /knowledge/projects/{pid}/chapters/{cid}/analysis-status 端点。
+- 前端：发布后轮询 analysis-status 到终态再刷新提案+通知；草稿保存（Ctrl+S）不再触发知识分析。
+- 测试：发布触发、去重跳过、提交后台任务、AIRun 成功/失败状态、批量发布触发多次；ruff 绿；全量套件无新回归（9 既有失败不变）。
+- 已知限制：BackgroundTaskRunner 300s 超时留下 AIRun=running（共享 runner 模式固有，CancelledError 重抛未置 failed）。
+
+**PR3 — 自动写分流（已完成并提交，f417cab）**
+- _is_metadata_operation：判定 extra_attributes 白名单子键（last_seen_chapter/mention_count/candidate_tags）。
+- _apply_metadata_update：仅 character，合并进现有 extra_attributes JSON（保留既有键），每键写一条 EntityStateEvent 审计（state_key=extra_attributes.{key}，proposal_id=None，chapter_order 时序）。
+- analyze_chapter 分流循环：元数据 op 自动直写并 commit，canon op 进提案；全为元数据不产提案。
+- 响应 ChapterAnalysisStatusResponse... ChapterKnowledgeAnalysisResponse 加 auto_written_count。
+- 系统提示词引导 AI 用 extra_attributes 白名单键表达元数据更新。
+- ENTITY_ALLOWED_FIELDS 四实体补 extra_attributes（非 character 元数据 op 降级走提案）；_apply_field_update/_read_field_value 加 hasattr 防护。
+- 测试：纯元数据自动写/混合分流/非 character 降级/非白名单键走提案；ruff 绿；全量套件无新回归（9 既有失败不变）。
+
+**PR4 — AI 工具补齐 + 上下文注入（已完成并提交，f5050c7）**
+- 新增 WorldbuildingService：四实体 create/update/delete 复用层，delete 先调 PR1 cleanup_entity_references 清孤儿。
+- 只读工具：list_characters、get_location/organization/worldview_detail、list_worldviews；get_character_detail 支持 id 优先 + name 降级。
+- 写入工具 12 个：四实体 create/update/delete，复用 service；delete 两步确认（confirm=false 返回摘要，confirm=true 才删）。
+- 全部注册到 CHAT_TOOLS。
+- chat 上下文：build_context(mode=chat) 注入世界观/地点/组织；format_for_chat_with_budget 渲染并按预算降级。
+- 测试：读工具、写工具含二次确认与孤儿清理、chat 上下文含世界观+预算降级；ruff 绿；全量套件无新回归（9 既有失败不变）。
+
+**PR5 — 提案生命周期 bug 修复（已完成并提交，3657f2c）**
+- Bug1 并发 apply：accept_proposal with_for_update 锁行 + CAS（终态拒绝重复接受）+ applied_at 幂等跳过。
+- Bug2 冲突持久化：conflicted 改 flush 再 raise，路由层 catch ConflictError 后 commit。
+- Bug3 章节去重收紧 pending-only：conflicted 不再阻塞同章节重新分析。
+- Bug4 entity_state_event 补冲突检测（同 entity+state_key pending 操作）。
+- Bug6 relationship_upsert 重激活保留原 proposal_id（仅新建写入）。
+- Bug7 relationship_delete 空关系标记 conflicted（_apply_* 返回 bool）。
+- reject_proposal 加 CAS。决策：不加 applied/stale 状态。
+- 测试：重复 accept CAS、conflicted 不阻塞重分析、state_event 冲突、关系溯源保留、空删除 conflicted；ruff 绿；全量套件无新回归（9 既有失败不变）。
+
+**任务完成总结**：06-17-fix-interconnected-entity-pipeline 五个 PR 全部完成并提交。
+- 提交链：44dc7d6（PR1 数据完整性）→ 7ec4c0f/4407bf7（PR2 异步触发+前端轮询）→ f417cab（PR3 自动写分流）→ f5050c7（PR4 AI 工具+上下文）→ 3657f2c（PR5 提案 bug）。
+- 核心链路打通：章节发布→后端异步触发知识分析→AIRun 可观测+前端轮询→元数据自动写/canon 走提案→提案评审（并发安全+冲突检测）→删实体清孤儿+状态时间线完整。chat agent 可读全四实体+直接 CRUD（删实体二次确认）+上下文含世界观/地点/组织。
+- 全程 ruff 绿、相关测试全绿；全量套件 9 失败均为既有问题（8 schemathesis 契约测试 + 1 顺序敏感 flaky），clean HEAD 即存在，与本任务无关。
