@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { FaBook } from 'react-icons/fa';
 import { useNotification } from '../NotificationManager';
 import { Layout, Divider, Spin } from 'antd';
+import { analyzeChapterKnowledge, getChapterAnalysisStatus } from '../../services/knowledgeService';
 import useWritingPersistentState from '../../hooks/useWritingPersistentState';
 import { useAIModelConfig } from '../../hooks/useAIModelConfig';
 import useChapters from '../../hooks/useChapters';
@@ -48,6 +49,12 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     handleModelConfigChange
   } = useModelConfigs({ addNotification, configLoaded, globalSelectedConfigId, setGlobalSelectedConfigId });
 
+  const [knowledgeAnalysisState, setKnowledgeAnalysisState] = useState({
+    status: 'idle',
+    message: '',
+    refreshKey: 0,
+  });
+
   const {
     promptTemplates,
     selectedPromptTemplate,
@@ -85,12 +92,118 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     }
   }, [projectId, configLoaded]);
 
+  const runKnowledgeAnalysis = useCallback(async (
+    chapterOverride = currentChapter,
+    force = false,
+    options = {},
+  ) => {
+    const chapter = chapterOverride || currentChapter;
+    if (!projectId || !chapter?.id) return null;
+
+    if (!selectedModelConfig?.id) {
+      if (options.notifyOnMissingConfig !== false) {
+        addNotification({
+          message: '请选择一个可用于知识库更新的模型配置',
+          type: 'warning',
+          duration: 3000,
+        });
+      }
+      return null;
+    }
+
+    setKnowledgeAnalysisState((previous) => ({
+      ...previous,
+      status: 'running',
+      message: '正在分析本章知识变更',
+    }));
+
+    try {
+      const result = await analyzeChapterKnowledge(projectId, chapter.id, selectedModelConfig.id, force);
+      const proposalCount = result?.proposal_count ?? 0;
+      const message = result?.message || (proposalCount > 0 ? `生成 ${proposalCount} 个知识变更提案` : '未发现待写入知识变更');
+      setKnowledgeAnalysisState((previous) => ({
+        status: 'success',
+        message,
+        refreshKey: previous.refreshKey + 1,
+      }));
+      if (options.notify !== false) {
+        addNotification({
+          message,
+          type: proposalCount > 0 ? 'success' : 'info',
+          duration: 3000,
+        });
+      }
+      return result;
+    } catch (error) {
+      setKnowledgeAnalysisState((previous) => ({
+        ...previous,
+        status: 'error',
+        message: error.message || '章节知识分析失败',
+      }));
+      if (options.notify !== false && options.notifyErrors !== false) {
+        addNotification({
+          message: `章节知识分析失败: ${error.message}`,
+          type: 'error',
+          duration: 4000,
+        });
+      }
+      return null;
+    }
+  }, [addNotification, currentChapter, projectId, selectedModelConfig?.id]);
+
+  // 草稿保存不再触发知识分析（PR2：仅发布触发，且由后端异步执行）
+  const handleSaveWithKnowledgeAnalysis = useCallback(async () => saveContent(), [saveContent]);
+
+  // 轮询章节知识分析后台任务状态，直到终态或超时
+  const pollChapterAnalysis = useCallback(async (chapterId) => {
+    if (!projectId || !chapterId) return;
+    const TERMINAL = new Set(['succeeded', 'failed', 'cancelled', 'interrupted']);
+    const MAX_POLLS = 60; // 约 5 分钟上限
+    const INTERVAL = 5000;
+    setKnowledgeAnalysisState((prev) => ({ ...prev, status: 'running', message: '正在分析本章知识变更' }));
+    for (let i = 0; i < MAX_POLLS; i++) {
+      try {
+        await new Promise((r) => setTimeout(r, INTERVAL));
+        const result = await getChapterAnalysisStatus(projectId, chapterId);
+        const status = result?.status;
+        if (status && TERMINAL.has(status)) {
+          if (status === 'succeeded') {
+            setKnowledgeAnalysisState((prev) => ({
+              status: 'success',
+              message: '知识变更分析完成',
+              refreshKey: prev.refreshKey + 1,
+            }));
+            addNotification({ message: '知识变更分析完成，请审阅提案', type: 'success', duration: 3000 });
+          } else {
+            const reason = result?.error_message || '分析未成功完成';
+            setKnowledgeAnalysisState((prev) => ({ ...prev, status: 'error', message: reason }));
+            addNotification({ message: `知识变更分析: ${reason}`, type: 'warning', duration: 4000 });
+          }
+          return;
+        }
+      } catch (error) {
+        setKnowledgeAnalysisState((prev) => ({ ...prev, status: 'error', message: error.message || '查询分析状态失败' }));
+        return;
+      }
+    }
+    setKnowledgeAnalysisState((prev) => ({ ...prev, status: 'error', message: '分析超时，请稍后在知识总览查看' }));
+  }, [addNotification, projectId]);
+
+  // 发布后由后端异步触发分析，前端改为轮询 analysis-status，不再同步阻塞
+  const handlePublishWithKnowledgeAnalysis = useCallback(async () => {
+    const updatedChapter = await publishChapterContent();
+    if (updatedChapter?.id) {
+      pollChapterAnalysis(updatedChapter.id);
+    }
+    return updatedChapter;
+  }, [pollChapterAnalysis, publishChapterContent]);
+
   // Ctrl+S 快捷键支持
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
-        saveContent();
+        handleSaveWithKnowledgeAnalysis();
       }
     };
 
@@ -98,7 +211,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [saveContent]);
+  }, [handleSaveWithKnowledgeAnalysis]);
 
   const toggleAiAssisted = () => {
     const newValue = !aiAssisted;
@@ -252,6 +365,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                 <AIChatPanel
                   {...aiWriting}
                   projectId={projectId}
+                  knowledgeAnalysisState={knowledgeAnalysisState}
+                  knowledgeRefreshKey={knowledgeAnalysisState.refreshKey}
+                  onAnalyzeChapterKnowledge={runKnowledgeAnalysis}
+                  addNotification={addNotification}
                   onModelConfigChange={handleModelConfigChange}
                   onPromptTemplateSelect={handlePromptTemplateSelect}
                 />
@@ -305,6 +422,10 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
                 <AIChatPanel
                   {...aiWriting}
                   projectId={projectId}
+                  knowledgeAnalysisState={knowledgeAnalysisState}
+                  knowledgeRefreshKey={knowledgeAnalysisState.refreshKey}
+                  onAnalyzeChapterKnowledge={runKnowledgeAnalysis}
+                  addNotification={addNotification}
                   onModelConfigChange={handleModelConfigChange}
                   onPromptTemplateSelect={handlePromptTemplateSelect}
                 />
@@ -337,7 +458,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             isPublishing={isPublishing}
             canPublishCurrentChapter={canPublishCurrentChapter}
             hasCurrentChapter={hasCurrentChapter}
-            onPublish={publishChapterContent}
+            onPublish={handlePublishWithKnowledgeAnalysis}
             onBatchPublishClick={handleBatchPublishClick}
             onNewChapterClick={() => {
               showConfirmDialog({
@@ -362,7 +483,7 @@ const WritingEditor = ({ projectId, initialChapterId, onChapterChange, onProject
             contentCharCount={contentCharCount}
             contentLineCount={contentLineCount}
             isSaving={isSaving}
-            onSave={saveContent}
+            onSave={handleSaveWithKnowledgeAnalysis}
             aiAssisted={aiAssisted}
             onToggleAiAssisted={toggleAiAssisted}
             aiMode={aiMode}
