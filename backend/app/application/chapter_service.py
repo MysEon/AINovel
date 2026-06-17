@@ -6,13 +6,17 @@
 - project stats 重算（从 ChapterRepository 移出）
 """
 
+import logging
 from collections.abc import Sequence
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.knowledge_graph_service import KnowledgeGraphService
 from app.core.exceptions import NotFoundError
 from app.domain.word_count import calculate_word_count
+
+logger = logging.getLogger(__name__)
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.projects import Project
 from app.infrastructure.db.repositories.chapter import ChapterRepository
@@ -61,6 +65,8 @@ class ChapterService:
         await self.db.refresh(chapter)
         await self._update_project_stats(project_id)
         await self.db.commit()
+        if body.status == "published":
+            await self._trigger_chapter_analysis(chapter, user_id)
         return chapter
 
     async def update_chapter(
@@ -74,6 +80,7 @@ class ChapterService:
         if not chapter:
             raise NotFoundError("章节不存在或无权访问")
 
+        old_status = chapter.status
         data = body.model_dump(exclude_unset=True)
         if "content" in data and data["content"] is not None:
             data["word_count"] = calculate_word_count(data["content"])
@@ -85,6 +92,8 @@ class ChapterService:
         await self.db.refresh(chapter)
         await self._update_project_stats(chapter.project_id)
         await self.db.commit()
+        if old_status != "published" and chapter.status == "published":
+            await self._trigger_chapter_analysis(chapter, user_id)
         return chapter
 
     async def delete_chapter(self, chapter_id: int, user_id: int) -> dict:
@@ -189,6 +198,9 @@ class ChapterService:
             await self.db.rollback()
             raise
 
+        for chapter in published:
+            await self._trigger_chapter_analysis(chapter, user_id)
+
         return {
             "success": len(failed) == 0,
             "published_chapters": [{"id": ch.id, "title": ch.title, "published_at": ch.updated_at} for ch in published],
@@ -215,3 +227,13 @@ class ChapterService:
         if project:
             project.word_count = words.scalar_one_or_none() or 0
             project.chapter_count = count.scalar_one_or_none() or 0
+
+    async def _trigger_chapter_analysis(self, chapter: Chapter, user_id: int) -> None:
+        """章节发布后触发异步知识分析（不阻塞响应）"""
+        try:
+            kg_service = KnowledgeGraphService(self.db)
+            run_id = await kg_service.submit_chapter_analysis(chapter.project_id, chapter.id, user_id)
+            if run_id is not None:
+                await self.db.commit()
+        except Exception:
+            logger.exception("Failed to trigger chapter analysis for chapter %s", chapter.id)

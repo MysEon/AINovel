@@ -16,6 +16,7 @@ from app.application.project_service import ProjectService
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.session import get_db
 from app.schemas.knowledge import (
+    ChapterAnalysisStatusResponse,
     ChapterKnowledgeAnalysisResponse,
     ChapterKnowledgeAnalyzeRequest,
     EntityChangeProposalCreate,
@@ -84,6 +85,21 @@ async def analyze_chapter_knowledge(
         model_config_id=body.model_config_id,
         force=body.force,
     )
+
+
+@router.get(
+    "/projects/{project_id}/chapters/{chapter_id}/analysis-status",
+    response_model=ChapterAnalysisStatusResponse,
+)
+async def get_chapter_analysis_status(
+    project_id: int,
+    chapter_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_active_user),
+):
+    """获取章节最近的 AI 知识分析任务状态，供前端轮询。"""
+    service = KnowledgeGraphService(db)
+    return await service.get_latest_chapter_analysis_run(project_id, user.id, chapter_id)
 
 
 @router.post(

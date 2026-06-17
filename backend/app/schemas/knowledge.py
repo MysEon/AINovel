@@ -167,3 +167,12 @@ class EntityStateEventResponse(BaseModel):
     proposal_operation_id: int | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ChapterAnalysisStatusResponse(BaseModel):
+    run_id: int | None
+    status: str | None
+    created_at: datetime | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    error_message: str | None = None

@@ -12,6 +12,8 @@ MODEL_SCENARIOS: list[str] = [
 ]
 DEFAULT_SCENARIOS: list[str] = ["writing", "chat"]
 
+KNOWLEDGE_UPDATE_SCENARIO = "knowledge_update"
+
 
 def validate_scenarios(values: list[str]) -> list[str]:
     """校验模型场景授权值，返回原列表。"""

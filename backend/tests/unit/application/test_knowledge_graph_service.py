@@ -1,14 +1,20 @@
 """KnowledgeGraphService proposal lifecycle tests."""
 
+import json
+
 import pytest
 
 from app.application.knowledge_graph_service import KnowledgeGraphService
 from app.application.project_service import ProjectService
-from app.core.exceptions import ConflictError
+from app.core.exceptions import ConflictError, ValidationError
+from app.domain.ai_runtime.enums import RunStatus
+from app.infrastructure.db.models.ai_runtime import AIRun
 from app.infrastructure.db.models.manuscript import Chapter
+from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.models.worldbuilding import Character, Organization
 from app.schemas.knowledge import (
     ChapterKnowledgeAnalysisDraft,
+    ChapterKnowledgeAnalysisResponse,
     EntityChangeProposalCreate,
     KnowledgeOperationDraft,
     KnowledgeProposalDraft,
@@ -314,3 +320,186 @@ class TestKnowledgeGraphService:
         assert conflicted.status == "conflicted"
         assert conflicted.operations[0].status == "conflicted"
         assert conflicted.operations[0].conflict_reason
+
+    async def _seed_model_config(self, db_session, user_id: int) -> ModelConfig:
+        cfg = ModelConfig(
+            user_id=user_id,
+            name="test",
+            model_type="openai",
+            api_key="secret",
+            scenarios=json.dumps(["knowledge_update"]),
+        )
+        db_session.add(cfg)
+        await db_session.commit()
+        await db_session.refresh(cfg)
+        return cfg
+
+    async def test_submit_chapter_analysis_skips_when_pending_proposals_exist(
+        self,
+        db_session,
+        test_user,
+    ):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        await self._seed_model_config(db_session, test_user.id)
+
+        service = KnowledgeGraphService(db_session)
+        await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="existing",
+                chapter_id=chapter.id,
+                source="chapter_analysis",
+                operations=[
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "state_key": "test",
+                        "new_value": "x",
+                    }
+                ],
+            ),
+        )
+
+        run_id = await service.submit_chapter_analysis(project.id, chapter.id, test_user.id)
+        assert run_id is None
+
+    async def test_submit_chapter_analysis_returns_run_id_and_submits_task(
+        self,
+        db_session,
+        test_user,
+    ):
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        await self._seed_model_config(db_session, test_user.id)
+
+        import app.application.knowledge_graph_service as kg_module
+
+        original_submit = kg_module.background_runner.submit
+        submitted: list[int] = []
+
+        class FakeInfo:
+            def __init__(self, run_id: int):
+                self.run_id = run_id
+                self.task = type("Task", (), {"done": lambda self: True})()
+
+        def mock_submit(run_id, coro, *, timeout=300):
+            submitted.append(run_id)
+            coro.close()
+            return FakeInfo(run_id)
+
+        kg_module.background_runner.submit = mock_submit
+        try:
+            service = KnowledgeGraphService(db_session)
+            run_id = await service.submit_chapter_analysis(project.id, chapter.id, test_user.id)
+            assert run_id is not None
+            assert len(submitted) == 1
+            assert submitted[0] == run_id
+
+            run = await db_session.get(AIRun, run_id)
+            assert run is not None
+            assert run.workflow_type == "knowledge_update"
+            assert run.status == RunStatus.PENDING.value
+        finally:
+            kg_module.background_runner.submit = original_submit
+
+    async def test_background_task_sets_airun_succeeded_on_success(
+        self,
+        db_session,
+        test_user,
+    ):
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        cfg = await self._seed_model_config(db_session, test_user.id)
+
+        service = KnowledgeGraphService(db_session)
+        workflow = await service._get_or_create_knowledge_workflow(project.id, cfg.id)
+        session = await service._get_or_create_knowledge_session(workflow.id, chapter.id)
+
+        run = AIRun(
+            session_id=session.id,
+            workflow_type="knowledge_update",
+            status=RunStatus.PENDING.value,
+            input_data=json.dumps({"chapter_id": chapter.id}),
+        )
+        db_session.add(run)
+        await db_session.commit()
+        await db_session.refresh(run)
+
+        original_analyze = KnowledgeGraphService.analyze_chapter
+
+        async def mock_analyze(*args, **kwargs):
+            return ChapterKnowledgeAnalysisResponse(
+                success=True,
+                project_id=project.id,
+                chapter_id=chapter.id,
+                proposal_count=0,
+                message="ok",
+            )
+
+        KnowledgeGraphService.analyze_chapter = mock_analyze
+        try:
+            from app.application.knowledge_graph_service import _run_chapter_analysis_background
+
+            await _run_chapter_analysis_background(
+                run.id,
+                project.id,
+                chapter.id,
+                test_user.id,
+                cfg.id,
+                _db_session=db_session,
+            )
+            await db_session.refresh(run)
+            assert run.status == RunStatus.SUCCEEDED.value
+            assert run.finished_at is not None
+        finally:
+            KnowledgeGraphService.analyze_chapter = original_analyze
+
+    async def test_background_task_sets_airun_failed_on_validation_error(
+        self,
+        db_session,
+        test_user,
+    ):
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        cfg = await self._seed_model_config(db_session, test_user.id)
+
+        service = KnowledgeGraphService(db_session)
+        workflow = await service._get_or_create_knowledge_workflow(project.id, cfg.id)
+        session = await service._get_or_create_knowledge_session(workflow.id, chapter.id)
+
+        run = AIRun(
+            session_id=session.id,
+            workflow_type="knowledge_update",
+            status=RunStatus.PENDING.value,
+            input_data=json.dumps({"chapter_id": chapter.id}),
+        )
+        db_session.add(run)
+        await db_session.commit()
+        await db_session.refresh(run)
+
+        original_analyze = KnowledgeGraphService.analyze_chapter
+
+        async def mock_analyze(*args, **kwargs):
+            raise ValidationError("解析失败")
+
+        KnowledgeGraphService.analyze_chapter = mock_analyze
+        try:
+            from app.application.knowledge_graph_service import _run_chapter_analysis_background
+
+            await _run_chapter_analysis_background(
+                run.id,
+                project.id,
+                chapter.id,
+                test_user.id,
+                cfg.id,
+                _db_session=db_session,
+            )
+            await db_session.refresh(run)
+            assert run.status == RunStatus.FAILED.value
+            assert run.error_message is not None
+            assert "解析失败" in run.error_message
+        finally:
+            KnowledgeGraphService.analyze_chapter = original_analyze

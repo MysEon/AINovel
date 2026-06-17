@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -13,7 +15,9 @@ from sqlalchemy.orm import selectinload
 
 from app.application.project_service import ProjectService
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
-from app.core.model_scenarios import DEFAULT_SCENARIOS, MODEL_SCENARIOS
+from app.core.model_scenarios import DEFAULT_SCENARIOS, KNOWLEDGE_UPDATE_SCENARIO, MODEL_SCENARIOS
+from app.domain.ai_runtime.enums import RunStatus
+from app.infrastructure.db.models.ai_runtime import AIRun, LangGraphSession, LangGraphWorkflow
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.model_configs import ModelConfig
 from app.infrastructure.db.models.projects import Project
@@ -25,7 +29,9 @@ from app.infrastructure.db.models.story_knowledge import (
 )
 from app.infrastructure.db.models.worldbuilding import Character, Location, Organization, Worldview
 from app.infrastructure.secrets import get_encryption_service
+from app.infrastructure.task.runner import background_runner
 from app.schemas.knowledge import (
+    ChapterAnalysisStatusResponse,
     ChapterKnowledgeAnalysisDraft,
     ChapterKnowledgeAnalysisResponse,
     EntityChangeProposalCreate,
@@ -38,6 +44,11 @@ from app.schemas.knowledge import (
     ProposalOperationCreate,
     ProposalOperationResponse,
 )
+
+logger = logging.getLogger(__name__)
+
+# 章节分析后台任务并发限流（避免批量发布时瞬间爆 N 个 LLM 调用）
+_CHAPTER_ANALYSIS_SEMAPHORE = asyncio.Semaphore(2)
 
 try:
     from langchain_core.exceptions import OutputParserException
@@ -88,7 +99,6 @@ JSON_TEXT_FIELDS = {
 
 ACTIVE_PROPOSAL_STATUSES = {"pending", "conflicted"}
 ACTIVE_OPERATION_STATUSES = {"pending", "conflicted"}
-KNOWLEDGE_UPDATE_SCENARIO = "knowledge_update"
 CHAPTER_ANALYSIS_SOURCE = "chapter_analysis"
 
 
@@ -185,6 +195,147 @@ class KnowledgeGraphService:
             return None
         return parsed if isinstance(parsed, list) else None
 
+    async def _get_default_knowledge_model_config(self, user_id: int) -> ModelConfig | None:
+        """查找用户第一个支持 knowledge_update 且有 API Key 的模型配置。"""
+        result = await self.db.execute(
+            select(ModelConfig)
+            .where(
+                ModelConfig.user_id == user_id,
+                ModelConfig.api_key.isnot(None),
+            )
+            .order_by(ModelConfig.id)
+        )
+        for cfg in result.scalars().all():
+            scenarios = self._parse_scenarios(cfg.scenarios)
+            if KNOWLEDGE_UPDATE_SCENARIO in scenarios:
+                return cfg
+        return None
+
+    async def _get_or_create_knowledge_workflow(
+        self,
+        project_id: int,
+        model_config_id: int,
+    ) -> LangGraphWorkflow:
+        result = await self.db.execute(
+            select(LangGraphWorkflow).where(
+                LangGraphWorkflow.project_id == project_id,
+                LangGraphWorkflow.workflow_type == "knowledge_update",
+            )
+        )
+        workflow = result.scalar_one_or_none()
+        if workflow:
+            return workflow
+        workflow = LangGraphWorkflow(
+            name="知识更新",
+            workflow_type="knowledge_update",
+            project_id=project_id,
+            model_config_id=model_config_id,
+            status="active",
+        )
+        self.db.add(workflow)
+        await self.db.flush()
+        return workflow
+
+    async def _get_or_create_knowledge_session(
+        self,
+        workflow_id: int,
+        chapter_id: int,
+    ) -> LangGraphSession:
+        thread_id = f"knowledge-update-{workflow_id}-{chapter_id}"
+        result = await self.db.execute(
+            select(LangGraphSession).where(LangGraphSession.thread_id == thread_id)
+        )
+        session = result.scalar_one_or_none()
+        if session:
+            return session
+        session = LangGraphSession(
+            workflow_id=workflow_id,
+            thread_id=thread_id,
+            messages_count=0,
+        )
+        self.db.add(session)
+        await self.db.flush()
+        return session
+
+    async def submit_chapter_analysis(
+        self,
+        project_id: int,
+        chapter_id: int,
+        user_id: int,
+    ) -> int | None:
+        """提交章节知识分析后台任务。返回 AIRun.id，None 表示去重跳过或没有可用模型。"""
+        existing = await self._list_existing_chapter_analysis(project_id, chapter_id)
+        if existing:
+            logger.info("Chapter %s already has pending proposals, skipping analysis", chapter_id)
+            return None
+
+        cfg = await self._get_default_knowledge_model_config(user_id)
+        if cfg is None:
+            logger.warning("No knowledge_update model config found for user %s, skipping analysis", user_id)
+            return None
+
+        workflow = await self._get_or_create_knowledge_workflow(project_id, cfg.id)
+        session = await self._get_or_create_knowledge_session(workflow.id, chapter_id)
+
+        run = AIRun(
+            session_id=session.id,
+            workflow_type="knowledge_update",
+            status=RunStatus.PENDING.value,
+            input_data=_dump_json({
+                "project_id": project_id,
+                "chapter_id": chapter_id,
+                "user_id": user_id,
+                "model_config_id": cfg.id,
+            }),
+        )
+        self.db.add(run)
+        await self.db.flush()
+
+        coro = _run_chapter_analysis_background(
+            run.id, project_id, chapter_id, user_id, cfg.id,
+        )
+        background_runner.submit(run.id, coro)
+        logger.info("Submitted chapter analysis background task run=%s chapter=%s", run.id, chapter_id)
+        return run.id
+
+    async def get_latest_chapter_analysis_run(
+        self,
+        project_id: int,
+        user_id: int,
+        chapter_id: int,
+    ) -> ChapterAnalysisStatusResponse:
+        """查询某章节最近的知识分析 AIRun 状态。"""
+        await self.project_service.require_user_project(project_id, user_id)
+        stmt = (
+            select(AIRun)
+            .join(LangGraphSession, AIRun.session_id == LangGraphSession.id)
+            .join(LangGraphWorkflow, LangGraphSession.workflow_id == LangGraphWorkflow.id)
+            .join(Project, LangGraphWorkflow.project_id == Project.id)
+            .where(
+                Project.id == project_id,
+                Project.user_id == user_id,
+                AIRun.workflow_type == "knowledge_update",
+            )
+            .order_by(AIRun.id.desc())
+            .limit(50)
+        )
+        result = await self.db.execute(stmt)
+        for run in result.scalars().all():
+            try:
+                data = json.loads(run.input_data or "{}")
+                if data.get("chapter_id") == chapter_id:
+                    return ChapterAnalysisStatusResponse(
+                        run_id=run.id,
+                        status=run.status,
+                        created_at=run.created_at,
+                        started_at=run.started_at,
+                        finished_at=run.finished_at,
+                        error_message=run.error_message,
+                    )
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return ChapterAnalysisStatusResponse(run_id=None, status=None)
+
     async def analyze_chapter(
         self,
         project_id: int,
@@ -194,11 +345,13 @@ class KnowledgeGraphService:
         model_config_id: int,
         force: bool = False,
     ) -> ChapterKnowledgeAnalysisResponse:
+        logger.info("Starting chapter analysis project=%s chapter=%s", project_id, chapter_id)
         await self.project_service.require_user_project(project_id, user_id)
         chapter = await self._require_chapter(project_id, chapter_id)
 
         existing = await self._list_existing_chapter_analysis(project_id, chapter_id)
         if existing and not force:
+            logger.info("Chapter %s has existing pending proposals, returning cached", chapter_id)
             return ChapterKnowledgeAnalysisResponse(
                 success=True,
                 project_id=project_id,
@@ -234,6 +387,7 @@ class KnowledgeGraphService:
             except _PARSE_EXCEPTIONS as exc:
                 last_error = exc
         else:
+            logger.error("Chapter analysis parsing failed for chapter %s: %s", chapter_id, last_error)
             raise ValidationError("章节知识影响分析失败：模型输出无法解析", detail=str(last_error))
 
         proposals: list[EntityChangeProposalResponse] = []
@@ -245,6 +399,10 @@ class KnowledgeGraphService:
                 continue
             proposals.append(await self.create_proposal(project_id, user_id, body))
 
+        logger.info(
+            "Chapter analysis completed project=%s chapter=%s proposals=%s skipped=%s",
+            project_id, chapter.id, len(proposals), skipped,
+        )
         return ChapterKnowledgeAnalysisResponse(
             success=True,
             project_id=project_id,
@@ -1003,3 +1161,73 @@ class KnowledgeGraphService:
             created_at=state_event.created_at,
             updated_at=state_event.updated_at,
         )
+
+
+async def _run_chapter_analysis_background(
+    run_id: int,
+    project_id: int,
+    chapter_id: int,
+    user_id: int,
+    model_config_id: int,
+    *,
+    _db_session: AsyncSession | None = None,
+) -> None:
+    """章节知识分析后台任务。支持注入 _db_session 供测试使用。"""
+    if _db_session is not None:
+        session = _db_session
+        should_close = False
+    else:
+        from app.infrastructure.db.session import get_session_factory
+
+        session_factory = get_session_factory()
+        session = session_factory()
+        should_close = True
+
+    run: AIRun | None = None
+    try:
+        result = await session.execute(select(AIRun).where(AIRun.id == run_id))
+        run = result.scalar_one_or_none()
+        if run is None:
+            logger.error("AIRun %s not found in background task", run_id)
+            return
+
+        run.status = RunStatus.RUNNING.value
+        run.started_at = _now()
+        await session.commit()
+
+        async with _CHAPTER_ANALYSIS_SEMAPHORE:
+            service = KnowledgeGraphService(session)
+            await service.analyze_chapter(
+                project_id,
+                chapter_id,
+                user_id,
+                model_config_id=model_config_id,
+            )
+
+        run.status = RunStatus.SUCCEEDED.value
+        run.finished_at = _now()
+        await session.commit()
+        logger.info(
+            "Chapter analysis background task succeeded run=%s chapter=%s",
+            run_id,
+            chapter_id,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Chapter analysis background task failed run=%s chapter=%s",
+            run_id,
+            chapter_id,
+        )
+        if run is not None:
+            try:
+                run.status = RunStatus.FAILED.value
+                run.error_message = str(exc)[:500]
+                run.finished_at = _now()
+                await session.commit()
+            except Exception:
+                logger.exception("Failed to update AIRun to failed state run=%s", run_id)
+    finally:
+        if should_close:
+            await session.close()
