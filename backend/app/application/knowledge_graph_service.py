@@ -1361,6 +1361,16 @@ async def _run_chapter_analysis_background(
             chapter_id,
         )
     except asyncio.CancelledError:
+        # BackgroundTaskRunner 的 wait_for 超时会取消本协程并抛 CancelledError。
+        # 此前直接 raise 会留下 AIRun=running（悬空状态），需在此标记 failed。
+        if run is not None:
+            try:
+                run.status = RunStatus.FAILED.value
+                run.error_message = "分析超时或被取消"
+                run.finished_at = _now()
+                await session.commit()
+            except Exception:
+                logger.exception("Failed to update AIRun to failed state on cancel run=%s", run_id)
         raise
     except Exception as exc:
         logger.exception(

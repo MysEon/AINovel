@@ -504,6 +504,53 @@ class TestKnowledgeGraphService:
         finally:
             KnowledgeGraphService.analyze_chapter = original_analyze
 
+    async def test_background_task_sets_airun_failed_on_cancel(self, db_session, test_user):
+        import asyncio
+
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        cfg = await self._seed_model_config(db_session, test_user.id)
+
+        service = KnowledgeGraphService(db_session)
+        workflow = await service._get_or_create_knowledge_workflow(project.id, cfg.id)
+        session = await service._get_or_create_knowledge_session(workflow.id, chapter.id)
+
+        run = AIRun(
+            session_id=session.id,
+            workflow_type="knowledge_update",
+            status=RunStatus.PENDING.value,
+            input_data=json.dumps({"chapter_id": chapter.id}),
+        )
+        db_session.add(run)
+        await db_session.commit()
+        await db_session.refresh(run)
+
+        original_analyze = KnowledgeGraphService.analyze_chapter
+
+        async def mock_analyze(*args, **kwargs):
+            raise asyncio.CancelledError()
+
+        KnowledgeGraphService.analyze_chapter = mock_analyze
+        try:
+            from app.application.knowledge_graph_service import _run_chapter_analysis_background
+
+            with pytest.raises(asyncio.CancelledError):
+                await _run_chapter_analysis_background(
+                    run.id,
+                    project.id,
+                    chapter.id,
+                    test_user.id,
+                    cfg.id,
+                    _db_session=db_session,
+                )
+            await db_session.refresh(run)
+            # 取消（含 runner 超时取消）应将 AIRun 标记为 failed，不留悬空 running
+            assert run.status == RunStatus.FAILED.value
+            assert run.error_message is not None
+            assert run.finished_at is not None
+        finally:
+            KnowledgeGraphService.analyze_chapter = original_analyze
+
     async def test_analyze_chapter_auto_writes_character_metadata_and_skips_proposal(
         self,
         db_session,
