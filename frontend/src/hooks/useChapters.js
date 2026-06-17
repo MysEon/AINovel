@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getChapters, updateChapter, createChapter, getChapter, batchUpdateChapterStatus, batchPublishChapters } from '../services/chapterService';
+import { getChapterAnalysisStatus } from '../services/knowledgeService';
 
 const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotification, onProjectsChange, showConfirmDialog }) => {
   const [currentChapter, setCurrentChapter] = useState(null);
@@ -71,7 +72,7 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
 
   // 保存功能
   const saveContent = useCallback(async () => {
-    if (isSaving || !currentChapter) return;
+    if (isSaving || !currentChapter) return null;
 
     setIsSaving(true);
     try {
@@ -102,12 +103,14 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
           chapter.id === updatedChapter.id ? updatedChapter : chapter
         )
       );
+      return updatedChapter;
     } catch (error) {
       addNotification({
         message: '保存失败: ' + error.message,
         type: 'error',
         duration: 3000
       });
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -115,7 +118,7 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
 
   // 发布功能
   const publishChapterContent = useCallback(async () => {
-    if (isPublishing || !currentChapter) return;
+    if (isPublishing || !currentChapter) return null;
 
     setIsPublishing(true);
     try {
@@ -149,12 +152,14 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
       if (onProjectsChange) {
         onProjectsChange();
       }
+      return latestChapter;
     } catch (error) {
       addNotification({
         message: '发布失败: ' + error.message,
         type: 'error',
         duration: 3000
       });
+      return null;
     } finally {
       setIsPublishing(false);
     }
@@ -249,6 +254,50 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
     }
   };
 
+  // 轮询章节知识分析后台任务状态（批量发布场景，轻量版，不操作 editor state）
+  const _pollChapterAnalysis = useCallback(async (chapterId, chapterTitle) => {
+    if (!projectId || !chapterId) return;
+    const TERMINAL = new Set(['succeeded', 'failed', 'cancelled', 'interrupted']);
+    const MAX_POLLS = 60; // 约 5 分钟上限
+    const INTERVAL = 5000;
+    for (let i = 0; i < MAX_POLLS; i++) {
+      try {
+        await new Promise((r) => setTimeout(r, INTERVAL));
+        const result = await getChapterAnalysisStatus(projectId, chapterId);
+        const status = result?.status;
+        if (status && TERMINAL.has(status)) {
+          if (status === 'succeeded') {
+            addNotification({
+              message: `《${chapterTitle}》知识变更分析完成，请审阅提案`,
+              type: 'success',
+              duration: 3000,
+            });
+          } else {
+            const reason = result?.error_message || '分析未成功完成';
+            addNotification({
+              message: `《${chapterTitle}》知识变更分析: ${reason}`,
+              type: 'warning',
+              duration: 4000,
+            });
+          }
+          return;
+        }
+      } catch (error) {
+        addNotification({
+          message: `《${chapterTitle}》查询分析状态失败: ${error.message || '未知错误'}`,
+          type: 'warning',
+          duration: 4000,
+        });
+        return;
+      }
+    }
+    addNotification({
+      message: `《${chapterTitle}》知识分析超时，请稍后在知识总览查看`,
+      type: 'warning',
+      duration: 4000,
+    });
+  }, [addNotification, projectId]);
+
   // 处理批量发布
   const handleBatchPublish = async (chaptersToPublish, onProgress) => {
     try {
@@ -287,6 +336,12 @@ const useChapters = ({ projectId, initialChapterId, onChapterChange, addNotifica
           duration: 5000
         });
       }
+
+      // 对成功发布的章节并行启动知识分析轮询（fire-and-forget）
+      const successIds = new Set(results.results.filter(r => r.success).map(r => r.chapterId));
+      chaptersToPublish.filter(ch => successIds.has(ch.id)).forEach(ch => {
+        _pollChapterAnalysis(ch.id, ch.title);
+      });
     } catch (error) {
       addNotification({
         message: '批量发布失败: ' + error.message,
