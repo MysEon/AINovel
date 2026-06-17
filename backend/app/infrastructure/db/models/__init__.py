@@ -16,6 +16,12 @@ from app.infrastructure.db.models.manuscript import Chapter, Draft  # noqa: F401
 from app.infrastructure.db.models.model_configs import ModelConfig  # noqa: F401
 from app.infrastructure.db.models.projects import Project  # noqa: F401
 from app.infrastructure.db.models.prompts import PromptTemplate  # noqa: F401
+from app.infrastructure.db.models.story_knowledge import (  # noqa: F401
+    EntityChangeProposal,
+    EntityRelationship,
+    EntityStateEvent,
+    ProposalOperation,
+)
 from app.infrastructure.db.models.worldbuilding import (  # noqa: F401
     Character,
     Location,

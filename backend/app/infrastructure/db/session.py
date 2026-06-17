@@ -4,7 +4,7 @@
 禁止在此模块执行 create_all()
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -18,6 +18,20 @@ def _is_sqlite(url: str) -> bool:
     return url.startswith("sqlite")
 
 
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record) -> None:
+    """SQLite 默认关闭外键约束 —— 在每个底层连接上开启。
+
+    历史上本项目的硬外键（如 characters.organization_id）实际从未生效，
+    删除实体后留下孤儿软引用即根因之一。开启后新写入受约束保护；
+    SQLite 不会回溯校验既有数据，故对存量行安全。
+    """
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
+
+
 def create_async_db_engine(settings=None):
     """创建异步数据库引擎"""
     settings = settings or get_settings()
@@ -25,13 +39,19 @@ def create_async_db_engine(settings=None):
     if _is_sqlite(settings.db.url):
         connect_args["check_same_thread"] = False
 
-    return create_async_engine(
+    engine = create_async_engine(
         settings.db.url,
         echo=settings.db.echo,
         pool_pre_ping=settings.db.pool_pre_ping,
         pool_recycle=settings.db.pool_recycle,
         connect_args=connect_args,
     )
+
+    if _is_sqlite(settings.db.url):
+        # 在底层 DBAPI 连接上启用外键约束（async engine 的 sync_engine 暴露 connect 事件）
+        event.listen(engine.sync_engine, "connect", _enable_sqlite_foreign_keys)
+
+    return engine
 
 
 def create_sync_db_engine(settings=None):

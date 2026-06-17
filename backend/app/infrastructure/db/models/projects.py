@@ -24,3 +24,10 @@ class Project(Base, TimestampMixin):
     worldviews = relationship("Worldview", back_populates="project", cascade="all, delete-orphan")
     chapters = relationship("Chapter", back_populates="project", cascade="all, delete-orphan")
     drafts = relationship("Draft", back_populates="project", cascade="all, delete-orphan")
+    entity_relationships = relationship("EntityRelationship", back_populates="project", cascade="all, delete-orphan")
+    entity_state_events = relationship("EntityStateEvent", back_populates="project", cascade="all, delete-orphan")
+    entity_change_proposals = relationship(
+        "EntityChangeProposal",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )

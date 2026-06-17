@@ -9,15 +9,16 @@
 """
 
 import asyncio
-import pytest
-import pytest_asyncio
-from typing import AsyncGenerator
-
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 # ── 测试环境变量（必须在 import app 之前设置） ──
 import os
+from collections.abc import AsyncGenerator
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("AUTH_SECRET_KEY", "test-secret-key-must-be-at-least-32-chars-long!!")
 os.environ.setdefault("AUTH_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
@@ -53,6 +54,10 @@ TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 @pytest_asyncio.fixture(scope="session")
 async def db_engine():
     engine = create_async_engine(TEST_DB_URL, echo=False)
+    # 注意：测试库不开启 PRAGMA foreign_keys。schemathesis 契约测试会生成随机
+    # 外键值，部分测试也直接插入无父行的引用行；强制外键会与之冲突。
+    # 生产引擎（create_async_db_engine）已开启外键约束，孤儿清理逻辑由
+    # test_entity_integrity.py 显式覆盖。
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
@@ -105,8 +110,9 @@ TEST_USER_PASSWORD = "TestPass123!"
 async def test_user(db_session):
     """创建测试用户并返回 ORM 对象"""
     import uuid
-    from app.infrastructure.db.models.auth import User
+
     from app.core.security import get_password_hash
+    from app.infrastructure.db.models.auth import User
 
     user = User(
         username=f"testuser_{uuid.uuid4().hex[:8]}",

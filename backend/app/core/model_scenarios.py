@@ -7,6 +7,7 @@ MODEL_SCENARIOS: list[str] = [
     "character_generation",
     "worldview_generation",
     "outline_generation",
+    "knowledge_update",
     "chat",
 ]
 DEFAULT_SCENARIOS: list[str] = ["writing", "chat"]

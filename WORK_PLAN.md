@@ -756,3 +756,17 @@
 **关键决策**：遵循 PRD D1-D5；不改后端、不改 `aiService.chatWithAIStream` 签名、不引入 shadcn / @assistant-ui/react-markdown / @ai-sdk 包；adapter 的 abort v1 仅本地停止 yield，真 fetch abort 留 TODO。
 
 **相关文件**：frontend/package.json、frontend/src/runtime/aiNovelChatAdapter.js、frontend/src/components/writing/AIChatPanel.jsx、frontend/src/components/writing/*MessageRenderer.jsx、frontend/src/hooks/useAIWriting.js、frontend/src/components/writing/WritingEditor.jsx、TODO.md、WORK_PLAN.md。
+
+### 实体联动与 AI 自动更新链路修复 - 2026-06-17（进行中，Trellis 任务 06-17-fix-interconnected-entity-pipeline）
+**需求描述**：打通世界观/角色/组织/地点四实体联动与 AI 自动更新链路。诊断见任务 prd.md。拆 5 个 PR。
+
+**PR1 — 数据完整性基础（已完成，待用户确认后提交）**
+- 开启 SQLite 外键约束：`app/infrastructure/db/session.py` 在 `create_async_db_engine` 注册 `connect` 事件 `PRAGMA foreign_keys=ON`（仅生产引擎；测试库不开启，因 schemathesis 契约测试生成随机外键值会冲突，孤儿清理由 `test_entity_integrity.py` 显式覆盖）。
+- 删除实体清理孤儿软引用：新增 `app/application/entity_integrity.py::cleanup_entity_references`，删关系边/状态时间线硬删，待处理提案操作标记 rejected，删组织时置空 `characters.organization_id`；`app/api/v1/worldbuilding.py` delete 端点接入。
+- `entity_field_update` 应用时同步写 `entity_state_events`（补全状态时间线）：`knowledge_graph_service.py::_apply_field_update`。
+- 状态事件新增 `chapter_order` 冗余字段，按叙事时序排序：迁移 0008 + `_chapter_order` + `list_state_events` 改 `nullslast(chapter_order.desc())`。
+- 迁移 0008：补单列索引（proposal_id/operation_id/operation_type/characters.organization_id）、`entity_state_events` 加 `(proposal_id, proposal_operation_id)` 唯一索引防重复 apply。
+- 测试：新增 `tests/unit/application/test_entity_integrity.py`；更新 `test_knowledge_graph_service.py`/`test_knowledge_proposals.py` 反映 field_update 现写时间线（states 数 1→2）。
+- 验证：ruff 全绿；PR1 相关测试全绿；迁移在 dev ainovel.db 升级/降级干净，schema 对象已落地；全量套件 9 失败均为既有问题（8 契约测试在 clean HEAD 即失败，1 character_ai 测试受契约测试日志污染的顺序敏感 flaky，隔离运行通过）。
+
+**后续 PR**：PR2 自动触发+异步可观测、PR3 自动写分流、PR4 AI 工具+上下文、PR5 提案生命周期 bug。

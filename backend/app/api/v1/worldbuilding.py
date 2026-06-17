@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.auth import require_active_user
+from app.application.entity_integrity import cleanup_entity_references
 from app.application.project_service import ProjectService
 from app.core.character_templates import build_character_template_registry
 from app.core.exceptions import NotFoundError
@@ -142,6 +143,13 @@ def _register_crud(
         user: User = Depends(require_active_user),
     ):
         entity = await get_entity(item_id, db, user)
+        # 清理该实体的全部图引用（关系/状态时间线/待处理提案操作），避免孤儿软引用
+        await cleanup_entity_references(
+            db,
+            project_id=entity.project_id,
+            entity_type=singular,
+            entity_id=item_id,
+        )
         await db.delete(entity)
         await db.commit()
         return {"message": f"{label} '{entity.name}' 已成功删除"}
