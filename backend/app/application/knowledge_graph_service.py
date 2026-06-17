@@ -523,6 +523,19 @@ class KnowledgeGraphService:
         body: ProposalAcceptRequest,
     ) -> EntityChangeProposalResponse:
         proposal = await self._get_proposal_for_user(proposal_id, user_id)
+
+        # Bug 1: 加悲观锁（PostgreSQL 生产环境生效；SQLite aiosqlite 为 no-op 但不报错）
+        lock_stmt = (
+            select(EntityChangeProposal)
+            .where(EntityChangeProposal.id == proposal_id)
+            .with_for_update()
+        )
+        await self.db.execute(lock_stmt)
+
+        # Bug 1: CAS 校验——已被终态处理则拒绝重复 accept
+        if proposal.status not in ACTIVE_PROPOSAL_STATUSES:
+            raise ValidationError("提案已处理，不能重复接受")
+
         available_ops = [op for op in proposal.operations if op.status in ACTIVE_OPERATION_STATUSES]
         available_ids = {op.id for op in available_ops}
 
@@ -555,7 +568,7 @@ class KnowledgeGraphService:
 
         if conflicts:
             proposal.status = "conflicted"
-            await self.db.commit()
+            await self.db.flush()
             raise ConflictError("提案存在冲突，请重新分析或明确强制应用", detail={"conflicts": conflicts})
 
         for operation in rejected_ops:
@@ -563,10 +576,24 @@ class KnowledgeGraphService:
             operation.conflict_reason = None
 
         for operation in accepted_ops:
-            await self._apply_operation(proposal, operation)
-            operation.status = "accepted"
-            operation.conflict_reason = None
-            operation.applied_at = _now()
+            # Bug 1: 幂等兜底——已应用过的 operation 直接跳过
+            if operation.applied_at is not None:
+                continue
+            success = await self._apply_operation(proposal, operation)
+            if success:
+                operation.status = "accepted"
+                operation.conflict_reason = None
+                operation.applied_at = _now()
+            else:
+                # Bug 7: 空关系删除失败（如 force 模式下 relationship 已不存在）
+                operation.status = "conflicted"
+                operation.conflict_reason = "要删除的关系不存在或已失效"
+                conflicts.append({"operation_id": operation.id, "reason": operation.conflict_reason})
+
+        if conflicts:
+            proposal.status = "conflicted"
+            await self.db.flush()
+            raise ConflictError("提案存在冲突，请重新分析或明确强制应用", detail={"conflicts": conflicts})
 
         proposal.status = self._proposal_status_after_operations(proposal.operations)
         if proposal.status in {"accepted", "rejected"}:
@@ -584,6 +611,9 @@ class KnowledgeGraphService:
         reason: str | None = None,
     ) -> EntityChangeProposalResponse:
         proposal = await self._get_proposal_for_user(proposal_id, user_id)
+        # Bug 5: 已终态提案拒绝重复 reject（不撤销已应用操作）
+        if proposal.status in {"accepted", "rejected"}:
+            raise ValidationError("提案已处理，不能重复拒绝")
         proposal.status = "rejected"
         proposal.reviewed_at = _now()
         for operation in proposal.operations:
@@ -650,7 +680,7 @@ class KnowledgeGraphService:
                 EntityChangeProposal.project_id == project_id,
                 EntityChangeProposal.chapter_id == chapter_id,
                 EntityChangeProposal.source == CHAPTER_ANALYSIS_SOURCE,
-                EntityChangeProposal.status.in_(ACTIVE_PROPOSAL_STATUSES),
+                EntityChangeProposal.status == "pending",
             )
             .options(selectinload(EntityChangeProposal.operations))
             .order_by(EntityChangeProposal.created_at.desc(), EntityChangeProposal.id.desc())
@@ -878,6 +908,9 @@ class KnowledgeGraphService:
         if operation.operation_type == "relationship_upsert":
             return await self._detect_pending_operation_conflict(project_id, operation)
 
+        if operation.operation_type == "entity_state_event":
+            return await self._detect_pending_operation_conflict(project_id, operation)
+
         return None
 
     async def _detect_pending_operation_conflict(self, project_id: int, operation: ProposalOperation) -> str | None:
@@ -912,25 +945,31 @@ class KnowledgeGraphService:
                 ProposalOperation.target_type == operation.target_type,
                 ProposalOperation.target_id == operation.target_id,
             )
+        elif operation.operation_type == "entity_state_event":
+            stmt = stmt.where(
+                ProposalOperation.operation_type == "entity_state_event",
+                ProposalOperation.entity_type == operation.entity_type,
+                ProposalOperation.entity_id == operation.entity_id,
+                ProposalOperation.state_key == operation.state_key,
+            )
         else:
             return None
 
         result = await self.db.execute(stmt)
         return "存在另一个待处理提案修改同一目标" if result.scalar_one_or_none() is not None else None
 
-    async def _apply_operation(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
+    async def _apply_operation(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> bool:
         if operation.operation_type == "entity_field_update":
             await self._apply_field_update(proposal, operation)
-            return
+            return True
         if operation.operation_type == "relationship_upsert":
             await self._apply_relationship_upsert(proposal, operation)
-            return
+            return True
         if operation.operation_type == "relationship_delete":
-            await self._apply_relationship_delete(proposal.project_id, operation)
-            return
+            return await self._apply_relationship_delete(proposal.project_id, operation)
         if operation.operation_type == "entity_state_event":
             await self._apply_state_event(proposal, operation)
-            return
+            return True
         raise ValidationError(f"不支持的子操作类型：{operation.operation_type}")
 
     async def _apply_field_update(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
@@ -993,14 +1032,18 @@ class KnowledgeGraphService:
         relationship.confidence = payload.get("confidence", proposal.confidence)
         relationship.properties = _dump_json(payload.get("properties") or {})
         relationship.source = proposal.source
-        relationship.proposal_id = proposal.id
-        relationship.proposal_operation_id = operation.id
+        # Bug 6: 仅当无溯源时才写 proposal_id，避免重激活时覆盖原创建者
+        if relationship.proposal_id is None:
+            relationship.proposal_id = proposal.id
+            relationship.proposal_operation_id = operation.id
 
-    async def _apply_relationship_delete(self, project_id: int, operation: ProposalOperation) -> None:
+    async def _apply_relationship_delete(self, project_id: int, operation: ProposalOperation) -> bool:
         relationship = await self._find_relationship(project_id, operation)
         if relationship is not None:
             relationship.status = "inactive"
             relationship.proposal_operation_id = operation.id
+            return True
+        return False
 
     async def _apply_state_event(
         self,

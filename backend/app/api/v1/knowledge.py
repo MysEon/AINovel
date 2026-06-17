@@ -13,6 +13,7 @@ from app.api.deps.auth import require_active_user
 from app.application.ai_context_builder import AIContextBuilder
 from app.application.knowledge_graph_service import KnowledgeGraphService
 from app.application.project_service import ProjectService
+from app.core.exceptions import ConflictError
 from app.infrastructure.db.models.auth import User
 from app.infrastructure.db.session import get_db
 from app.schemas.knowledge import (
@@ -169,7 +170,12 @@ async def accept_change_proposal(
 ):
     """Accept all or selected child operations from a proposal."""
     service = KnowledgeGraphService(db)
-    return await service.accept_proposal(proposal_id, user.id, body)
+    try:
+        return await service.accept_proposal(proposal_id, user.id, body)
+    except ConflictError:
+        # Bug 2: service 内部冲突时只 flush 不 commit，由路由层统一 commit conflicted 状态
+        await db.commit()
+        raise
 
 
 @router.post(

@@ -708,3 +708,246 @@ class TestKnowledgeGraphService:
         assert response.proposal_count == 1
         assert len(response.proposals[0].operations) == 1
         assert response.proposals[0].operations[0].field_name == "extra_attributes"
+
+
+    async def test_repeat_accept_final_proposal_raises_validation_error(self, db_session, test_user):
+        """Bug 1: 重复 accept 已终态提案应抛 ValidationError。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        service = KnowledgeGraphService(db_session)
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Accept once",
+                operations=[
+                    {
+                        "operation_type": "entity_field_update",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "field_name": "alignment",
+                        "expected_old_value": "loyal",
+                        "new_value": "defector",
+                    }
+                ],
+            ),
+        )
+
+        first = await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        assert first.status == "accepted"
+
+        with pytest.raises(ValidationError, match="提案已处理"):
+            await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+
+    async def test_conflicted_proposal_does_not_block_chapter_reanalysis(self, db_session, test_user):
+        """Bug 3: conflicted 提案不应阻塞同章节的重新分析。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        service = KnowledgeGraphService(db_session)
+
+        # 制造一个 conflicted 提案
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Stale",
+                chapter_id=chapter.id,
+                source="chapter_analysis",
+                operations=[
+                    {
+                        "operation_type": "entity_field_update",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "field_name": "alignment",
+                        "expected_old_value": "loyal",
+                        "new_value": "defector",
+                    }
+                ],
+            ),
+        )
+        character.alignment = "independent"
+        await db_session.commit()
+
+        with pytest.raises(ConflictError):
+            await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+
+        # 重新分析应能调 AI
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="New analysis",
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_state_event",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            state_key="mood",
+                            new_value="angry",
+                        )
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(project.id, chapter.id, test_user.id, model_config_id=123)
+        assert structured_model.calls == 1
+        assert response.proposal_count == 1
+
+    async def test_entity_state_event_conflict_detected_for_pending_operations(self, db_session, test_user):
+        """Bug 4: 同 entity+state_key 的两个 pending state_event 应触发冲突。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        service = KnowledgeGraphService(db_session)
+
+        await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="State A",
+                operations=[
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "state_key": "status",
+                        "new_value": "injured",
+                    }
+                ],
+            ),
+        )
+
+        proposal2 = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="State B",
+                operations=[
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "state_key": "status",
+                        "new_value": "dead",
+                    }
+                ],
+            ),
+        )
+
+        with pytest.raises(ConflictError):
+            await service.accept_proposal(proposal2.id, test_user.id, ProposalAcceptRequest())
+
+        conflicted = await service.get_proposal(proposal2.id, test_user.id)
+        assert conflicted.status == "conflicted"
+        assert conflicted.operations[0].conflict_reason == "存在另一个待处理提案修改同一目标"
+
+    async def test_relationship_upsert_reactivate_preserves_original_proposal_id(self, db_session, test_user):
+        """Bug 6: 重激活已 inactive 的关系时不应覆盖原 proposal_id。"""
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        service = KnowledgeGraphService(db_session)
+
+        # 创建关系
+        proposal_a = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Create relation",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "enemy_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                        "payload": {"status": "active"},
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(proposal_a.id, test_user.id, ProposalAcceptRequest())
+
+        # 删除关系
+        proposal_del = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Delete relation",
+                operations=[
+                    {
+                        "operation_type": "relationship_delete",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "enemy_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(proposal_del.id, test_user.id, ProposalAcceptRequest())
+
+        # 重激活
+        proposal_b = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Reactivate relation",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "enemy_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                        "payload": {"status": "active", "description": "reborn"},
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(proposal_b.id, test_user.id, ProposalAcceptRequest())
+
+        relationships = await service.list_relationships(project.id, test_user.id)
+        assert len(relationships) == 1
+        rel = relationships[0]
+        assert rel.status == "active"
+        assert rel.proposal_id == proposal_a.id
+
+    async def test_relationship_delete_missing_marks_operation_conflicted(self, db_session, test_user):
+        """Bug 7: force 模式下删除不存在的关系应标记 operation conflicted。"""
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Delete missing",
+                operations=[
+                    {
+                        "operation_type": "relationship_delete",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "enemy_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                    }
+                ],
+            ),
+        )
+
+        with pytest.raises(ConflictError):
+            await service.accept_proposal(
+                proposal.id,
+                test_user.id,
+                ProposalAcceptRequest(force_conflicts=True),
+            )
+
+        conflicted = await service.get_proposal(proposal.id, test_user.id)
+        assert conflicted.status == "conflicted"
+        assert conflicted.operations[0].status == "conflicted"
+        assert "要删除的关系不存在" in conflicted.operations[0].conflict_reason
