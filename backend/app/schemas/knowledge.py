@@ -76,6 +76,7 @@ class ChapterKnowledgeAnalysisResponse(BaseModel):
     chapter_id: int
     proposal_count: int
     skipped_proposal_count: int = 0
+    auto_written_count: int = 0
     proposals: list[EntityChangeProposalResponse] = Field(default_factory=list)
     message: str
 

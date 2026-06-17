@@ -11,7 +11,7 @@ from app.domain.ai_runtime.enums import RunStatus
 from app.infrastructure.db.models.ai_runtime import AIRun
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.model_configs import ModelConfig
-from app.infrastructure.db.models.worldbuilding import Character, Organization
+from app.infrastructure.db.models.worldbuilding import Character, Location, Organization
 from app.schemas.knowledge import (
     ChapterKnowledgeAnalysisDraft,
     ChapterKnowledgeAnalysisResponse,
@@ -503,3 +503,208 @@ class TestKnowledgeGraphService:
             assert "解析失败" in run.error_message
         finally:
             KnowledgeGraphService.analyze_chapter = original_analyze
+
+    async def test_analyze_chapter_auto_writes_character_metadata_and_skips_proposal(
+        self,
+        db_session,
+        test_user,
+    ):
+        """纯元数据 operation → 不产提案，extra_attributes 已合并落库，状态时间线有审计记录。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        character.extra_attributes = '{"existing_key": "existing_value"}'
+        await db_session.commit()
+
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="Lin Zhao mention update",
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_field_update",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            field_name="extra_attributes",
+                            new_value={
+                                "last_seen_chapter": chapter.id,
+                                "mention_count": 3,
+                            },
+                        )
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(
+            project.id, chapter.id, test_user.id, model_config_id=123
+        )
+
+        assert response.success is True
+        assert response.proposal_count == 0
+        assert response.auto_written_count == 2
+        assert response.skipped_proposal_count == 0
+        assert len(response.proposals) == 0
+
+        await db_session.refresh(character)
+        extra = json.loads(character.extra_attributes)
+        assert extra["existing_key"] == "existing_value"
+        assert extra["last_seen_chapter"] == chapter.id
+        assert extra["mention_count"] == 3
+
+        states = await service.list_state_events(project.id, test_user.id)
+        assert len(states) == 2
+        state_keys = {s.state_key for s in states}
+        assert state_keys == {"extra_attributes.last_seen_chapter", "extra_attributes.mention_count"}
+
+    async def test_analyze_chapter_mixed_metadata_and_canon_creates_proposal_with_canon_only(
+        self,
+        db_session,
+        test_user,
+    ):
+        """混合：元数据自动写，canon 进提案（提案只含 canon operation）。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="Lin Zhao changes",
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_field_update",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            field_name="extra_attributes",
+                            new_value={"mention_count": 5},
+                        ),
+                        KnowledgeOperationDraft(
+                            operation_type="entity_field_update",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            field_name="alignment",
+                            new_value="wavering",
+                        ),
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(
+            project.id, chapter.id, test_user.id, model_config_id=123
+        )
+
+        assert response.success is True
+        assert response.proposal_count == 1
+        assert response.auto_written_count == 1
+        assert len(response.proposals) == 1
+        proposal = response.proposals[0]
+        assert len(proposal.operations) == 1
+        assert proposal.operations[0].operation_type == "entity_field_update"
+        assert proposal.operations[0].field_name == "alignment"
+
+        await db_session.refresh(character)
+        extra = json.loads(character.extra_attributes)
+        assert extra["mention_count"] == 5
+
+    async def test_analyze_chapter_non_character_metadata_falls_through_to_proposal(
+        self,
+        db_session,
+        test_user,
+    ):
+        """非 character 实体的元数据 op → 降级走提案。"""
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+
+        location = Location(project_id=project.id, name="Harbor", description="Old harbor")
+        db_session.add(location)
+        await db_session.commit()
+        await db_session.refresh(location)
+
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="Location metadata",
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_field_update",
+                            entity_type="location",
+                            entity_name="Harbor",
+                            field_name="extra_attributes",
+                            new_value={"last_seen_chapter": chapter.id},
+                        )
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(
+            project.id, chapter.id, test_user.id, model_config_id=123
+        )
+
+        assert response.auto_written_count == 0
+        assert response.proposal_count == 1
+        assert len(response.proposals[0].operations) == 1
+        assert response.proposals[0].operations[0].field_name == "extra_attributes"
+
+    async def test_analyze_chapter_extra_attributes_with_non_whitelist_key_goes_to_proposal(
+        self,
+        db_session,
+        test_user,
+    ):
+        """extra_attributes 含非白名单键 → 不算元数据，走提案。"""
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="Custom attr update",
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_field_update",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            field_name="extra_attributes",
+                            new_value={"foo": "bar"},
+                        )
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(
+            project.id, chapter.id, test_user.id, model_config_id=123
+        )
+
+        assert response.auto_written_count == 0
+        assert response.proposal_count == 1
+        assert len(response.proposals[0].operations) == 1
+        assert response.proposals[0].operations[0].field_name == "extra_attributes"

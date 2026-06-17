@@ -87,9 +87,9 @@ ENTITY_ALLOWED_FIELDS = {
         "weaknesses",
         "extra_attributes",
     },
-    "location": {"name", "description", "geography", "culture", "history"},
-    "organization": {"name", "description", "structure", "purpose", "influence"},
-    "worldview": {"name", "description", "rules", "magic_system", "technology", "timeline"},
+    "location": {"name", "description", "geography", "culture", "history", "extra_attributes"},
+    "organization": {"name", "description", "structure", "purpose", "influence", "extra_attributes"},
+    "worldview": {"name", "description", "rules", "magic_system", "technology", "timeline", "extra_attributes"},
 }
 
 JSON_TEXT_FIELDS = {
@@ -392,16 +392,47 @@ class KnowledgeGraphService:
 
         proposals: list[EntityChangeProposalResponse] = []
         skipped = 0
+        auto_written = 0
         for proposal_draft in draft.proposals:
-            body = self._proposal_body_from_draft(chapter.id, proposal_draft, entities)
-            if body is None:
-                skipped += 1
-                continue
-            proposals.append(await self.create_proposal(project_id, user_id, body))
+            metadata_applied = 0
+            canon_operations: list[KnowledgeOperationDraft] = []
+
+            for op_draft in proposal_draft.operations:
+                if self._is_metadata_operation(op_draft):
+                    entity_id = self._resolve_entity_id(entities, op_draft.entity_type, op_draft.entity_name)
+                    metadata_dict = op_draft.new_value if isinstance(op_draft.new_value, dict) else {}
+                    applied = await self._apply_metadata_update(
+                        project_id,
+                        op_draft.entity_type,
+                        entity_id,
+                        metadata_dict,
+                        chapter_id=chapter.id,
+                        source=CHAPTER_ANALYSIS_SOURCE,
+                    )
+                    if applied:
+                        metadata_applied += applied
+                        continue
+
+                canon_operations.append(op_draft)
+
+            if metadata_applied:
+                await self.db.commit()
+                auto_written += metadata_applied
+
+            if canon_operations:
+                canon_draft = proposal_draft.model_copy(update={"operations": canon_operations})
+                body = self._proposal_body_from_draft(chapter.id, canon_draft, entities)
+                if body is not None:
+                    proposals.append(await self.create_proposal(project_id, user_id, body))
+                else:
+                    skipped += 1
+            else:
+                if not metadata_applied:
+                    skipped += 1
 
         logger.info(
-            "Chapter analysis completed project=%s chapter=%s proposals=%s skipped=%s",
-            project_id, chapter.id, len(proposals), skipped,
+            "Chapter analysis completed project=%s chapter=%s proposals=%s skipped=%s auto_written=%s",
+            project_id, chapter.id, len(proposals), skipped, auto_written,
         )
         return ChapterKnowledgeAnalysisResponse(
             success=True,
@@ -409,8 +440,9 @@ class KnowledgeGraphService:
             chapter_id=chapter.id,
             proposal_count=len(proposals),
             skipped_proposal_count=skipped,
+            auto_written_count=auto_written,
             proposals=proposals,
-            message="章节知识影响分析完成" if proposals else "未发现可写入的知识变更",
+            message="章节知识影响分析完成" if (proposals or auto_written) else "未发现可写入的知识变更",
         )
 
     async def create_proposal(
@@ -699,6 +731,7 @@ class KnowledgeGraphService:
                 "字段更新只能使用下面 allowed_fields 中的英文字段名；不确定时优先生成 entity_state_event。",
                 "关系建议使用英文 relation_type，例如 ally_of、enemy_of、member_of、controls、located_in、believes_in、affected_by。",
                 "每个 proposal 应是一个故事事件，operations 是这个事件造成的具体影响。",
+                "低风险元数据（如角色最后出现章节、提及次数、候选标签）请使用 extra_attributes 下的 last_seen_chapter、mention_count、candidate_tags，与正史字段更新区分开。",
                 f"章节：第 {chapter.chapter_number} 章《{chapter.title}》",
                 f"章节正文：\n{chapter.content or ''}",
                 "allowed_fields：\n" + _dump_json({key: sorted(value) for key, value in ENTITY_ALLOWED_FIELDS.items()}),
@@ -902,6 +935,13 @@ class KnowledgeGraphService:
 
     async def _apply_field_update(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
         entity = await self._get_entity(proposal.project_id, operation.entity_type, operation.entity_id)
+        if not hasattr(type(entity), operation.field_name):
+            logger.warning(
+                "Entity %s has no attribute %s; skipping field update",
+                operation.entity_type,
+                operation.field_name,
+            )
+            return
         old_value = self._read_field_value(entity, operation.entity_type, operation.field_name)
         value = _load_json(operation.new_value)
         setattr(
@@ -1030,6 +1070,69 @@ class KnowledgeGraphService:
         )
         return result.scalar_one_or_none()
 
+    def _is_metadata_operation(self, draft: KnowledgeOperationDraft) -> bool:
+        """判定 operation 是否为低风险元数据（可自动直写 extra_attributes 子键）。"""
+        if draft.operation_type != "entity_field_update":
+            return False
+        if draft.field_name != "extra_attributes":
+            return False
+        if not isinstance(draft.new_value, dict):
+            return False
+        allowed_keys = {"last_seen_chapter", "mention_count", "candidate_tags"}
+        return set(draft.new_value.keys()) <= allowed_keys
+
+    async def _apply_metadata_update(
+        self,
+        project_id: int,
+        entity_type: str | None,
+        entity_id: int | None,
+        metadata_dict: dict[str, Any],
+        *,
+        chapter_id: int | None,
+        source: str,
+    ) -> int:
+        """自动直写元数据到实体 extra_attributes。仅对 character 生效。
+
+        将 metadata_dict 合并进现有 extra_attributes（新覆盖旧，保留其他键）。
+        每改一个子键写一条 EntityStateEvent 审计。
+
+        Returns number of keys applied. 0 means should fall through to proposal.
+        """
+        if entity_type != "character" or entity_id is None:
+            return 0
+
+        entity = await self._get_entity(project_id, entity_type, entity_id)
+        extra = _load_json(getattr(entity, "extra_attributes", None)) or {}
+        if not isinstance(extra, dict):
+            extra = {}
+
+        chapter_order = await self._chapter_order(project_id, chapter_id)
+
+        applied_count = 0
+        for key, new_val in metadata_dict.items():
+            old_val = extra.get(key)
+            extra[key] = new_val
+            applied_count += 1
+            self.db.add(
+                EntityStateEvent(
+                    project_id=project_id,
+                    chapter_id=chapter_id,
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    state_key=f"extra_attributes.{key}",
+                    old_value=_serialize_state_value(entity_type, "extra_attributes", old_val),
+                    new_value=_dump_json(new_val),
+                    summary=f"元数据更新：extra_attributes.{key}",
+                    source=source,
+                    proposal_id=None,
+                    proposal_operation_id=None,
+                    chapter_order=chapter_order,
+                )
+            )
+
+        entity.extra_attributes = _dump_json(extra)
+        return applied_count
+
     async def _get_proposal_for_user(self, proposal_id: int, user_id: int) -> EntityChangeProposal:
         stmt = (
             select(EntityChangeProposal)
@@ -1052,6 +1155,8 @@ class KnowledgeGraphService:
         if not entity_type or not field_name:
             raise ValidationError("字段引用无效")
         self._ensure_allowed_field(entity_type, field_name)
+        if not hasattr(type(entity), field_name):
+            return None
         raw = getattr(entity, field_name)
         if (entity_type, field_name) in JSON_TEXT_FIELDS:
             return _load_json(raw)
