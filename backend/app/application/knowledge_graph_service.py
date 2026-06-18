@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import nullslast, or_, select
+from sqlalchemy import func, nullslast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -741,6 +741,58 @@ class KnowledgeGraphService:
             }
             for row in rows.scalars().all()
         ]
+
+        entity_names = {
+            (entity_type, item["id"]): item["name"]
+            for entity_type in ("character", "location", "organization", "worldview")
+            for item in entities.get(entity_type, [])
+        }
+
+        rows = await self.db.execute(
+            select(EntityRelationship)
+            .where(EntityRelationship.project_id == project_id, EntityRelationship.status == "active")
+            .order_by(EntityRelationship.updated_at.desc(), EntityRelationship.id.desc())
+            .limit(50)
+        )
+        entities["relationships"] = [
+            {
+                "source_type": row.source_type,
+                "source_id": row.source_id,
+                "source_name": entity_names.get((row.source_type, row.source_id)),
+                "relation_type": row.relation_type,
+                "target_type": row.target_type,
+                "target_id": row.target_id,
+                "target_name": entity_names.get((row.target_type, row.target_id)),
+                "description": row.description,
+                "evidence": row.evidence,
+                "confidence": row.confidence,
+            }
+            for row in rows.scalars().all()
+        ]
+
+        rows = await self.db.execute(
+            select(EntityStateEvent)
+            .where(EntityStateEvent.project_id == project_id)
+            .order_by(
+                nullslast(EntityStateEvent.chapter_order.desc()),
+                EntityStateEvent.created_at.desc(),
+                EntityStateEvent.id.desc(),
+            )
+            .limit(50)
+        )
+        entities["state_events"] = [
+            {
+                "entity_type": row.entity_type,
+                "entity_id": row.entity_id,
+                "entity_name": entity_names.get((row.entity_type, row.entity_id)),
+                "state_key": row.state_key,
+                "old_value": _load_json(row.old_value),
+                "new_value": _load_json(row.new_value),
+                "summary": row.summary,
+                "chapter_id": row.chapter_id,
+            }
+            for row in rows.scalars().all()
+        ]
         return entities
 
     @staticmethod
@@ -757,7 +809,8 @@ class KnowledgeGraphService:
         return "\n\n".join(
             [
                 "请分析本章是否造成角色、组织、地点、世界观的状态或关系变化。",
-                "可用 operation_type：entity_field_update、relationship_upsert、relationship_delete、entity_state_event。",
+                "可用 operation_type：entity_create、entity_field_update、relationship_upsert、relationship_delete、entity_state_event。",
+                "章节中首次出现且会影响后续剧情的新角色、组织、地点或世界观设定，使用 entity_create；entity_name 填名称，payload 填可写字段。",
                 "字段更新只能使用下面 allowed_fields 中的英文字段名；不确定时优先生成 entity_state_event。",
                 "关系建议使用英文 relation_type，例如 ally_of、enemy_of、member_of、controls、located_in、believes_in、affected_by。",
                 "每个 proposal 应是一个故事事件，operations 是这个事件造成的具体影响。",
@@ -765,7 +818,7 @@ class KnowledgeGraphService:
                 f"章节：第 {chapter.chapter_number} 章《{chapter.title}》",
                 f"章节正文：\n{chapter.content or ''}",
                 "allowed_fields：\n" + _dump_json({key: sorted(value) for key, value in ENTITY_ALLOWED_FIELDS.items()}),
-                "已知实体：\n" + _dump_json(entities),
+                "已知实体、已有关系 relationships、最近状态 state_events：\n" + _dump_json(entities),
             ]
         )
 
@@ -800,6 +853,9 @@ class KnowledgeGraphService:
         draft: KnowledgeOperationDraft,
         entities: dict[str, list[dict[str, Any]]],
     ) -> ProposalOperationCreate | None:
+        if draft.operation_type == "entity_create":
+            return self._entity_create_operation_from_draft(draft, entities)
+
         entity_id = self._resolve_entity_id(entities, draft.entity_type, draft.entity_name)
         target_id = self._resolve_entity_id(entities, draft.target_type, draft.target_name)
 
@@ -829,6 +885,32 @@ class KnowledgeGraphService:
             operation_data["expected_old_value"] = draft.expected_old_value
         return ProposalOperationCreate(**operation_data)
 
+    def _entity_create_operation_from_draft(
+        self,
+        draft: KnowledgeOperationDraft,
+        entities: dict[str, list[dict[str, Any]]],
+    ) -> ProposalOperationCreate | None:
+        if not draft.entity_type:
+            return None
+        payload = draft.payload if isinstance(draft.payload, dict) else {}
+        if not payload and isinstance(draft.new_value, dict):
+            payload = draft.new_value
+        payload = dict(payload)
+        if draft.entity_name and not payload.get("name"):
+            payload["name"] = draft.entity_name
+
+        data = self._coerce_entity_create_payload(draft.entity_type, payload)
+        if data is None:
+            return None
+        if self._resolve_entity_id(entities, draft.entity_type, data["name"]):
+            return None
+
+        return ProposalOperationCreate(
+            operation_type="entity_create",
+            entity_type=draft.entity_type,
+            payload=data,
+        )
+
     @staticmethod
     def _resolve_entity_id(
         entities: dict[str, list[dict[str, Any]]],
@@ -851,6 +933,9 @@ class KnowledgeGraphService:
     ) -> ProposalOperation:
         await self._validate_operation_refs(project_id, body)
         expected_old_value = body.expected_old_value
+        payload = body.payload or {}
+        if body.operation_type == "entity_create":
+            payload = self._coerce_entity_create_payload(body.entity_type, body.payload) or {}
         if body.operation_type == "entity_field_update" and "expected_old_value" not in body.model_fields_set:
             entity = await self._get_entity(project_id, body.entity_type, body.entity_id)
             expected_old_value = self._read_field_value(entity, body.entity_type, body.field_name)
@@ -867,10 +952,20 @@ class KnowledgeGraphService:
             state_key=body.state_key,
             expected_old_value=_dump_json(expected_old_value),
             new_value=_dump_json(body.new_value),
-            payload=_dump_json(body.payload or {}),
+            payload=_dump_json(payload),
         )
 
     async def _validate_operation_refs(self, project_id: int, body: ProposalOperationCreate) -> None:
+        if body.operation_type == "entity_create":
+            if not body.entity_type:
+                raise ValidationError("实体创建操作缺少 entity_type")
+            data = self._coerce_entity_create_payload(body.entity_type, body.payload)
+            if data is None:
+                raise ValidationError("实体创建操作缺少有效 payload.name")
+            if body.entity_type == "character" and data.get("organization_id") is not None:
+                await self._get_entity(project_id, "organization", data["organization_id"])
+            return
+
         if body.operation_type in {"entity_field_update", "entity_state_event"}:
             if not body.entity_type or not body.entity_id:
                 raise ValidationError("子操作缺少实体引用")
@@ -891,6 +986,15 @@ class KnowledgeGraphService:
             await self._get_entity(project_id, body.target_type, body.target_id)
 
     async def _detect_conflict(self, project_id: int, operation: ProposalOperation) -> str | None:
+        if operation.operation_type == "entity_create":
+            data = self._coerce_entity_create_payload(operation.entity_type, _load_json(operation.payload))
+            if data is None:
+                return "实体创建数据无效"
+            existing = await self._find_entity_by_name(project_id, operation.entity_type, data["name"])
+            if existing is not None:
+                return f"同名实体已存在：{data['name']}"
+            return await self._detect_pending_operation_conflict(project_id, operation)
+
         if operation.operation_type == "entity_field_update":
             entity = await self._get_entity(project_id, operation.entity_type, operation.entity_id)
             expected = _load_json(operation.expected_old_value)
@@ -929,6 +1033,31 @@ class KnowledgeGraphService:
             .limit(1)
         )
 
+        if operation.operation_type == "entity_create":
+            data = self._coerce_entity_create_payload(operation.entity_type, _load_json(operation.payload))
+            if data is None:
+                return "实体创建数据无效"
+            create_stmt = (
+                select(ProposalOperation)
+                .join(EntityChangeProposal)
+                .where(
+                    EntityChangeProposal.project_id == project_id,
+                    ProposalOperation.id != operation.id,
+                    ProposalOperation.proposal_id != operation.proposal_id,
+                    proposal_status_filter,
+                    operation_status_filter,
+                    ProposalOperation.operation_type == "entity_create",
+                    ProposalOperation.entity_type == operation.entity_type,
+                )
+            )
+            result = await self.db.execute(create_stmt)
+            normalized_name = data["name"].strip().casefold()
+            for other in result.scalars().all():
+                other_data = self._coerce_entity_create_payload(other.entity_type, _load_json(other.payload))
+                if other_data and other_data["name"].strip().casefold() == normalized_name:
+                    return "存在另一个待处理提案创建同名实体"
+            return None
+
         if operation.operation_type == "entity_field_update":
             stmt = stmt.where(
                 ProposalOperation.operation_type == "entity_field_update",
@@ -959,6 +1088,9 @@ class KnowledgeGraphService:
         return "存在另一个待处理提案修改同一目标" if result.scalar_one_or_none() is not None else None
 
     async def _apply_operation(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> bool:
+        if operation.operation_type == "entity_create":
+            await self._apply_entity_create(proposal, operation)
+            return True
         if operation.operation_type == "entity_field_update":
             await self._apply_field_update(proposal, operation)
             return True
@@ -971,6 +1103,39 @@ class KnowledgeGraphService:
             await self._apply_state_event(proposal, operation)
             return True
         raise ValidationError(f"不支持的子操作类型：{operation.operation_type}")
+
+    async def _apply_entity_create(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
+        data = self._coerce_entity_create_payload(operation.entity_type, _load_json(operation.payload))
+        if data is None:
+            raise ValidationError("实体创建数据无效")
+        model = ENTITY_MODELS.get(operation.entity_type)
+        if model is None:
+            raise ValidationError("实体类型无效")
+
+        entity = model(**data, project_id=proposal.project_id)
+        self.db.add(entity)
+        await self.db.flush()
+        operation.entity_id = entity.id
+
+        chapter_order = await self._chapter_order(proposal.project_id, proposal.chapter_id)
+        self.db.add(
+            EntityStateEvent(
+                project_id=proposal.project_id,
+                chapter_id=proposal.chapter_id,
+                entity_type=operation.entity_type,
+                entity_id=entity.id,
+                state_key="created",
+                old_value=None,
+                new_value=_dump_json(data),
+                summary=f"创建实体：{data['name']}",
+                evidence=proposal.evidence,
+                confidence=proposal.confidence,
+                source=proposal.source,
+                proposal_id=proposal.id,
+                proposal_operation_id=operation.id,
+                chapter_order=chapter_order,
+            )
+        )
 
     async def _apply_field_update(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
         entity = await self._get_entity(proposal.project_id, operation.entity_type, operation.entity_id)
@@ -1197,6 +1362,49 @@ class KnowledgeGraphService:
             return False
         model = ENTITY_MODELS.get(entity_type)
         return model is not None and hasattr(model, field_name)
+
+    @classmethod
+    def _coerce_entity_create_payload(
+        cls,
+        entity_type: str | None,
+        payload: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if not entity_type or entity_type not in ENTITY_MODELS or not isinstance(payload, dict):
+            return None
+
+        data: dict[str, Any] = {}
+        for field_name, value in payload.items():
+            if value is None or not cls._is_allowed_model_field(entity_type, field_name):
+                continue
+            if field_name == "name":
+                name = str(value).strip()
+                if name:
+                    data[field_name] = name
+                continue
+            if (entity_type, field_name) in JSON_TEXT_FIELDS:
+                data[field_name] = value if isinstance(value, str) else _dump_json(value)
+                continue
+            if entity_type == "character" and field_name == "organization_id":
+                try:
+                    data[field_name] = int(value)
+                except (TypeError, ValueError):
+                    return None
+                continue
+            data[field_name] = value if isinstance(value, str) else str(value)
+
+        return data if data.get("name") else None
+
+    async def _find_entity_by_name(self, project_id: int, entity_type: str | None, name: str | None):
+        if not entity_type or entity_type not in ENTITY_MODELS or not name:
+            return None
+        model = ENTITY_MODELS[entity_type]
+        result = await self.db.execute(
+            select(model).where(
+                model.project_id == project_id,
+                func.lower(model.name) == name.strip().casefold(),
+            )
+        )
+        return result.scalar_one_or_none()
 
     @staticmethod
     def _ensure_allowed_field(entity_type: str | None, field_name: str) -> None:

@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from sqlalchemy import select
 
 from app.application.knowledge_graph_service import KnowledgeGraphService
 from app.application.project_service import ProjectService
@@ -11,6 +12,7 @@ from app.domain.ai_runtime.enums import RunStatus
 from app.infrastructure.db.models.ai_runtime import AIRun
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.model_configs import ModelConfig
+from app.infrastructure.db.models.story_knowledge import EntityRelationship, EntityStateEvent
 from app.infrastructure.db.models.worldbuilding import Character, Location, Organization
 from app.schemas.knowledge import (
     ChapterKnowledgeAnalysisDraft,
@@ -27,9 +29,11 @@ class FakeStructuredKnowledgeModel:
     def __init__(self, draft: ChapterKnowledgeAnalysisDraft):
         self.draft = draft
         self.calls = 0
+        self.messages = []
 
-    async def ainvoke(self, _messages):
+    async def ainvoke(self, messages):
         self.calls += 1
+        self.messages.append(messages)
         return self.draft
 
 
@@ -146,6 +150,113 @@ class TestKnowledgeGraphService:
         assert field_op.new_value == "wavering"
         assert relationship_op.entity_id == character.id
         assert relationship_op.target_id == organization.id
+
+    async def test_analyze_chapter_prompt_includes_existing_graph_history(self, db_session, test_user):
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        db_session.add(
+            EntityRelationship(
+                project_id=project.id,
+                source_type="character",
+                source_id=character.id,
+                relation_type="enemy_of",
+                target_type="organization",
+                target_id=organization.id,
+                status="active",
+                description="openly opposes the guild",
+                source="test",
+            )
+        )
+        db_session.add(
+            EntityStateEvent(
+                project_id=project.id,
+                chapter_id=chapter.id,
+                entity_type="character",
+                entity_id=character.id,
+                state_key="condition",
+                new_value="injured",
+                summary="hurt during the harbor fight",
+                source="test",
+                chapter_order=chapter.order_index,
+            )
+        )
+        await db_session.commit()
+        structured_model = FakeStructuredKnowledgeModel(ChapterKnowledgeAnalysisDraft(proposals=[]))
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        await service.analyze_chapter(project.id, chapter.id, test_user.id, model_config_id=123)
+
+        prompt = structured_model.messages[0][1].content
+        assert "relationships" in prompt
+        assert "state_events" in prompt
+        assert "enemy_of" in prompt
+        assert "injured" in prompt
+
+    async def test_analyze_chapter_can_create_new_entity_proposal_and_accept(self, db_session, test_user):
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        chapter = await self._seed_chapter(db_session, project.id)
+        draft = ChapterKnowledgeAnalysisDraft(
+            proposals=[
+                KnowledgeProposalDraft(
+                    title="Moon Gate enters the story",
+                    summary="A new location becomes important for later travel.",
+                    evidence="Lin Zhao reached Moon Gate before dawn.",
+                    confidence=0.91,
+                    operations=[
+                        KnowledgeOperationDraft(
+                            operation_type="entity_create",
+                            entity_type="location",
+                            entity_name="Moon Gate",
+                            payload={
+                                "name": "Moon Gate",
+                                "description": "A hidden pass used by smugglers.",
+                                "geography": "narrow mountain gate",
+                                "unknown_field": "ignored",
+                            },
+                        )
+                    ],
+                )
+            ]
+        )
+        structured_model = FakeStructuredKnowledgeModel(draft)
+        service = KnowledgeGraphService(db_session)
+
+        async def fake_get_config_and_model(_config_id: int, _user_id: int):
+            return None, FakeChatModel(structured_model)
+
+        service._get_config_and_model = fake_get_config_and_model
+
+        response = await service.analyze_chapter(project.id, chapter.id, test_user.id, model_config_id=123)
+        proposal = response.proposals[0]
+        create_op = proposal.operations[0]
+
+        assert response.proposal_count == 1
+        assert create_op.operation_type == "entity_create"
+        assert create_op.entity_type == "location"
+        assert create_op.entity_id is None
+        assert create_op.payload == {
+            "name": "Moon Gate",
+            "description": "A hidden pass used by smugglers.",
+            "geography": "narrow mountain gate",
+        }
+
+        accepted = await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        created_location = (
+            await db_session.execute(
+                select(Location).where(Location.project_id == project.id, Location.name == "Moon Gate")
+            )
+        ).scalar_one()
+        states = await service.list_state_events(project.id, test_user.id, entity_type="location", entity_id=created_location.id)
+
+        assert accepted.status == "accepted"
+        assert accepted.operations[0].entity_id == created_location.id
+        assert created_location.description == "A hidden pass used by smugglers."
+        assert states[0].state_key == "created"
 
     async def test_analyze_chapter_returns_existing_pending_proposals_without_duplicate_ai_call(
         self,

@@ -10,7 +10,13 @@ from pydantic import BaseModel, Field
 EntityType = Literal["character", "location", "organization", "worldview"]
 ProposalStatus = Literal["pending", "accepted", "rejected", "conflicted"]
 OperationStatus = Literal["pending", "accepted", "rejected", "conflicted"]
-OperationType = Literal["entity_field_update", "relationship_upsert", "relationship_delete", "entity_state_event"]
+OperationType = Literal[
+    "entity_create",
+    "entity_field_update",
+    "relationship_upsert",
+    "relationship_delete",
+    "entity_state_event",
+]
 
 
 class ProposalOperationCreate(BaseModel):
