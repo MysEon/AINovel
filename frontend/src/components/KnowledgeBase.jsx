@@ -17,6 +17,7 @@ import {
 import { aiService } from '../services/aiService';
 import { getProjectContext } from '../services/knowledgeService';
 import { useNotification } from './NotificationManager';
+import KnowledgeGraphView from './knowledge/KnowledgeGraphView';
 import './KnowledgeBase.css';
 
 const EMPTY_CONTEXT = {
@@ -421,6 +422,12 @@ const KnowledgeBase = ({ projectId }) => {
           );
         })}
       </section>
+
+      <KnowledgeGraphView
+        projectId={projectId}
+        contextData={contextData}
+        loading={loading}
+      />
 
       <main className="knowledge-workspace">
         <section className="knowledge-entity-panel">
