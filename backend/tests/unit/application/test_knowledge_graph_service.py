@@ -365,9 +365,16 @@ class TestKnowledgeGraphService:
         assert accepted.status == "accepted"
         assert {operation.status for operation in accepted.operations} == {"accepted"}
         assert character.alignment == "defector"
-        assert len(relationships) == 1
-        assert relationships[0].relation_type == "enemy_of"
-        assert relationships[0].description == "openly opposes the guild"
+        active_refs = {
+            (relationship.source_type, relationship.source_id, relationship.relation_type, relationship.target_type, relationship.target_id)
+            for relationship in relationships
+            if relationship.status == "active"
+        }
+        assert active_refs == {
+            ("character", character.id, "enemy_of", "organization", organization.id),
+            ("organization", organization.id, "enemy_of", "character", character.id),
+        }
+        assert {relationship.description for relationship in relationships} == {"openly opposes the guild"}
         # entity_field_update 现在同步写入状态时间线，故 alignment 与 status 两条均可见
         assert len(states) == 2
         assert {state.state_key for state in states} == {"alignment", "status"}
@@ -609,6 +616,280 @@ class TestKnowledgeGraphService:
         assert character.organization_id == new_organization.id
         assert statuses_by_target[organization.id] == "inactive"
         assert statuses_by_target[new_organization.id] == "active"
+
+    async def test_bidirectional_relationships_are_synced_on_accept(self, db_session, test_user):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        princess = Character(project_id=project.id, name="Princess Gu", description="imperial princess")
+        child = Character(project_id=project.id, name="Lin Heir", description="their son")
+        db_session.add_all([princess, child])
+        await db_session.commit()
+        await db_session.refresh(princess)
+        await db_session.refresh(child)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Family ties",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "spouse_of",
+                        "target_type": "character",
+                        "target_id": princess.id,
+                    },
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": child.id,
+                        "relation_type": "child_of",
+                        "target_type": "character",
+                        "target_id": character.id,
+                    },
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(EntityRelationship.project_id == project.id)
+            )
+        ).scalars().all()
+        active_refs = {
+            (relationship.source_id, relationship.relation_type, relationship.target_id)
+            for relationship in relationships
+            if relationship.status == "active"
+        }
+
+        assert (character.id, "spouse_of", princess.id) in active_refs
+        assert (princess.id, "spouse_of", character.id) in active_refs
+        assert (child.id, "child_of", character.id) in active_refs
+        assert (character.id, "parent_of", child.id) in active_refs
+
+    async def test_relationship_delete_deactivates_inverse_relationship(self, db_session, test_user):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        princess = Character(project_id=project.id, name="Princess Gu", description="imperial princess")
+        db_session.add(princess)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="spouse_of",
+                    target_type="character",
+                    target_id=princess.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=princess.id,
+                    relation_type="spouse_of",
+                    target_type="character",
+                    target_id=character.id,
+                    status="active",
+                    source="test",
+                ),
+            ]
+        )
+        await db_session.commit()
+        await db_session.refresh(princess)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Annul marriage",
+                operations=[
+                    {
+                        "operation_type": "relationship_delete",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "spouse_of",
+                        "target_type": "character",
+                        "target_id": princess.id,
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(
+                    EntityRelationship.project_id == project.id,
+                    EntityRelationship.relation_type == "spouse_of",
+                )
+            )
+        ).scalars().all()
+
+        assert {relationship.status for relationship in relationships} == {"inactive"}
+
+    async def test_located_in_upsert_deactivates_previous_location(self, db_session, test_user):
+        project, _character, organization = await self._seed_entities(db_session, test_user.id)
+        town = Location(project_id=project.id, name="Town A", description="old base")
+        capital = Location(project_id=project.id, name="Imperial Capital", description="new base")
+        db_session.add_all([town, capital])
+        await db_session.flush()
+        db_session.add(
+            EntityRelationship(
+                project_id=project.id,
+                source_type="organization",
+                source_id=organization.id,
+                relation_type="located_in",
+                target_type="location",
+                target_id=town.id,
+                status="active",
+                source="test",
+            )
+        )
+        await db_session.commit()
+        await db_session.refresh(capital)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Family relocates",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "organization",
+                        "entity_id": organization.id,
+                        "relation_type": "located_in",
+                        "target_type": "location",
+                        "target_id": capital.id,
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(
+                    EntityRelationship.project_id == project.id,
+                    EntityRelationship.source_type == "organization",
+                    EntityRelationship.source_id == organization.id,
+                    EntityRelationship.relation_type == "located_in",
+                )
+            )
+        ).scalars().all()
+        statuses_by_target = {relationship.target_id: relationship.status for relationship in relationships}
+
+        assert statuses_by_target[town.id] == "inactive"
+        assert statuses_by_target[capital.id] == "active"
+
+    async def test_terminal_state_events_close_destroyed_and_ascended_links(self, db_session, test_user):
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        rival = Organization(project_id=project.id, name="Rival Clan", description="old enemy")
+        realm = Location(project_id=project.id, name="Mortal Realm", description="starting plane")
+        princess = Character(project_id=project.id, name="Princess Gu", description="imperial princess")
+        db_session.add_all([rival, realm, princess])
+        await db_session.flush()
+        db_session.add_all(
+            [
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="organization",
+                    source_id=organization.id,
+                    relation_type="enemy_of",
+                    target_type="organization",
+                    target_id=rival.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="organization",
+                    source_id=rival.id,
+                    relation_type="located_in",
+                    target_type="location",
+                    target_id=realm.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="located_in",
+                    target_type="location",
+                    target_id=realm.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="spouse_of",
+                    target_type="character",
+                    target_id=princess.id,
+                    status="active",
+                    source="test",
+                ),
+            ]
+        )
+        await db_session.commit()
+        await db_session.refresh(rival)
+        await db_session.refresh(realm)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Rival clan falls and Lin Zhao ascends",
+                operations=[
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "organization",
+                        "entity_id": rival.id,
+                        "state_key": "status",
+                        "new_value": "destroyed",
+                    },
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "state_key": "status",
+                        "new_value": "ascended",
+                    },
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(EntityRelationship.project_id == project.id)
+            )
+        ).scalars().all()
+        by_ref = {
+            (
+                relationship.source_type,
+                relationship.source_id,
+                relationship.relation_type,
+                relationship.target_type,
+                relationship.target_id,
+            ): relationship.status
+            for relationship in relationships
+        }
+
+        assert by_ref[("organization", organization.id, "enemy_of", "organization", rival.id)] == "inactive"
+        assert by_ref[("organization", rival.id, "located_in", "location", realm.id)] == "inactive"
+        assert by_ref[("character", character.id, "located_in", "location", realm.id)] == "inactive"
+        assert by_ref[("character", character.id, "spouse_of", "character", princess.id)] == "active"
 
     async def test_create_proposal_rejects_field_missing_from_target_model(self, db_session, test_user):
         project, _character, _organization = await self._seed_entities(db_session, test_user.id)
@@ -1351,10 +1632,9 @@ class TestKnowledgeGraphService:
         await service.accept_proposal(proposal_b.id, test_user.id, ProposalAcceptRequest())
 
         relationships = await service.list_relationships(project.id, test_user.id)
-        assert len(relationships) == 1
-        rel = relationships[0]
-        assert rel.status == "active"
-        assert rel.proposal_id == proposal_a.id
+        assert len(relationships) == 2
+        assert {relationship.status for relationship in relationships} == {"active"}
+        assert {relationship.proposal_id for relationship in relationships} == {proposal_a.id}
 
     async def test_relationship_delete_missing_marks_operation_conflicted(self, db_session, test_user):
         """Bug 7: force 模式下删除不存在的关系应标记 operation conflicted。"""
