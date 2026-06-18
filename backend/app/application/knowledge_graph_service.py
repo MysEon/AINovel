@@ -1369,13 +1369,6 @@ class KnowledgeGraphService:
         if old_org_id == new_org_id:
             return
 
-        await self._deactivate_other_member_of_relationships(
-            proposal.project_id,
-            operation.entity_id,
-            keep_target_id=new_org_id,
-            operation=operation,
-        )
-
         if new_org_id is not None:
             await self._upsert_relationship_record(
                 proposal,
@@ -1396,15 +1389,9 @@ class KnowledgeGraphService:
     ) -> None:
         if not self._is_character_member_of_operation(operation) or relationship.status != "active":
             return
-        await self._deactivate_other_member_of_relationships(
-            proposal.project_id,
-            operation.entity_id,
-            keep_target_id=operation.target_id,
-            operation=operation,
-        )
         character = await self._get_entity(proposal.project_id, "character", operation.entity_id)
         old_org_id = character.organization_id
-        if old_org_id == operation.target_id:
+        if old_org_id is not None:
             return
         character.organization_id = operation.target_id
         await self._add_synced_organization_state_event(proposal, operation, old_org_id, operation.target_id)
@@ -1420,19 +1407,18 @@ class KnowledgeGraphService:
         if character.organization_id != operation.target_id:
             return
         old_org_id = character.organization_id
-        character.organization_id = None
-        await self._add_synced_organization_state_event(proposal, operation, old_org_id, None)
+        fallback_relationship = await self._find_active_member_of_relationship(proposal.project_id, operation.entity_id)
+        new_org_id = fallback_relationship.target_id if fallback_relationship else None
+        character.organization_id = new_org_id
+        await self._add_synced_organization_state_event(proposal, operation, old_org_id, new_org_id)
 
-    async def _deactivate_other_member_of_relationships(
+    async def _find_active_member_of_relationship(
         self,
         project_id: int,
         character_id: int | None,
-        *,
-        keep_target_id: int | None,
-        operation: ProposalOperation,
-    ) -> None:
+    ) -> EntityRelationship | None:
         if character_id is None:
-            return
+            return None
         stmt = select(EntityRelationship).where(
             EntityRelationship.project_id == project_id,
             EntityRelationship.source_type == "character",
@@ -1441,12 +1427,9 @@ class KnowledgeGraphService:
             EntityRelationship.target_type == "organization",
             EntityRelationship.status == "active",
         )
-        if keep_target_id is not None:
-            stmt = stmt.where(EntityRelationship.target_id != keep_target_id)
+        stmt = stmt.order_by(EntityRelationship.updated_at.desc(), EntityRelationship.id.desc()).limit(1)
         result = await self.db.execute(stmt)
-        for relationship in result.scalars().all():
-            relationship.status = "inactive"
-            relationship.proposal_operation_id = operation.id
+        return result.scalar_one_or_none()
 
     async def _add_synced_organization_state_event(
         self,

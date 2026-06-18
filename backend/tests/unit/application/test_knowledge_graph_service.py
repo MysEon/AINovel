@@ -374,7 +374,7 @@ class TestKnowledgeGraphService:
         status_state = next(state for state in states if state.state_key == "status")
         assert status_state.new_value == "defected"
 
-    async def test_member_of_relationship_syncs_character_organization_id(self, db_session, test_user):
+    async def test_member_of_relationship_preserves_multiple_active_memberships(self, db_session, test_user):
         project, character, organization = await self._seed_entities(db_session, test_user.id)
         new_organization = Organization(
             project_id=project.id,
@@ -432,11 +432,49 @@ class TestKnowledgeGraphService:
         ).scalars().all()
         statuses_by_target = {relationship.target_id: relationship.status for relationship in relationships}
 
-        assert character.organization_id == new_organization.id
-        assert statuses_by_target[organization.id] == "inactive"
+        assert character.organization_id == organization.id
+        assert statuses_by_target[organization.id] == "active"
         assert statuses_by_target[new_organization.id] == "active"
+        assert all(state.state_key != "organization_id" for state in states)
+
+    async def test_member_of_relationship_fills_empty_primary_organization_id(self, db_session, test_user):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        character.organization_id = None
+        new_organization = Organization(
+            project_id=project.id,
+            name="Dawn Circle",
+            description="rival faction",
+        )
+        db_session.add(new_organization)
+        await db_session.commit()
+        await db_session.refresh(new_organization)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Lin Zhao joins Dawn Circle",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "member_of",
+                        "target_type": "organization",
+                        "target_id": new_organization.id,
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        await db_session.refresh(character)
+        states = await service.list_state_events(project.id, test_user.id, entity_type="character", entity_id=character.id)
+
+        assert character.organization_id == new_organization.id
         organization_state = next(state for state in states if state.state_key == "organization_id")
-        assert organization_state.old_value != organization_state.new_value
+        assert organization_state.old_value is None
         assert organization_state.new_value == new_organization.id
 
     async def test_organization_id_field_update_syncs_member_of_relationships(self, db_session, test_user):
@@ -476,6 +514,79 @@ class TestKnowledgeGraphService:
                         "field_name": "organization_id",
                         "expected_old_value": organization.id,
                         "new_value": new_organization.id,
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        await db_session.refresh(character)
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(
+                    EntityRelationship.project_id == project.id,
+                    EntityRelationship.source_type == "character",
+                    EntityRelationship.source_id == character.id,
+                    EntityRelationship.relation_type == "member_of",
+                )
+            )
+        ).scalars().all()
+        statuses_by_target = {relationship.target_id: relationship.status for relationship in relationships}
+
+        assert character.organization_id == new_organization.id
+        assert statuses_by_target[organization.id] == "active"
+        assert statuses_by_target[new_organization.id] == "active"
+
+    async def test_member_of_delete_moves_primary_to_remaining_membership(self, db_session, test_user):
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        new_organization = Organization(
+            project_id=project.id,
+            name="Dawn Circle",
+            description="rival faction",
+        )
+        db_session.add(new_organization)
+        await db_session.flush()
+        db_session.add_all(
+            [
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="member_of",
+                    target_type="organization",
+                    target_id=organization.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="member_of",
+                    target_type="organization",
+                    target_id=new_organization.id,
+                    status="active",
+                    source="test",
+                ),
+            ]
+        )
+        await db_session.commit()
+        await db_session.refresh(new_organization)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Lin Zhao leaves Ash Guild",
+                operations=[
+                    {
+                        "operation_type": "relationship_delete",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "member_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
                     }
                 ],
             ),
