@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useState } from 'react';
+import React, { useCallback, createContext, useContext, useMemo, useReducer, useRef, useState } from 'react';
 import { App, Modal, message } from 'antd';
 import { 
   ExclamationCircleOutlined, 
@@ -13,7 +13,7 @@ const NotificationContext = createContext();
 const notificationReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_NOTIFICATION':
-      return [...state, { ...action.payload, id: Date.now() + Math.random() }];
+      return [...state, action.payload];
     case 'REMOVE_NOTIFICATION':
       return state.filter(notification => notification.id !== action.payload);
     default:
@@ -24,25 +24,27 @@ const notificationReducer = (state, action) => {
 export const NotificationProvider = ({ children }) => {
   const [notifications, dispatch] = useReducer(notificationReducer, []);
   const { message: messageApi, modal: modalApi } = App.useApp();
+  const removeNotificationRef = useRef(null);
 
-  const addNotification = (notification) => {
-    dispatch({
-      type: 'ADD_NOTIFICATION',
-      payload: {
-        ...notification,
-        id: Date.now() + Math.random()
-      }
-    });
+  const removeNotification = useCallback((id) => {
+    dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
+  }, []);
+
+  removeNotificationRef.current = removeNotification;
+
+  const addNotification = useCallback((notification) => {
+    const id = Date.now() + Math.random();
+    dispatch({ type: 'ADD_NOTIFICATION', payload: { ...notification, id } });
 
     // 自动移除通知
     if (notification.duration !== 0) {
       setTimeout(() => {
-        removeNotification(notification.id);
+        removeNotificationRef.current(id);
       }, notification.duration || 3000);
     }
-  };
+  }, []);
 
-  const showConfirmDialog = ({
+  const showConfirmDialog = useCallback(({
     title,
     message,
     content,
@@ -169,24 +171,22 @@ export const NotificationProvider = ({ children }) => {
       className: `confirm-dialog-${type} ${className}`,
       width: showInput ? 480 : 420,
     });
-  };
+  }, [messageApi, modalApi]);
 
-  const hideConfirmDialog = () => {
+  const hideConfirmDialog = useCallback(() => {
     // This function is now a no-op, but we'll keep it for API consistency
     // in case other components are calling it.
     // A better long-term solution would be to remove it entirely and
     // update all call sites.
-  };
+  }, []);
 
-  const removeNotification = (id) => {
-    dispatch({
-      type: 'REMOVE_NOTIFICATION',
-      payload: id
-    });
-  };
+  const contextValue = useMemo(
+    () => ({ addNotification, removeNotification, showConfirmDialog, hideConfirmDialog }),
+    [addNotification, removeNotification, showConfirmDialog, hideConfirmDialog],
+  );
 
   return (
-    <NotificationContext.Provider value={{ addNotification, removeNotification, showConfirmDialog, hideConfirmDialog }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
       <div className="notifications-container">
         {notifications.map((notification) => (

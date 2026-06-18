@@ -273,13 +273,13 @@ const CharacterCreatorTabs = ({
       setConfirmedIdxSet(nextConfirmed);
       const nextUnconfirmedIdx = drafts.findIndex((_, i) => !nextConfirmed.has(i));
       if (nextUnconfirmedIdx === -1) {
-        // 全部已确认 → 关闭审阅面板
+        // 全部已确认 → 关闭审阅面板并通知父组件
         aiForm.resetFields();
         resetDraftState();
         await onCreated?.();
       } else {
         setActiveDraftIdx(nextUnconfirmedIdx);
-        await onCreated?.();
+        // 不调 onCreated，避免关闭弹窗；用户还需继续审阅剩余角色
       }
     } catch (error) {
       notification.error({ message: '创建角色失败', description: error.message });
@@ -309,6 +309,35 @@ const CharacterCreatorTabs = ({
     setActiveDraftIdx(Math.min(idx, newDrafts.length - 1));
   };
 
+  // 将 AI 返回的 draft 原始数据转换为 createCharacter API 兼容的 payload
+  const buildDraftPayload = (draft) => {
+    const payload = normalizeCoreCharacterPayload({
+      name: draft.name,
+      description: draft.description,
+      personality: draft.personality,
+      background: draft.background,
+      appearance: draft.appearance,
+      age: draft.age,
+      species: draft.species,
+      alignment: draft.alignment,
+      abilities: draft.abilities,
+      weaknesses: draft.weaknesses,
+    });
+    if (draft.dimensions && typeof draft.dimensions === 'object') {
+      payload.dimensions = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(draft.dimensions)
+            .filter(([, v]) => v !== undefined && v !== null && v !== '')
+            .map(([k, v]) => [k, Math.min(100, Math.max(0, Math.round(Number(v) || 0)))])
+        )
+      );
+    }
+    if (draft.extra_fields && typeof draft.extra_fields === 'object') {
+      payload.extra_attributes = JSON.stringify(draft.extra_fields);
+    }
+    return payload;
+  };
+
   // 一次性确认所有未入库的角色
   const handleConfirmAll = async () => {
     const pendingIndices = drafts
@@ -322,9 +351,8 @@ const CharacterCreatorTabs = ({
     for (const i of pendingIndices) {
       const draft = drafts[i];
       try {
-        // 这里直接用 draft 原始 schema 落库——CharacterDraftReviewCard 的编辑能力此场景下不暴露
-        // 用户若需精修可改回 tab 内单独保存
-        await createCharacter(projectId, draft);
+        const payload = buildDraftPayload(draft);
+        await createCharacter(projectId, payload);
         successIndices.push(i);
       } catch (err) {
         failed.push({ idx: i, name: draft?.name || `角色 ${i + 1}`, error: err });
@@ -339,7 +367,6 @@ const CharacterCreatorTabs = ({
       notification.success({
         message: `已批量入库 ${successIndices.length} 个角色`,
       });
-      await onCreated?.();
     }
     if (failed.length > 0) {
       notification.error({
@@ -349,9 +376,10 @@ const CharacterCreatorTabs = ({
       // 跳到第一个失败的 tab
       setActiveDraftIdx(failed[0].idx);
     } else if (successIndices.length === pendingIndices.length) {
-      // 全部成功 → 关闭审阅面板
+      // 全部成功 → 关闭审阅面板并通知父组件
       aiForm.resetFields();
       resetDraftState();
+      await onCreated?.();
     }
   };
 

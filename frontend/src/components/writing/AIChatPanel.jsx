@@ -13,6 +13,12 @@ import WritingToolbar from './WritingToolbar';
 import AssistantMessageRenderer from './AssistantMessageRenderer';
 import UserMessageRenderer from './UserMessageRenderer';
 import { runChatStream } from '../../runtime/aiNovelChatAdapter';
+import {
+  acceptChangeProposal,
+  getChangeProposals,
+  rejectChangeProposal,
+} from '../../services/knowledgeService';
+import ProposalReviewList from '../knowledge/ProposalReviewList';
 import './AIChatPanel.assistant-ui.css';
 
 const { Sider } = Layout;
@@ -136,6 +142,10 @@ const AIChatPanel = ({
   onAssistantRunningChange,
   onRegisterNewChat,
   projectId,
+  knowledgeAnalysisState,
+  knowledgeRefreshKey = 0,
+  onAnalyzeChapterKnowledge,
+  addNotification,
   // 用户当前编辑的章节（从 useAIWriting 透传）。后端按 L1/L2/L3 分层注入章节上下文
   currentChapter,
   // 受控 messages（来自 useWritingPersistentState，按 projectId 持久化）
@@ -145,6 +155,77 @@ const AIChatPanel = ({
   const abortControllerRef = useRef(null);
   // running 状态由本组件维护（不写入持久化层），切换 isRunning 给 useExternalStoreRuntime
   const [isRunning, setIsRunning] = useState(false);
+  const [chapterProposals, setChapterProposals] = useState([]);
+  const [proposalLoading, setProposalLoading] = useState(false);
+
+  const loadChapterProposals = useCallback(async () => {
+    if (!projectId || !currentChapter?.id) {
+      setChapterProposals([]);
+      return;
+    }
+
+    setProposalLoading(true);
+    try {
+      const [pending, conflicted] = await Promise.all([
+        getChangeProposals(projectId, { chapter_id: currentChapter.id, status: 'pending' }),
+        getChangeProposals(projectId, { chapter_id: currentChapter.id, status: 'conflicted' }),
+      ]);
+      setChapterProposals([...(conflicted || []), ...(pending || [])]);
+    } catch (error) {
+      addNotification?.({
+        message: `章节知识队列加载失败: ${error.message}`,
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setProposalLoading(false);
+    }
+  }, [addNotification, currentChapter?.id, projectId]);
+
+  useEffect(() => {
+    loadChapterProposals();
+  }, [loadChapterProposals, knowledgeRefreshKey]);
+
+  const handleAcceptProposal = useCallback(async (proposal, acceptedOperationIds) => {
+    try {
+      await acceptChangeProposal(proposal.id, acceptedOperationIds);
+      addNotification?.({
+        message: '本章知识变更已应用',
+        type: 'success',
+        duration: 3000,
+      });
+      await loadChapterProposals();
+    } catch (error) {
+      addNotification?.({
+        message: `应用失败: ${error.message}`,
+        type: 'error',
+        duration: 4000,
+      });
+      await loadChapterProposals();
+    }
+  }, [addNotification, loadChapterProposals]);
+
+  const handleRejectProposal = useCallback(async (proposal) => {
+    try {
+      await rejectChangeProposal(proposal.id, '用户在写作侧栏拒绝');
+      addNotification?.({
+        message: '本章知识变更已拒绝',
+        type: 'success',
+        duration: 3000,
+      });
+      await loadChapterProposals();
+    } catch (error) {
+      addNotification?.({
+        message: `拒绝失败: ${error.message}`,
+        type: 'error',
+        duration: 4000,
+      });
+    }
+  }, [addNotification, loadChapterProposals]);
+
+  const handleAnalyzeKnowledge = useCallback(() => {
+    onAnalyzeChapterKnowledge?.(currentChapter, false);
+  }, [currentChapter, onAnalyzeChapterKnowledge]);
 
   // assistant-ui 0.14 在某些 message 形态（缺 metadata）下初始化会崩；
   // 这里用「真实持久化 messages」直接喂给 runtime，空状态由 ThreadPrimitive.Empty 渲染。
@@ -246,6 +327,9 @@ const AIChatPanel = ({
       setMessages?.(next);
     },
   });
+  const knowledgeStatusText = knowledgeAnalysisState?.status === 'running'
+    ? '分析中'
+    : (knowledgeAnalysisState?.message || '');
 
   return (
     <Sider
@@ -271,6 +355,22 @@ const AIChatPanel = ({
             onAIAction={onAIAction}
             onModelConfigChange={onModelConfigChange}
             onPromptTemplateSelect={onPromptTemplateSelect}
+          />
+
+          <ProposalReviewList
+            compact
+            title="本章知识变更"
+            subtitle={`${chapterProposals.length} 个待审事件`}
+            proposals={chapterProposals}
+            loading={proposalLoading}
+            analyzing={knowledgeAnalysisState?.status === 'running'}
+            statusText={knowledgeStatusText}
+            onAnalyze={onAnalyzeChapterKnowledge ? handleAnalyzeKnowledge : null}
+            onRefresh={loadChapterProposals}
+            onAccept={handleAcceptProposal}
+            onReject={handleRejectProposal}
+            emptyText="本章暂无待审知识变更"
+            analyzeLabel="分析知识"
           />
 
           <div className="ai-chat-body">

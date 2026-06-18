@@ -15,9 +15,17 @@ import {
   FaUsers,
 } from 'react-icons/fa';
 import { aiService } from '../services/aiService';
-import { getProjectContext } from '../services/knowledgeService';
+import {
+  acceptChangeProposal,
+  getChangeProposals,
+  getEntityRelationships,
+  getEntityStateEvents,
+  getProjectContext,
+  rejectChangeProposal,
+} from '../services/knowledgeService';
 import { useNotification } from './NotificationManager';
 import KnowledgeGraphView from './knowledge/KnowledgeGraphView';
+import ProposalReviewList from './knowledge/ProposalReviewList';
 import './KnowledgeBase.css';
 
 const EMPTY_CONTEXT = {
@@ -208,6 +216,10 @@ const KnowledgeBase = ({ projectId }) => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [aiMode, setAiMode] = useState('');
+  const [changeProposals, setChangeProposals] = useState([]);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [relationships, setRelationships] = useState([]);
+  const [stateEvents, setStateEvents] = useState([]);
   const { addNotification } = useNotification();
 
   const loadContext = useCallback(async () => {
@@ -228,6 +240,34 @@ const KnowledgeBase = ({ projectId }) => {
   useEffect(() => {
     loadContext();
   }, [loadContext]);
+
+  const loadKnowledgeGraph = useCallback(async () => {
+    if (!projectId) return;
+
+    setProposalLoading(true);
+    try {
+      const [pending, conflicted, relationshipRows, stateRows] = await Promise.all([
+        getChangeProposals(projectId, { status: 'pending' }),
+        getChangeProposals(projectId, { status: 'conflicted' }),
+        getEntityRelationships(projectId),
+        getEntityStateEvents(projectId),
+      ]);
+      setChangeProposals([...(conflicted || []), ...(pending || [])]);
+      setRelationships(relationshipRows || []);
+      setStateEvents(stateRows || []);
+    } catch (error) {
+      addNotification({
+        message: `知识变更队列加载失败: ${error.message}`,
+        type: 'error',
+      });
+    } finally {
+      setProposalLoading(false);
+    }
+  }, [projectId, addNotification]);
+
+  useEffect(() => {
+    loadKnowledgeGraph();
+  }, [loadKnowledgeGraph]);
 
   const metrics = useMemo(() => {
     const checks = [
@@ -262,6 +302,21 @@ const KnowledgeBase = ({ projectId }) => {
   const latestChapter = contextData.chapters[contextData.chapters.length - 1];
   const gapChecks = metrics.checks.filter((check) => !check.ready);
 
+  const entityNameResolver = useMemo(() => {
+    const lookup = new Map();
+    [
+      ['character', contextData.characters],
+      ['worldview', contextData.worldviews],
+      ['location', contextData.locations],
+      ['organization', contextData.organizations],
+    ].forEach(([type, items]) => {
+      items.forEach((item) => {
+        if (item.id) lookup.set(`${type}:${item.id}`, item.name || item.title);
+      });
+    });
+    return (type, id) => lookup.get(`${type}:${id}`);
+  }, [contextData]);
+
   const handleAiInsight = async (kind) => {
     if (!projectId || aiAnalyzing) return;
 
@@ -292,6 +347,39 @@ const KnowledgeBase = ({ projectId }) => {
       setAiMode('');
     }
   };
+
+  const handleAcceptProposal = useCallback(async (proposal, acceptedOperationIds) => {
+    try {
+      await acceptChangeProposal(proposal.id, acceptedOperationIds);
+      addNotification({
+        message: '知识变更已应用',
+        type: 'success',
+      });
+      await Promise.all([loadContext(), loadKnowledgeGraph()]);
+    } catch (error) {
+      addNotification({
+        message: `应用失败: ${error.message}`,
+        type: 'error',
+      });
+      await loadKnowledgeGraph();
+    }
+  }, [addNotification, loadContext, loadKnowledgeGraph]);
+
+  const handleRejectProposal = useCallback(async (proposal) => {
+    try {
+      await rejectChangeProposal(proposal.id, '用户在知识库总览拒绝');
+      addNotification({
+        message: '知识变更已拒绝',
+        type: 'success',
+      });
+      await loadKnowledgeGraph();
+    } catch (error) {
+      addNotification({
+        message: `拒绝失败: ${error.message}`,
+        type: 'error',
+      });
+    }
+  }, [addNotification, loadKnowledgeGraph]);
 
   const ReadinessIcon = metrics.score >= 70 ? FaCheck : FaExclamationTriangle;
 
@@ -371,6 +459,8 @@ const KnowledgeBase = ({ projectId }) => {
           <p>{contextData.projectDescription || '尚未填写项目简介。建议补充作品类型、核心冲突、主角目标和世界规则。'}</p>
           <div className="knowledge-brief-meta">
             <span>{metrics.totalAssets} 条资料</span>
+            <span>{relationships.length} 条关系</span>
+            <span>{stateEvents.length} 条状态</span>
             <span>{contextData.chapters.length} 章上下文</span>
             {latestChapter && <span>最新：{latestChapter.title || `第 ${latestChapter.number} 章`}</span>}
           </div>
@@ -426,7 +516,8 @@ const KnowledgeBase = ({ projectId }) => {
       <KnowledgeGraphView
         projectId={projectId}
         contextData={contextData}
-        loading={loading}
+        relationships={relationships}
+        loading={loading || proposalLoading}
       />
 
       <main className="knowledge-workspace">
@@ -484,6 +575,18 @@ const KnowledgeBase = ({ projectId }) => {
         </section>
 
         <aside className="knowledge-side-rail">
+          <ProposalReviewList
+            title="变更提案队列"
+            subtitle={`${changeProposals.length} 个待审事件`}
+            proposals={changeProposals}
+            loading={proposalLoading}
+            onRefresh={loadKnowledgeGraph}
+            onAccept={handleAcceptProposal}
+            onReject={handleRejectProposal}
+            entityNameResolver={entityNameResolver}
+            emptyText="暂无待审知识变更"
+          />
+
           {aiAnalysis && (
             <section className="knowledge-ai-result">
               <div className="knowledge-panel-header compact">

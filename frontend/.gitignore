@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# UI QA screenshots (generated, do not commit)
+ui-qa-screenshots/

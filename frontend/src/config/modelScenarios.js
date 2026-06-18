@@ -3,6 +3,7 @@ export const MODEL_SCENARIOS = [
   { value: 'character_generation', label: '角色生成' },
   { value: 'worldview_generation', label: '世界观构建' },
   { value: 'outline_generation', label: '大纲生成' },
+  { value: 'knowledge_update', label: '知识库更新' },
   { value: 'chat', label: 'AI 对话' },
 ];
 
