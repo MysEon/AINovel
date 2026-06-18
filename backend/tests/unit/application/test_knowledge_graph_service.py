@@ -197,8 +197,8 @@ class TestKnowledgeGraphService:
         assert "enemy_of" in prompt
         assert "injured" in prompt
 
-    async def test_analyze_chapter_can_create_new_entity_proposal_and_accept(self, db_session, test_user):
-        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+    async def test_analyze_chapter_can_create_new_entity_and_related_edge_in_one_proposal(self, db_session, test_user):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
         chapter = await self._seed_chapter(db_session, project.id)
         draft = ChapterKnowledgeAnalysisDraft(
             proposals=[
@@ -218,6 +218,15 @@ class TestKnowledgeGraphService:
                                 "geography": "narrow mountain gate",
                                 "unknown_field": "ignored",
                             },
+                        ),
+                        KnowledgeOperationDraft(
+                            operation_type="relationship_upsert",
+                            entity_type="character",
+                            entity_name="Lin Zhao",
+                            relation_type="located_in",
+                            target_type="location",
+                            target_name="Moon Gate",
+                            payload={"description": "reaches Moon Gate before dawn"},
                         )
                     ],
                 )
@@ -234,6 +243,7 @@ class TestKnowledgeGraphService:
         response = await service.analyze_chapter(project.id, chapter.id, test_user.id, model_config_id=123)
         proposal = response.proposals[0]
         create_op = proposal.operations[0]
+        relationship_op = proposal.operations[1]
 
         assert response.proposal_count == 1
         assert create_op.operation_type == "entity_create"
@@ -244,6 +254,10 @@ class TestKnowledgeGraphService:
             "description": "A hidden pass used by smugglers.",
             "geography": "narrow mountain gate",
         }
+        assert relationship_op.operation_type == "relationship_upsert"
+        assert relationship_op.entity_id == character.id
+        assert relationship_op.target_id is None
+        assert relationship_op.payload["pending_target_ref"] == {"type": "location", "name": "Moon Gate"}
 
         accepted = await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
         created_location = (
@@ -252,11 +266,16 @@ class TestKnowledgeGraphService:
             )
         ).scalar_one()
         states = await service.list_state_events(project.id, test_user.id, entity_type="location", entity_id=created_location.id)
+        relationships = await service.list_relationships(project.id, test_user.id, entity_type="location", entity_id=created_location.id)
 
         assert accepted.status == "accepted"
         assert accepted.operations[0].entity_id == created_location.id
+        assert accepted.operations[1].target_id == created_location.id
         assert created_location.description == "A hidden pass used by smugglers."
         assert states[0].state_key == "created"
+        assert relationships[0].source_id == character.id
+        assert relationships[0].target_id == created_location.id
+        assert relationships[0].relation_type == "located_in"
 
     async def test_analyze_chapter_returns_existing_pending_proposals_without_duplicate_ai_call(
         self,

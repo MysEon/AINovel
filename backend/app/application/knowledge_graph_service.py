@@ -575,7 +575,7 @@ class KnowledgeGraphService:
             operation.status = "rejected"
             operation.conflict_reason = None
 
-        for operation in accepted_ops:
+        for operation in self._operations_in_apply_order(accepted_ops):
             # Bug 1: 幂等兜底——已应用过的 operation 直接跳过
             if operation.applied_at is not None:
                 continue
@@ -602,6 +602,13 @@ class KnowledgeGraphService:
         await self.db.commit()
         proposal = await self._get_proposal_for_user(proposal.id, user_id)
         return self._proposal_response(proposal)
+
+    @staticmethod
+    def _operations_in_apply_order(operations: list[ProposalOperation]) -> list[ProposalOperation]:
+        return sorted(
+            operations,
+            key=lambda operation: (0 if operation.operation_type == "entity_create" else 1, operation.sort_order),
+        )
 
     async def reject_proposal(
         self,
@@ -811,6 +818,7 @@ class KnowledgeGraphService:
                 "请分析本章是否造成角色、组织、地点、世界观的状态或关系变化。",
                 "可用 operation_type：entity_create、entity_field_update、relationship_upsert、relationship_delete、entity_state_event。",
                 "章节中首次出现且会影响后续剧情的新角色、组织、地点或世界观设定，使用 entity_create；entity_name 填名称，payload 填可写字段。",
+                "同一个 proposal 中，后续 relationship_upsert/entity_state_event 可以用 entity_name/target_name 指向刚 entity_create 的新实体。",
                 "字段更新只能使用下面 allowed_fields 中的英文字段名；不确定时优先生成 entity_state_event。",
                 "关系建议使用英文 relation_type，例如 ally_of、enemy_of、member_of、controls、located_in、believes_in、affected_by。",
                 "每个 proposal 应是一个故事事件，operations 是这个事件造成的具体影响。",
@@ -829,8 +837,22 @@ class KnowledgeGraphService:
         entities: dict[str, list[dict[str, Any]]],
     ) -> EntityChangeProposalCreate | None:
         operations: list[ProposalOperationCreate] = []
+        created_refs: dict[tuple[str, str], dict[str, str]] = {}
         for operation_draft in draft.operations:
-            operation = self._operation_body_from_draft(operation_draft, entities)
+            if operation_draft.operation_type != "entity_create":
+                continue
+            operation = self._entity_create_operation_from_draft(operation_draft, entities)
+            if operation is None or not operation.entity_type or not isinstance(operation.payload, dict):
+                continue
+            name = str(operation.payload.get("name") or "").strip()
+            if name:
+                created_refs[(operation.entity_type, name.casefold())] = {
+                    "type": operation.entity_type,
+                    "name": name,
+                }
+
+        for operation_draft in draft.operations:
+            operation = self._operation_body_from_draft(operation_draft, entities, created_refs)
             if operation is not None:
                 operations.append(operation)
 
@@ -852,17 +874,30 @@ class KnowledgeGraphService:
         self,
         draft: KnowledgeOperationDraft,
         entities: dict[str, list[dict[str, Any]]],
+        created_refs: dict[tuple[str, str], dict[str, str]] | None = None,
     ) -> ProposalOperationCreate | None:
         if draft.operation_type == "entity_create":
             return self._entity_create_operation_from_draft(draft, entities)
 
         entity_id = self._resolve_entity_id(entities, draft.entity_type, draft.entity_name)
         target_id = self._resolve_entity_id(entities, draft.target_type, draft.target_name)
+        payload = dict(draft.payload) if isinstance(draft.payload, dict) else {}
+        pending_entity_ref = self._pending_created_ref(created_refs, draft.entity_type, draft.entity_name)
+        pending_target_ref = self._pending_created_ref(created_refs, draft.target_type, draft.target_name)
 
-        if draft.operation_type in {"entity_field_update", "entity_state_event"} and not entity_id:
+        if draft.operation_type == "entity_state_event" and not entity_id and pending_entity_ref:
+            payload["pending_entity_ref"] = pending_entity_ref
+        if draft.operation_type == "entity_field_update" and not entity_id:
             return None
-        if draft.operation_type in {"relationship_upsert", "relationship_delete"} and (not entity_id or not target_id):
+        if draft.operation_type == "entity_state_event" and not entity_id and not pending_entity_ref:
             return None
+        if draft.operation_type in {"relationship_upsert", "relationship_delete"}:
+            if not entity_id and pending_entity_ref:
+                payload["pending_source_ref"] = pending_entity_ref
+            if not target_id and pending_target_ref:
+                payload["pending_target_ref"] = pending_target_ref
+            if (not entity_id and not pending_entity_ref) or (not target_id and not pending_target_ref):
+                return None
         if draft.operation_type == "entity_field_update":
             if not draft.entity_type or not draft.field_name:
                 return None
@@ -879,7 +914,7 @@ class KnowledgeGraphService:
             "target_id": target_id,
             "state_key": draft.state_key,
             "new_value": draft.new_value,
-            "payload": draft.payload,
+            "payload": payload,
         }
         if "expected_old_value" in draft.model_fields_set:
             operation_data["expected_old_value"] = draft.expected_old_value
@@ -925,6 +960,64 @@ class KnowledgeGraphService:
                 return item.get("id")
         return None
 
+    @staticmethod
+    def _pending_created_ref(
+        created_refs: dict[tuple[str, str], dict[str, str]] | None,
+        entity_type: str | None,
+        entity_name: str | None,
+    ) -> dict[str, str] | None:
+        if not created_refs or not entity_type or not entity_name:
+            return None
+        return created_refs.get((entity_type, entity_name.strip().casefold()))
+
+    @staticmethod
+    def _payload_ref(payload: dict[str, Any], key: str) -> dict[str, str] | None:
+        ref = payload.get(key)
+        if not isinstance(ref, dict):
+            return None
+        ref_type = ref.get("type")
+        ref_name = ref.get("name")
+        if not isinstance(ref_type, str) or not isinstance(ref_name, str) or not ref_name.strip():
+            return None
+        return {"type": ref_type, "name": ref_name.strip()}
+
+    @staticmethod
+    def _operation_has_pending_refs(operation: ProposalOperation) -> bool:
+        payload = _load_json(operation.payload) or {}
+        if not isinstance(payload, dict):
+            return False
+        return any(
+            key in payload
+            for key in ("pending_entity_ref", "pending_source_ref", "pending_target_ref")
+        )
+
+    def _resolve_pending_operation_refs(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> None:
+        payload = _load_json(operation.payload) or {}
+        if not isinstance(payload, dict):
+            return
+
+        entity_ref = self._payload_ref(payload, "pending_entity_ref")
+        source_ref = self._payload_ref(payload, "pending_source_ref")
+        target_ref = self._payload_ref(payload, "pending_target_ref")
+
+        if entity_ref and not operation.entity_id:
+            operation.entity_id = self._created_entity_id_from_ref(proposal, entity_ref)
+        if source_ref and not operation.entity_id:
+            operation.entity_id = self._created_entity_id_from_ref(proposal, source_ref)
+        if target_ref and not operation.target_id:
+            operation.target_id = self._created_entity_id_from_ref(proposal, target_ref)
+
+    def _created_entity_id_from_ref(self, proposal: EntityChangeProposal, ref: dict[str, str]) -> int:
+        ref_type = ref["type"]
+        ref_name = ref["name"].strip().casefold()
+        for operation in proposal.operations:
+            if operation.operation_type != "entity_create" or operation.entity_type != ref_type:
+                continue
+            data = self._coerce_entity_create_payload(operation.entity_type, _load_json(operation.payload))
+            if data and data["name"].strip().casefold() == ref_name and operation.entity_id:
+                return operation.entity_id
+        raise ValidationError(f"待创建实体尚未应用：{ref['type']}:{ref['name']}")
+
     async def _build_operation(
         self,
         project_id: int,
@@ -966,10 +1059,13 @@ class KnowledgeGraphService:
                 await self._get_entity(project_id, "organization", data["organization_id"])
             return
 
+        payload = body.payload or {}
         if body.operation_type in {"entity_field_update", "entity_state_event"}:
-            if not body.entity_type or not body.entity_id:
+            pending_entity_ref = self._payload_ref(payload, "pending_entity_ref")
+            if not body.entity_type or (not body.entity_id and not pending_entity_ref):
                 raise ValidationError("子操作缺少实体引用")
-            await self._get_entity(project_id, body.entity_type, body.entity_id)
+            if body.entity_id:
+                await self._get_entity(project_id, body.entity_type, body.entity_id)
 
         if body.operation_type == "entity_field_update":
             if not body.field_name:
@@ -980,10 +1076,16 @@ class KnowledgeGraphService:
             raise ValidationError("状态事件操作缺少 state_key")
 
         if body.operation_type in {"relationship_upsert", "relationship_delete"}:
-            if not all([body.entity_type, body.entity_id, body.relation_type, body.target_type, body.target_id]):
+            pending_source_ref = self._payload_ref(payload, "pending_source_ref")
+            pending_target_ref = self._payload_ref(payload, "pending_target_ref")
+            has_source = bool(body.entity_type and (body.entity_id or pending_source_ref))
+            has_target = bool(body.target_type and (body.target_id or pending_target_ref))
+            if not all([has_source, body.relation_type, has_target]):
                 raise ValidationError("关系操作缺少 source/target/relation_type")
-            await self._get_entity(project_id, body.entity_type, body.entity_id)
-            await self._get_entity(project_id, body.target_type, body.target_id)
+            if body.entity_id:
+                await self._get_entity(project_id, body.entity_type, body.entity_id)
+            if body.target_id:
+                await self._get_entity(project_id, body.target_type, body.target_id)
 
     async def _detect_conflict(self, project_id: int, operation: ProposalOperation) -> str | None:
         if operation.operation_type == "entity_create":
@@ -994,6 +1096,9 @@ class KnowledgeGraphService:
             if existing is not None:
                 return f"同名实体已存在：{data['name']}"
             return await self._detect_pending_operation_conflict(project_id, operation)
+
+        if self._operation_has_pending_refs(operation):
+            return None
 
         if operation.operation_type == "entity_field_update":
             entity = await self._get_entity(project_id, operation.entity_type, operation.entity_id)
@@ -1091,6 +1196,8 @@ class KnowledgeGraphService:
         if operation.operation_type == "entity_create":
             await self._apply_entity_create(proposal, operation)
             return True
+        if operation.operation_type in {"relationship_upsert", "relationship_delete", "entity_state_event"}:
+            self._resolve_pending_operation_refs(proposal, operation)
         if operation.operation_type == "entity_field_update":
             await self._apply_field_update(proposal, operation)
             return True
