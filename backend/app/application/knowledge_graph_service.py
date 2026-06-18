@@ -1071,6 +1071,10 @@ class KnowledgeGraphService:
             if not body.field_name:
                 raise ValidationError("字段更新操作缺少 field_name")
             self._ensure_allowed_field(body.entity_type, body.field_name)
+            if body.entity_type == "character" and body.field_name == "organization_id":
+                organization_id = self._coerce_optional_organization_id(body.new_value)
+                if organization_id is not None:
+                    await self._get_entity(project_id, "organization", organization_id)
 
         if body.operation_type == "entity_state_event" and not body.state_key:
             raise ValidationError("状态事件操作缺少 state_key")
@@ -1205,7 +1209,7 @@ class KnowledgeGraphService:
             await self._apply_relationship_upsert(proposal, operation)
             return True
         if operation.operation_type == "relationship_delete":
-            return await self._apply_relationship_delete(proposal.project_id, operation)
+            return await self._apply_relationship_delete(proposal, operation)
         if operation.operation_type == "entity_state_event":
             await self._apply_state_event(proposal, operation)
             return True
@@ -1279,6 +1283,7 @@ class KnowledgeGraphService:
                 chapter_order=chapter_order,
             )
         )
+        await self._sync_member_of_from_organization_field(proposal, operation, old_value, value)
 
     async def _apply_relationship_upsert(
         self,
@@ -1286,15 +1291,46 @@ class KnowledgeGraphService:
         operation: ProposalOperation,
     ) -> None:
         payload = _load_json(operation.payload) or {}
-        relationship = await self._find_relationship(proposal.project_id, operation)
+        relationship = await self._upsert_relationship_record(
+            proposal,
+            operation,
+            source_type=operation.entity_type,
+            source_id=operation.entity_id,
+            relation_type=operation.relation_type,
+            target_type=operation.target_type,
+            target_id=operation.target_id,
+            payload=payload,
+        )
+        await self._sync_organization_field_from_member_of_upsert(proposal, operation, relationship)
+
+    async def _upsert_relationship_record(
+        self,
+        proposal: EntityChangeProposal,
+        operation: ProposalOperation,
+        *,
+        source_type: str | None,
+        source_id: int | None,
+        relation_type: str | None,
+        target_type: str | None,
+        target_id: int | None,
+        payload: dict[str, Any],
+    ) -> EntityRelationship:
+        relationship = await self._find_relationship_by_refs(
+            proposal.project_id,
+            source_type=source_type,
+            source_id=source_id,
+            relation_type=relation_type,
+            target_type=target_type,
+            target_id=target_id,
+        )
         if relationship is None:
             relationship = EntityRelationship(
                 project_id=proposal.project_id,
-                source_type=operation.entity_type,
-                source_id=operation.entity_id,
-                relation_type=operation.relation_type,
-                target_type=operation.target_type,
-                target_id=operation.target_id,
+                source_type=source_type,
+                source_id=source_id,
+                relation_type=relation_type,
+                target_type=target_type,
+                target_id=target_id,
             )
             self.db.add(relationship)
 
@@ -1308,14 +1344,136 @@ class KnowledgeGraphService:
         if relationship.proposal_id is None:
             relationship.proposal_id = proposal.id
             relationship.proposal_operation_id = operation.id
+        return relationship
 
-    async def _apply_relationship_delete(self, project_id: int, operation: ProposalOperation) -> bool:
-        relationship = await self._find_relationship(project_id, operation)
+    async def _apply_relationship_delete(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> bool:
+        relationship = await self._find_relationship(proposal.project_id, operation)
         if relationship is not None:
             relationship.status = "inactive"
             relationship.proposal_operation_id = operation.id
+            await self._sync_organization_field_from_member_of_delete(proposal, operation)
             return True
         return False
+
+    async def _sync_member_of_from_organization_field(
+        self,
+        proposal: EntityChangeProposal,
+        operation: ProposalOperation,
+        old_value: Any,
+        new_value: Any,
+    ) -> None:
+        if operation.entity_type != "character" or operation.field_name != "organization_id":
+            return
+        old_org_id = self._coerce_optional_organization_id(old_value)
+        new_org_id = self._coerce_optional_organization_id(new_value)
+        if old_org_id == new_org_id:
+            return
+
+        await self._deactivate_other_member_of_relationships(
+            proposal.project_id,
+            operation.entity_id,
+            keep_target_id=new_org_id,
+            operation=operation,
+        )
+
+        if new_org_id is not None:
+            await self._upsert_relationship_record(
+                proposal,
+                operation,
+                source_type="character",
+                source_id=operation.entity_id,
+                relation_type="member_of",
+                target_type="organization",
+                target_id=new_org_id,
+                payload={"status": "active", "properties": {"synced_from": "character.organization_id"}},
+            )
+
+    async def _sync_organization_field_from_member_of_upsert(
+        self,
+        proposal: EntityChangeProposal,
+        operation: ProposalOperation,
+        relationship: EntityRelationship,
+    ) -> None:
+        if not self._is_character_member_of_operation(operation) or relationship.status != "active":
+            return
+        await self._deactivate_other_member_of_relationships(
+            proposal.project_id,
+            operation.entity_id,
+            keep_target_id=operation.target_id,
+            operation=operation,
+        )
+        character = await self._get_entity(proposal.project_id, "character", operation.entity_id)
+        old_org_id = character.organization_id
+        if old_org_id == operation.target_id:
+            return
+        character.organization_id = operation.target_id
+        await self._add_synced_organization_state_event(proposal, operation, old_org_id, operation.target_id)
+
+    async def _sync_organization_field_from_member_of_delete(
+        self,
+        proposal: EntityChangeProposal,
+        operation: ProposalOperation,
+    ) -> None:
+        if not self._is_character_member_of_operation(operation):
+            return
+        character = await self._get_entity(proposal.project_id, "character", operation.entity_id)
+        if character.organization_id != operation.target_id:
+            return
+        old_org_id = character.organization_id
+        character.organization_id = None
+        await self._add_synced_organization_state_event(proposal, operation, old_org_id, None)
+
+    async def _deactivate_other_member_of_relationships(
+        self,
+        project_id: int,
+        character_id: int | None,
+        *,
+        keep_target_id: int | None,
+        operation: ProposalOperation,
+    ) -> None:
+        if character_id is None:
+            return
+        stmt = select(EntityRelationship).where(
+            EntityRelationship.project_id == project_id,
+            EntityRelationship.source_type == "character",
+            EntityRelationship.source_id == character_id,
+            EntityRelationship.relation_type == "member_of",
+            EntityRelationship.target_type == "organization",
+            EntityRelationship.status == "active",
+        )
+        if keep_target_id is not None:
+            stmt = stmt.where(EntityRelationship.target_id != keep_target_id)
+        result = await self.db.execute(stmt)
+        for relationship in result.scalars().all():
+            relationship.status = "inactive"
+            relationship.proposal_operation_id = operation.id
+
+    async def _add_synced_organization_state_event(
+        self,
+        proposal: EntityChangeProposal,
+        operation: ProposalOperation,
+        old_org_id: int | None,
+        new_org_id: int | None,
+    ) -> None:
+        chapter_order = await self._chapter_order(proposal.project_id, proposal.chapter_id)
+        self.db.add(
+            EntityStateEvent(
+                project_id=proposal.project_id,
+                chapter_id=proposal.chapter_id,
+                entity_type="character",
+                entity_id=operation.entity_id,
+                state_key="organization_id",
+                old_value=_dump_json(old_org_id),
+                new_value=_dump_json(new_org_id),
+                summary="同步组织归属关系",
+                evidence=proposal.evidence,
+                confidence=proposal.confidence,
+                source=proposal.source,
+                proposal_id=proposal.id,
+                proposal_operation_id=operation.id,
+                chapter_order=chapter_order,
+            )
+        )
 
     async def _apply_state_event(
         self,
@@ -1344,16 +1502,43 @@ class KnowledgeGraphService:
         self.db.add(state_event)
 
     async def _find_relationship(self, project_id: int, operation: ProposalOperation) -> EntityRelationship | None:
+        return await self._find_relationship_by_refs(
+            project_id,
+            source_type=operation.entity_type,
+            source_id=operation.entity_id,
+            relation_type=operation.relation_type,
+            target_type=operation.target_type,
+            target_id=operation.target_id,
+        )
+
+    async def _find_relationship_by_refs(
+        self,
+        project_id: int,
+        *,
+        source_type: str | None,
+        source_id: int | None,
+        relation_type: str | None,
+        target_type: str | None,
+        target_id: int | None,
+    ) -> EntityRelationship | None:
         stmt = select(EntityRelationship).where(
             EntityRelationship.project_id == project_id,
-            EntityRelationship.source_type == operation.entity_type,
-            EntityRelationship.source_id == operation.entity_id,
-            EntityRelationship.relation_type == operation.relation_type,
-            EntityRelationship.target_type == operation.target_type,
-            EntityRelationship.target_id == operation.target_id,
+            EntityRelationship.source_type == source_type,
+            EntityRelationship.source_id == source_id,
+            EntityRelationship.relation_type == relation_type,
+            EntityRelationship.target_type == target_type,
+            EntityRelationship.target_id == target_id,
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    def _is_character_member_of_operation(operation: ProposalOperation) -> bool:
+        return (
+            operation.entity_type == "character"
+            and operation.relation_type == "member_of"
+            and operation.target_type == "organization"
+        )
 
     async def _get_entity(self, project_id: int, entity_type: str | None, entity_id: int | None):
         if not entity_type or not entity_id or entity_type not in ENTITY_MODELS:
@@ -1536,8 +1721,19 @@ class KnowledgeGraphService:
         if (entity_type, field_name) in JSON_TEXT_FIELDS:
             return _dump_json(value)
         if entity_type == "character" and field_name == "organization_id":
-            return int(value)
+            return KnowledgeGraphService._coerce_optional_organization_id(value)
         return value if isinstance(value, str) else str(value)
+
+    @staticmethod
+    def _coerce_optional_organization_id(value: Any) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("组织引用无效") from exc
 
     @staticmethod
     def _proposal_status_after_operations(operations: list[ProposalOperation]) -> str:
