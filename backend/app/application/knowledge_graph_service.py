@@ -87,9 +87,9 @@ ENTITY_ALLOWED_FIELDS = {
         "weaknesses",
         "extra_attributes",
     },
-    "location": {"name", "description", "geography", "culture", "history", "extra_attributes"},
-    "organization": {"name", "description", "structure", "purpose", "influence", "extra_attributes"},
-    "worldview": {"name", "description", "rules", "magic_system", "technology", "timeline", "extra_attributes"},
+    "location": {"name", "description", "geography", "culture", "history"},
+    "organization": {"name", "description", "structure", "purpose", "influence"},
+    "worldview": {"name", "description", "rules", "magic_system", "technology", "timeline"},
 }
 
 JSON_TEXT_FIELDS = {
@@ -810,7 +810,7 @@ class KnowledgeGraphService:
         if draft.operation_type == "entity_field_update":
             if not draft.entity_type or not draft.field_name:
                 return None
-            if draft.field_name not in ENTITY_ALLOWED_FIELDS.get(draft.entity_type, set()):
+            if not self._is_allowed_model_field(draft.entity_type, draft.field_name):
                 return None
 
         operation_data = {
@@ -1190,8 +1190,17 @@ class KnowledgeGraphService:
         return proposal
 
     @staticmethod
+    def _is_allowed_model_field(entity_type: str | None, field_name: str | None) -> bool:
+        if not entity_type or not field_name:
+            return False
+        if field_name not in ENTITY_ALLOWED_FIELDS.get(entity_type, set()):
+            return False
+        model = ENTITY_MODELS.get(entity_type)
+        return model is not None and hasattr(model, field_name)
+
+    @staticmethod
     def _ensure_allowed_field(entity_type: str | None, field_name: str) -> None:
-        if not entity_type or field_name not in ENTITY_ALLOWED_FIELDS.get(entity_type, set()):
+        if not KnowledgeGraphService._is_allowed_model_field(entity_type, field_name):
             raise ValidationError("该实体字段不允许通过提案更新")
 
     def _read_field_value(self, entity, entity_type: str | None, field_name: str | None) -> Any:

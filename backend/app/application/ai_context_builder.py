@@ -12,11 +12,12 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import nullslast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.models.manuscript import Chapter
 from app.infrastructure.db.models.projects import Project
+from app.infrastructure.db.models.story_knowledge import EntityRelationship, EntityStateEvent
 from app.infrastructure.db.models.worldbuilding import Character, Location, Organization, Worldview
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,9 @@ class AIContextBuilder:
             ctx["worldviews"] = await self._get_worldviews(project_id)
             ctx["locations"] = await self._get_locations(project_id)
             ctx["organizations"] = await self._get_organizations(project_id)
+            entity_names = await self._get_entity_name_lookup(project_id)
+            ctx["relationships"] = await self._get_relationships(project_id, entity_names)
+            ctx["state_events"] = await self._get_state_events(project_id, entity_names)
 
         if mode in ("full", "outline"):
             ctx["previous_chapters"] = await self._get_chapter_summaries(project_id)
@@ -105,11 +109,13 @@ class AIContextBuilder:
         )
         return [
             {
+                "id": c.id,
                 "name": c.name,
                 "description": _truncate(c.description, 200),
                 "personality": _truncate(c.personality, 200),
                 "background": _truncate(c.background, 200),
                 "appearance": _truncate(c.appearance, 200),
+                "organization_id": c.organization_id,
             }
             for c in result.scalars().all()
         ]
@@ -118,6 +124,7 @@ class AIContextBuilder:
         result = await self.db.execute(select(Worldview).where(Worldview.project_id == project_id).limit(10))
         return [
             {
+                "id": w.id,
                 "name": w.name,
                 "description": _truncate(w.description, 300),
                 "rules": _truncate(w.rules, 300),
@@ -130,6 +137,7 @@ class AIContextBuilder:
         result = await self.db.execute(select(Location).where(Location.project_id == project_id).limit(15))
         return [
             {
+                "id": loc.id,
                 "name": loc.name,
                 "description": _truncate(loc.description, 200),
                 "geography": _truncate(loc.geography, 150),
@@ -141,11 +149,84 @@ class AIContextBuilder:
         result = await self.db.execute(select(Organization).where(Organization.project_id == project_id).limit(10))
         return [
             {
+                "id": org.id,
                 "name": org.name,
                 "description": _truncate(org.description, 200),
                 "purpose": _truncate(org.purpose, 150),
             }
             for org in result.scalars().all()
+        ]
+
+    async def _get_entity_name_lookup(self, project_id: int) -> dict[tuple[str, int], str]:
+        lookup: dict[tuple[str, int], str] = {}
+        model_pairs = (
+            ("character", Character),
+            ("worldview", Worldview),
+            ("location", Location),
+            ("organization", Organization),
+        )
+        for entity_type, model in model_pairs:
+            rows = await self.db.execute(
+                select(model.id, model.name).where(model.project_id == project_id)
+            )
+            for entity_id, name in rows.all():
+                lookup[(entity_type, entity_id)] = name
+        return lookup
+
+    async def _get_relationships(
+        self,
+        project_id: int,
+        entity_names: dict[tuple[str, int], str],
+    ) -> list[dict]:
+        result = await self.db.execute(
+            select(EntityRelationship)
+            .where(EntityRelationship.project_id == project_id, EntityRelationship.status == "active")
+            .order_by(EntityRelationship.updated_at.desc(), EntityRelationship.id.desc())
+            .limit(30)
+        )
+        return [
+            {
+                "source_type": rel.source_type,
+                "source_id": rel.source_id,
+                "source_name": entity_names.get((rel.source_type, rel.source_id)),
+                "relation_type": rel.relation_type,
+                "target_type": rel.target_type,
+                "target_id": rel.target_id,
+                "target_name": entity_names.get((rel.target_type, rel.target_id)),
+                "description": _truncate(rel.description, 200),
+                "evidence": _truncate(rel.evidence, 160),
+                "confidence": rel.confidence,
+            }
+            for rel in result.scalars().all()
+        ]
+
+    async def _get_state_events(
+        self,
+        project_id: int,
+        entity_names: dict[tuple[str, int], str],
+    ) -> list[dict]:
+        result = await self.db.execute(
+            select(EntityStateEvent)
+            .where(EntityStateEvent.project_id == project_id)
+            .order_by(
+                nullslast(EntityStateEvent.chapter_order.desc()),
+                EntityStateEvent.created_at.desc(),
+                EntityStateEvent.id.desc(),
+            )
+            .limit(30)
+        )
+        return [
+            {
+                "entity_type": event.entity_type,
+                "entity_id": event.entity_id,
+                "entity_name": entity_names.get((event.entity_type, event.entity_id)),
+                "state_key": event.state_key,
+                "old_value": _truncate(event.old_value, 120),
+                "new_value": _truncate(event.new_value, 160),
+                "summary": _truncate(event.summary, 200),
+                "chapter_id": event.chapter_id,
+            }
+            for event in result.scalars().all()
         ]
 
     async def _get_chapter_summaries(self, project_id: int) -> list[dict]:
@@ -319,7 +400,14 @@ class AIContextBuilder:
 
     def format_for_chat(self, ctx: dict) -> str:
         """格式化 chat 用轻量上下文：项目元数据 + 角色基础列表。"""
-        return self._format_chat_characters(ctx, field_limit=200, compact=False)
+        text = self._format_chat_characters(ctx, field_limit=200, compact=False)
+        wb_text = self._format_chat_worldbuilding(ctx, field_limit=120)
+        graph_text = self._format_chat_graph(ctx, field_limit=120)
+        if wb_text:
+            text = text + "\n\n" + wb_text
+        if graph_text:
+            text = text + "\n\n" + graph_text
+        return text
 
     # ── 分层章节注入（L1 当前章全文 / L2 近 3 章详细 / L3 更早 ≤6 章简要） ──
 
@@ -549,6 +637,9 @@ class AIContextBuilder:
         wb_text = self._format_chat_worldbuilding(ctx, field_limit=120)
         if wb_text:
             text = text + "\n\n" + wb_text
+        graph_text = self._format_chat_graph(ctx, field_limit=120)
+        if graph_text:
+            text = text + "\n\n" + graph_text
 
         if len(text) <= max_chars:
             return text
@@ -557,16 +648,22 @@ class AIContextBuilder:
         if count <= 8:
             text = self._format_chat_characters(ctx, field_limit=100, compact=False)
             wb_text = self._format_chat_worldbuilding(ctx, field_limit=80)
+            graph_text = self._format_chat_graph(ctx, field_limit=80)
             if wb_text:
                 text = text + "\n\n" + wb_text
+            if graph_text:
+                text = text + "\n\n" + graph_text
             if len(text) <= max_chars:
                 return text
 
         # 降级 2：最紧凑角色格式 + 保留世界building
         text = self._format_chat_characters(ctx, field_limit=100, compact=True)
         wb_text = self._format_chat_worldbuilding(ctx, field_limit=60)
+        graph_text = self._format_chat_graph(ctx, field_limit=60)
         if wb_text:
             text = text + "\n\n" + wb_text
+        if graph_text:
+            text = text + "\n\n" + graph_text
         if len(text) <= max_chars:
             return text
 
@@ -642,6 +739,41 @@ class AIContextBuilder:
 
         return "\n\n".join(sections) if sections else ""
 
+    def _format_chat_graph(self, ctx: dict, *, field_limit: int) -> str:
+        sections: list[str] = []
+
+        relationships = ctx.get("relationships") or []
+        if relationships:
+            lines = ["[Known Relationships]"]
+            for rel in relationships:
+                source = rel.get("source_name") or f"{rel.get('source_type')}#{rel.get('source_id')}"
+                target = rel.get("target_name") or f"{rel.get('target_type')}#{rel.get('target_id')}"
+                relation = rel.get("relation_type") or "related_to"
+                desc = _truncate(rel.get("description", ""), field_limit)
+                line = f"- {source} --{relation}--> {target}"
+                if desc:
+                    line += f": {desc}"
+                lines.append(line)
+            sections.append("\n".join(lines))
+
+        state_events = ctx.get("state_events") or []
+        if state_events:
+            lines = ["[State Timeline]"]
+            for event in state_events:
+                entity = event.get("entity_name") or f"{event.get('entity_type')}#{event.get('entity_id')}"
+                key = event.get("state_key") or "state"
+                value = _truncate(event.get("new_value", ""), field_limit)
+                summary = _truncate(event.get("summary", ""), field_limit)
+                line = f"- {entity} / {key}"
+                if value:
+                    line += f": {value}"
+                if summary:
+                    line += f" ({summary})"
+                lines.append(line)
+            sections.append("\n".join(lines))
+
+        return "\n\n".join(sections) if sections else ""
+
     def count_tokens_estimate(self, text: str) -> int:
         """实例方法包装，便于调用方从 builder 使用。"""
         return count_tokens_estimate(text)
@@ -671,6 +803,16 @@ class AIContextBuilder:
             for loc in ctx["locations"]:
                 lines.append(f"- {loc['name']}：{loc.get('description', '')}")
             parts.append("\n".join(lines))
+
+        if ctx.get("organizations"):
+            lines = ["[Organizations]"]
+            for org in ctx["organizations"]:
+                lines.append(f"- {org['name']}: {org.get('description', '')}")
+            parts.append("\n".join(lines))
+
+        graph_text = self._format_chat_graph(ctx, field_limit=160)
+        if graph_text:
+            parts.append(graph_text)
 
         if ctx.get("previous_chapters"):
             lines = ["【前文摘要】"]

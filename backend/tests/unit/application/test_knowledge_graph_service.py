@@ -244,6 +244,32 @@ class TestKnowledgeGraphService:
         status_state = next(state for state in states if state.state_key == "status")
         assert status_state.new_value == "defected"
 
+    async def test_create_proposal_rejects_field_missing_from_target_model(self, db_session, test_user):
+        project, _character, _organization = await self._seed_entities(db_session, test_user.id)
+        location = Location(project_id=project.id, name="Harbor", description="Old harbor")
+        db_session.add(location)
+        await db_session.commit()
+        await db_session.refresh(location)
+        service = KnowledgeGraphService(db_session)
+
+        with pytest.raises(ValidationError):
+            await service.create_proposal(
+                project.id,
+                test_user.id,
+                EntityChangeProposalCreate(
+                    title="Invalid location metadata",
+                    operations=[
+                        {
+                            "operation_type": "entity_field_update",
+                            "entity_type": "location",
+                            "entity_id": location.id,
+                            "field_name": "extra_attributes",
+                            "new_value": {"last_seen_chapter": 1},
+                        }
+                    ],
+                ),
+            )
+
     async def test_accept_proposal_can_reject_unselected_child_operations(self, db_session, test_user):
         project, character, organization = await self._seed_entities(db_session, test_user.id)
         service = KnowledgeGraphService(db_session)
@@ -667,7 +693,7 @@ class TestKnowledgeGraphService:
         extra = json.loads(character.extra_attributes)
         assert extra["mention_count"] == 5
 
-    async def test_analyze_chapter_non_character_metadata_falls_through_to_proposal(
+    async def test_analyze_chapter_non_character_metadata_is_skipped(
         self,
         db_session,
         test_user,
@@ -710,9 +736,9 @@ class TestKnowledgeGraphService:
         )
 
         assert response.auto_written_count == 0
-        assert response.proposal_count == 1
-        assert len(response.proposals[0].operations) == 1
-        assert response.proposals[0].operations[0].field_name == "extra_attributes"
+        assert response.proposal_count == 0
+        assert response.skipped_proposal_count == 1
+        assert response.proposals == []
 
     async def test_analyze_chapter_extra_attributes_with_non_whitelist_key_goes_to_proposal(
         self,

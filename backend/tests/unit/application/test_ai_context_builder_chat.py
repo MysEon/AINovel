@@ -1,9 +1,11 @@
 """AIContextBuilder chat formatting tests."""
 
 import pytest
+from sqlalchemy import select
 
 from app.application.ai_context_builder import AIContextBuilder, count_tokens_estimate
 from app.infrastructure.db.models.projects import Project
+from app.infrastructure.db.models.story_knowledge import EntityRelationship, EntityStateEvent
 from app.infrastructure.db.models.worldbuilding import (
     Character,
     Location,
@@ -172,6 +174,60 @@ async def test_format_for_chat_with_budget_includes_worldbuilding(db_session, te
     assert "【组织】" in text
     assert "灰烬公会" in text
     assert len(text) <= 4000
+
+
+@pytest.mark.asyncio
+async def test_project_context_includes_entity_ids_graph_and_state_text(db_session, test_user):
+    project = await _create_project_with_worldbuilding(db_session, test_user.id)
+    character = (
+        await db_session.execute(select(Character).where(Character.project_id == project.id))
+    ).scalar_one()
+    organization = (
+        await db_session.execute(select(Organization).where(Organization.project_id == project.id))
+    ).scalar_one()
+    db_session.add(
+        EntityRelationship(
+            project_id=project.id,
+            source_type="character",
+            source_id=character.id,
+            relation_type="member_of",
+            target_type="organization",
+            target_id=organization.id,
+            status="active",
+            description="serves the guild",
+            source="test",
+        )
+    )
+    db_session.add(
+        EntityStateEvent(
+            project_id=project.id,
+            entity_type="character",
+            entity_id=character.id,
+            state_key="condition",
+            old_value="unknown",
+            new_value="injured",
+            summary="hurt during chapter events",
+            source="test",
+        )
+    )
+    await db_session.commit()
+    builder = AIContextBuilder(db_session)
+
+    ctx = await builder.get_project_context(project.id, mode="chat")
+
+    assert ctx["characters"][0]["id"] == character.id
+    assert ctx["organizations"][0]["id"] == organization.id
+    assert ctx["relationships"][0]["source_name"] == character.name
+    assert ctx["relationships"][0]["target_name"] == organization.name
+    assert ctx["state_events"][0]["entity_name"] == character.name
+
+    chat_text = builder.format_for_chat_with_budget(ctx, max_chars=4000)
+    plain_text = builder.format_as_text(ctx)
+    for rendered in (chat_text, plain_text):
+        assert "member_of" in rendered
+        assert "serves the guild" in rendered
+        assert "injured" in rendered
+        assert organization.name in rendered
 
 
 @pytest.mark.asyncio
