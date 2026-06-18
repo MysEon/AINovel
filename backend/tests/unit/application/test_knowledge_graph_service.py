@@ -733,6 +733,141 @@ class TestKnowledgeGraphService:
 
         assert {relationship.status for relationship in relationships} == {"inactive"}
 
+    async def test_relationship_delete_deactivates_custom_synced_inverse_without_policy(self, db_session, test_user):
+        project, character, _organization = await self._seed_entities(db_session, test_user.id)
+        disciple = Character(project_id=project.id, name="Disciple Gu", description="young cultivator")
+        db_session.add(disciple)
+        await db_session.commit()
+        await db_session.refresh(disciple)
+        service = KnowledgeGraphService(db_session)
+
+        create_proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Mentorship starts",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "mentor_of",
+                        "target_type": "character",
+                        "target_id": disciple.id,
+                        "payload": {"policy": {"inverse_relation_type": "disciple_of"}},
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(create_proposal.id, test_user.id, ProposalAcceptRequest())
+
+        delete_proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Mentorship ends",
+                operations=[
+                    {
+                        "operation_type": "relationship_delete",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "mentor_of",
+                        "target_type": "character",
+                        "target_id": disciple.id,
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(delete_proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(EntityRelationship.project_id == project.id)
+            )
+        ).scalars().all()
+        by_type = {relationship.relation_type: relationship.status for relationship in relationships}
+
+        assert by_type["mentor_of"] == "inactive"
+        assert by_type["disciple_of"] == "inactive"
+
+    async def test_relationship_policy_supports_custom_inverse_and_target_exclusive_scope(self, db_session, test_user):
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        usurper = Character(project_id=project.id, name="Second Prince", description="new emperor")
+        db_session.add(usurper)
+        await db_session.commit()
+        await db_session.refresh(usurper)
+        service = KnowledgeGraphService(db_session)
+
+        first_proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="First ruler takes the throne",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": character.id,
+                        "relation_type": "ruler_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                        "payload": {
+                            "policy": {
+                                "inverse_relation_type": "ruled_by",
+                                "exclusive_scope": "target_relation",
+                            }
+                        },
+                    }
+                ],
+            ),
+        )
+        await service.accept_proposal(first_proposal.id, test_user.id, ProposalAcceptRequest())
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Second Prince usurps the throne",
+                operations=[
+                    {
+                        "operation_type": "relationship_upsert",
+                        "entity_type": "character",
+                        "entity_id": usurper.id,
+                        "relation_type": "ruler_of",
+                        "target_type": "organization",
+                        "target_id": organization.id,
+                        "payload": {
+                            "policy": {
+                                "inverse_relation_type": "ruled_by",
+                                "exclusive_scope": "target_relation",
+                            }
+                        },
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(EntityRelationship.project_id == project.id)
+            )
+        ).scalars().all()
+        by_ref = {
+            (
+                relationship.source_type,
+                relationship.source_id,
+                relationship.relation_type,
+                relationship.target_type,
+                relationship.target_id,
+            ): relationship.status
+            for relationship in relationships
+        }
+
+        assert by_ref[("character", character.id, "ruler_of", "organization", organization.id)] == "inactive"
+        assert by_ref[("organization", organization.id, "ruled_by", "character", character.id)] == "inactive"
+        assert by_ref[("character", usurper.id, "ruler_of", "organization", organization.id)] == "active"
+        assert by_ref[("organization", organization.id, "ruled_by", "character", usurper.id)] == "active"
+
     async def test_located_in_upsert_deactivates_previous_location(self, db_session, test_user):
         project, _character, organization = await self._seed_entities(db_session, test_user.id)
         town = Location(project_id=project.id, name="Town A", description="old base")
@@ -890,6 +1025,84 @@ class TestKnowledgeGraphService:
         assert by_ref[("organization", rival.id, "located_in", "location", realm.id)] == "inactive"
         assert by_ref[("character", character.id, "located_in", "location", realm.id)] == "inactive"
         assert by_ref[("character", character.id, "spouse_of", "character", princess.id)] == "active"
+
+    async def test_state_relationship_effects_payload_deactivates_custom_relationship_scope(self, db_session, test_user):
+        project, character, organization = await self._seed_entities(db_session, test_user.id)
+        sect = Organization(project_id=project.id, name="Sect V", description="outside sect")
+        child = Character(project_id=project.id, name="Lin Heir", description="divine body")
+        db_session.add_all([sect, child])
+        await db_session.flush()
+        db_session.add_all(
+            [
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="organization",
+                    source_id=sect.id,
+                    relation_type="targets",
+                    target_type="character",
+                    target_id=child.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="character",
+                    source_id=character.id,
+                    relation_type="parent_of",
+                    target_type="character",
+                    target_id=child.id,
+                    status="active",
+                    source="test",
+                ),
+                EntityRelationship(
+                    project_id=project.id,
+                    source_type="organization",
+                    source_id=organization.id,
+                    relation_type="protects",
+                    target_type="character",
+                    target_id=child.id,
+                    status="active",
+                    source="test",
+                ),
+            ]
+        )
+        await db_session.commit()
+        await db_session.refresh(child)
+        service = KnowledgeGraphService(db_session)
+
+        proposal = await service.create_proposal(
+            project.id,
+            test_user.id,
+            EntityChangeProposalCreate(
+                title="Child is no longer targeted",
+                operations=[
+                    {
+                        "operation_type": "entity_state_event",
+                        "entity_type": "character",
+                        "entity_id": child.id,
+                        "state_key": "danger",
+                        "new_value": "protected",
+                        "payload": {
+                            "relationship_effects": [
+                                {"action": "deactivate", "scope": "target", "relation_type": "targets"}
+                            ]
+                        },
+                    }
+                ],
+            ),
+        )
+
+        await service.accept_proposal(proposal.id, test_user.id, ProposalAcceptRequest())
+        relationships = (
+            await db_session.execute(
+                select(EntityRelationship).where(EntityRelationship.project_id == project.id)
+            )
+        ).scalars().all()
+        by_relation = {relationship.relation_type: relationship.status for relationship in relationships}
+
+        assert by_relation["targets"] == "inactive"
+        assert by_relation["parent_of"] == "active"
+        assert by_relation["protects"] == "active"
 
     async def test_create_proposal_rejects_field_missing_from_target_model(self, db_session, test_user):
         project, _character, _organization = await self._seed_entities(db_session, test_user.id)

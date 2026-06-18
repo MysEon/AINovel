@@ -97,17 +97,21 @@ JSON_TEXT_FIELDS = {
     ("character", "extra_attributes"),
 }
 
-BIDIRECTIONAL_RELATION_TYPES = {
-    "ally_of": "ally_of",
-    "enemy_of": "enemy_of",
-    "spouse_of": "spouse_of",
-    "parent_of": "child_of",
-    "child_of": "parent_of",
+DEFAULT_RELATION_POLICIES = {
+    "ally_of": {"inverse_relation_type": "ally_of"},
+    "enemy_of": {"inverse_relation_type": "enemy_of"},
+    "spouse_of": {"inverse_relation_type": "spouse_of"},
+    "parent_of": {"inverse_relation_type": "child_of"},
+    "child_of": {"inverse_relation_type": "parent_of"},
+    "located_in": {"exclusive_scope": "source_relation"},
 }
-EXCLUSIVE_SOURCE_RELATION_TYPES = {"located_in"}
 TERMINAL_STATE_KEYS = {"status", "state", "condition", "life_status", "existence"}
 DESTROYED_STATE_MARKERS = ("destroyed", "dead", "deceased", "灭亡", "覆灭", "已灭", "死亡", "身死", "陨落")
 ASCENDED_STATE_MARKERS = ("ascended", "飞升")
+DEFAULT_TERMINAL_RELATIONSHIP_EFFECTS = {
+    "destroyed": [{"action": "deactivate", "scope": "entity"}],
+    "ascended": [{"action": "deactivate", "scope": "source", "relation_type": "located_in"}],
+}
 
 ACTIVE_PROPOSAL_STATUSES = {"pending", "conflicted"}
 ACTIVE_OPERATION_STATUSES = {"pending", "conflicted"}
@@ -833,6 +837,8 @@ class KnowledgeGraphService:
                 "同一个 proposal 中，后续 relationship_upsert/entity_state_event 可以用 entity_name/target_name 指向刚 entity_create 的新实体。",
                 "字段更新只能使用下面 allowed_fields 中的英文字段名；不确定时优先生成 entity_state_event。",
                 "关系建议使用英文 relation_type，例如 ally_of、enemy_of、member_of、controls、located_in、believes_in、affected_by。",
+                "关系行为不要靠枚举：需要反向关系时在 payload.policy.inverse_relation_type 写反向 relation_type；需要唯一当前关系时写 payload.policy.exclusive_scope=source_relation 或 target_relation。",
+                "状态事件会造成关系收束时，在 payload.relationship_effects 写 [{action:'deactivate', scope:'entity|source|target', relation_type?:'located_in'}]。",
                 "每个 proposal 应是一个故事事件，operations 是这个事件造成的具体影响。",
                 "低风险元数据（如角色最后出现章节、提及次数、候选标签）请使用 extra_attributes 下的 last_seen_chapter、mention_count、candidate_tags，与正史字段更新区分开。",
                 f"章节：第 {chapter.chapter_number} 章《{chapter.title}》",
@@ -1303,6 +1309,9 @@ class KnowledgeGraphService:
         operation: ProposalOperation,
     ) -> None:
         payload = _load_json(operation.payload) or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        policy = self._relationship_policy(operation, payload)
         relationship = await self._upsert_relationship_record(
             proposal,
             operation,
@@ -1313,8 +1322,8 @@ class KnowledgeGraphService:
             target_id=operation.target_id,
             payload=payload,
         )
-        await self._sync_exclusive_relationship_upsert(proposal, operation, relationship)
-        await self._sync_inverse_relationship_upsert(proposal, operation, relationship, payload)
+        await self._sync_exclusive_relationship_upsert(proposal, operation, relationship, policy)
+        await self._sync_inverse_relationship_upsert(proposal, operation, relationship, payload, policy)
         await self._sync_organization_field_from_member_of_upsert(proposal, operation, relationship)
 
     async def _upsert_relationship_record(
@@ -1361,11 +1370,14 @@ class KnowledgeGraphService:
         return relationship
 
     async def _apply_relationship_delete(self, proposal: EntityChangeProposal, operation: ProposalOperation) -> bool:
+        payload = _load_json(operation.payload) or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        policy = self._relationship_policy(operation, payload)
         relationship = await self._find_relationship(proposal.project_id, operation)
         if relationship is not None:
-            relationship.status = "inactive"
-            relationship.proposal_operation_id = operation.id
-            await self._sync_inverse_relationship_delete(proposal, operation)
+            await self._deactivate_relationship(relationship, operation)
+            await self._sync_inverse_relationship_delete(proposal, operation, policy)
             await self._sync_organization_field_from_member_of_delete(proposal, operation)
             return True
         return False
@@ -1375,18 +1387,31 @@ class KnowledgeGraphService:
         proposal: EntityChangeProposal,
         operation: ProposalOperation,
         relationship: EntityRelationship,
+        policy: dict[str, Any],
     ) -> None:
-        if relationship.status != "active" or operation.relation_type not in EXCLUSIVE_SOURCE_RELATION_TYPES:
+        exclusive_scope = policy.get("exclusive_scope")
+        if relationship.status != "active" or not exclusive_scope:
             return
-        await self._deactivate_source_relationships(
-            proposal.project_id,
-            source_type=operation.entity_type,
-            source_id=operation.entity_id,
-            relation_type=operation.relation_type,
-            operation=operation,
-            keep_target_type=operation.target_type,
-            keep_target_id=operation.target_id,
-        )
+        if exclusive_scope == "source_relation":
+            await self._deactivate_source_relationships(
+                proposal.project_id,
+                source_type=operation.entity_type,
+                source_id=operation.entity_id,
+                relation_type=operation.relation_type,
+                operation=operation,
+                keep_target_type=operation.target_type,
+                keep_target_id=operation.target_id,
+            )
+        elif exclusive_scope == "target_relation":
+            await self._deactivate_target_relationships(
+                proposal.project_id,
+                target_type=operation.target_type,
+                target_id=operation.target_id,
+                relation_type=operation.relation_type,
+                operation=operation,
+                keep_source_type=operation.entity_type,
+                keep_source_id=operation.entity_id,
+            )
 
     async def _sync_inverse_relationship_upsert(
         self,
@@ -1394,10 +1419,11 @@ class KnowledgeGraphService:
         operation: ProposalOperation,
         relationship: EntityRelationship,
         payload: dict[str, Any],
+        policy: dict[str, Any],
     ) -> None:
         if relationship.status != "active":
             return
-        inverse_relation_type = self._inverse_relation_type(operation.relation_type)
+        inverse_relation_type = self._inverse_relation_type(operation, policy)
         if inverse_relation_type is None or self._is_self_inverse_ref(operation, inverse_relation_type):
             return
         properties = payload.get("properties") if isinstance(payload.get("properties"), dict) else {}
@@ -1408,6 +1434,7 @@ class KnowledgeGraphService:
                 **properties,
                 "synced_from": "inverse_relationship",
                 "source_operation_id": operation.id,
+                "source_relation_type": operation.relation_type,
             },
         }
         await self._upsert_relationship_record(
@@ -1425,8 +1452,9 @@ class KnowledgeGraphService:
         self,
         proposal: EntityChangeProposal,
         operation: ProposalOperation,
+        policy: dict[str, Any],
     ) -> None:
-        inverse_relation_type = self._inverse_relation_type(operation.relation_type)
+        inverse_relation_type = self._inverse_relation_type(operation, policy)
         if inverse_relation_type is None or self._is_self_inverse_ref(operation, inverse_relation_type):
             return
         inverse = await self._find_relationship_by_refs(
@@ -1438,8 +1466,7 @@ class KnowledgeGraphService:
             target_id=operation.entity_id,
         )
         if inverse is not None:
-            inverse.status = "inactive"
-            inverse.proposal_operation_id = operation.id
+            await self._deactivate_relationship(inverse, operation, sync_inverse=False)
 
     async def _sync_member_of_from_organization_field(
         self,
@@ -1602,11 +1629,28 @@ class KnowledgeGraphService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+    @classmethod
+    def _relationship_policy(cls, operation: ProposalOperation, payload: dict[str, Any]) -> dict[str, Any]:
+        policy = dict(DEFAULT_RELATION_POLICIES.get(operation.relation_type) or {})
+        raw_policy = payload.get("policy") if isinstance(payload, dict) else None
+        if isinstance(raw_policy, dict):
+            policy.update(raw_policy)
+        if isinstance(payload, dict):
+            for key in ("inverse_relation_type", "exclusive_scope"):
+                if key in payload:
+                    policy[key] = payload[key]
+            if "inverse" in payload and "inverse_relation_type" not in policy:
+                policy["inverse_relation_type"] = payload["inverse"]
+        return policy
+
     @staticmethod
-    def _inverse_relation_type(relation_type: str | None) -> str | None:
-        if not relation_type:
-            return None
-        return BIDIRECTIONAL_RELATION_TYPES.get(relation_type)
+    def _inverse_relation_type(operation: ProposalOperation, policy: dict[str, Any]) -> str | None:
+        inverse = policy.get("inverse_relation_type")
+        if inverse is True or inverse == "same":
+            return operation.relation_type
+        if isinstance(inverse, str) and inverse.strip():
+            return inverse.strip()
+        return None
 
     @staticmethod
     def _is_self_inverse_ref(operation: ProposalOperation, inverse_relation_type: str) -> bool:
@@ -1627,21 +1671,48 @@ class KnowledgeGraphService:
         keep_target_type: str | None = None,
         keep_target_id: int | None = None,
     ) -> None:
-        if not source_type or not source_id or not relation_type:
+        if not source_type or not source_id:
             return
         stmt = select(EntityRelationship).where(
             EntityRelationship.project_id == project_id,
             EntityRelationship.source_type == source_type,
             EntityRelationship.source_id == source_id,
-            EntityRelationship.relation_type == relation_type,
             EntityRelationship.status == "active",
         )
+        if relation_type:
+            stmt = stmt.where(EntityRelationship.relation_type == relation_type)
         result = await self.db.execute(stmt)
         for relationship in result.scalars().all():
             if relationship.target_type == keep_target_type and relationship.target_id == keep_target_id:
                 continue
-            relationship.status = "inactive"
-            relationship.proposal_operation_id = operation.id
+            await self._deactivate_relationship(relationship, operation)
+
+    async def _deactivate_target_relationships(
+        self,
+        project_id: int,
+        *,
+        target_type: str | None,
+        target_id: int | None,
+        relation_type: str | None,
+        operation: ProposalOperation,
+        keep_source_type: str | None = None,
+        keep_source_id: int | None = None,
+    ) -> None:
+        if not target_type or not target_id:
+            return
+        stmt = select(EntityRelationship).where(
+            EntityRelationship.project_id == project_id,
+            EntityRelationship.target_type == target_type,
+            EntityRelationship.target_id == target_id,
+            EntityRelationship.status == "active",
+        )
+        if relation_type:
+            stmt = stmt.where(EntityRelationship.relation_type == relation_type)
+        result = await self.db.execute(stmt)
+        for relationship in result.scalars().all():
+            if relationship.source_type == keep_source_type and relationship.source_id == keep_source_id:
+                continue
+            await self._deactivate_relationship(relationship, operation)
 
     async def _deactivate_entity_relationships(
         self,
@@ -1663,34 +1734,118 @@ class KnowledgeGraphService:
         )
         result = await self.db.execute(stmt)
         for relationship in result.scalars().all():
-            relationship.status = "inactive"
-            relationship.proposal_operation_id = operation.id
+            await self._deactivate_relationship(relationship, operation)
+
+    async def _deactivate_relationship(
+        self,
+        relationship: EntityRelationship,
+        operation: ProposalOperation,
+        *,
+        sync_inverse: bool = True,
+    ) -> None:
+        original_operation_id = relationship.proposal_operation_id
+        relationship.status = "inactive"
+        relationship.proposal_operation_id = operation.id
+        if sync_inverse:
+            await self._deactivate_synced_inverse_relationships(
+                relationship,
+                operation,
+                original_operation_id=original_operation_id,
+            )
+
+    async def _deactivate_synced_inverse_relationships(
+        self,
+        relationship: EntityRelationship,
+        operation: ProposalOperation,
+        *,
+        original_operation_id: int | None,
+    ) -> None:
+        if not relationship.target_type or not relationship.target_id:
+            return
+        if not relationship.source_type or not relationship.source_id:
+            return
+        stmt = select(EntityRelationship).where(
+            EntityRelationship.project_id == relationship.project_id,
+            EntityRelationship.source_type == relationship.target_type,
+            EntityRelationship.source_id == relationship.target_id,
+            EntityRelationship.target_type == relationship.source_type,
+            EntityRelationship.target_id == relationship.source_id,
+            EntityRelationship.status == "active",
+        )
+        result = await self.db.execute(stmt)
+        legacy_candidates: list[EntityRelationship] = []
+        matched: list[EntityRelationship] = []
+        for inverse in result.scalars().all():
+            properties = _load_json(inverse.properties) or {}
+            if not isinstance(properties, dict) or properties.get("synced_from") != "inverse_relationship":
+                continue
+            source_relation_type = properties.get("source_relation_type")
+            source_operation_id = properties.get("source_operation_id")
+            if source_relation_type == relationship.relation_type or (
+                original_operation_id is not None and source_operation_id == original_operation_id
+            ):
+                matched.append(inverse)
+            elif source_relation_type is None and source_operation_id is None:
+                legacy_candidates.append(inverse)
+
+        if not matched and len(legacy_candidates) == 1:
+            matched = legacy_candidates
+        for inverse in matched:
+            inverse.status = "inactive"
+            inverse.proposal_operation_id = operation.id
 
     async def _sync_terminal_state_effects(
         self,
         proposal: EntityChangeProposal,
         operation: ProposalOperation,
     ) -> None:
-        terminal_action = self._terminal_state_action(operation)
-        if terminal_action == "destroyed":
-            await self._deactivate_entity_relationships(
-                proposal.project_id,
-                entity_type=operation.entity_type,
-                entity_id=operation.entity_id,
-                operation=operation,
-            )
-            return
-        if terminal_action == "ascended":
-            await self._deactivate_source_relationships(
-                proposal.project_id,
-                source_type=operation.entity_type,
-                source_id=operation.entity_id,
-                relation_type="located_in",
-                operation=operation,
-            )
+        for effect in self._state_relationship_effects(operation):
+            if effect.get("action") != "deactivate":
+                continue
+            scope = effect.get("scope")
+            relation_type = effect.get("relation_type")
+            if scope == "entity":
+                await self._deactivate_entity_relationships(
+                    proposal.project_id,
+                    entity_type=operation.entity_type,
+                    entity_id=operation.entity_id,
+                    operation=operation,
+                )
+            elif scope == "source":
+                await self._deactivate_source_relationships(
+                    proposal.project_id,
+                    source_type=operation.entity_type,
+                    source_id=operation.entity_id,
+                    relation_type=relation_type,
+                    operation=operation,
+                )
+            elif scope == "target":
+                await self._deactivate_target_relationships(
+                    proposal.project_id,
+                    target_type=operation.entity_type,
+                    target_id=operation.entity_id,
+                    relation_type=relation_type,
+                    operation=operation,
+                )
 
     @classmethod
-    def _terminal_state_action(cls, operation: ProposalOperation) -> str | None:
+    def _state_relationship_effects(cls, operation: ProposalOperation) -> list[dict[str, Any]]:
+        payload = _load_json(operation.payload) or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        effects = []
+        raw_effects = payload.get("relationship_effects")
+        if isinstance(raw_effects, dict):
+            effects.append(raw_effects)
+        elif isinstance(raw_effects, list):
+            effects.extend(effect for effect in raw_effects if isinstance(effect, dict))
+        if effects:
+            return effects
+        default_action = cls._default_terminal_state_action(operation)
+        return list(DEFAULT_TERMINAL_RELATIONSHIP_EFFECTS.get(default_action) or [])
+
+    @classmethod
+    def _default_terminal_state_action(cls, operation: ProposalOperation) -> str | None:
         if operation.operation_type != "entity_state_event" or operation.state_key not in TERMINAL_STATE_KEYS:
             return None
         value_text = cls._state_value_text(operation.new_value)
